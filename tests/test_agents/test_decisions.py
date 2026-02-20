@@ -14,9 +14,9 @@ def test_continue_after_image_error():
     assert should_continue_after_image(state) == "error"
 
 
-def test_continue_after_validation_export():
+def test_continue_after_validation_continue():
     state = {"error": None, "should_regenerate": False}
-    assert should_continue_after_validation(state) == "export"
+    assert should_continue_after_validation(state) == "continue"
 
 
 def test_continue_after_validation_regenerate():

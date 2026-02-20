@@ -45,3 +45,18 @@ def test_agent_state_with_all_fields():
     }
     assert state["figure_name"] == "Napoleon Bonaparte"
     assert state["validation_passed"] is True
+
+
+def test_agent_state_face_swap_fields():
+    state: AgentState = {
+        "request_id": "test-789",
+        "input_text": "Caesar",
+        "source_face_path": "/uploads/faces/abc123.jpg",
+        "swapped_image_path": "/output/test-789/swapped.png",
+        "original_image_path": "/output/test-789/original_generated.png",
+        "agent_trace": [],
+        "retry_count": 0,
+    }
+    assert state["source_face_path"] == "/uploads/faces/abc123.jpg"
+    assert state["swapped_image_path"] == "/output/test-789/swapped.png"
+    assert state["original_image_path"] == "/output/test-789/original_generated.png"
