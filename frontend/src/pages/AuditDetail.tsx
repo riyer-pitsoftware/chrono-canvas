@@ -1,11 +1,12 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useAuditDetail, useDeleteGeneration, useRetryGeneration } from "@/api/hooks/useGeneration";
 import { useNavigation } from "@/stores/navigation";
 import { PipelineStepper } from "@/components/generation/PipelineStepper";
-import { ChevronDown, ChevronRight, RotateCcw, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, RotateCcw, Trash2, X } from "lucide-react";
+import type { GeneratedImage } from "@/api/types";
 
 const PIPELINE_STEPS = [
   { value: "orchestrator", label: "Orchestrator" },
@@ -189,26 +190,16 @@ export function AuditDetail({ requestId }: { requestId: string }) {
         </Card>
       )}
 
-      {/* Generated Image */}
+      {/* Generated Images Gallery */}
       {data.images.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Generated Images</CardTitle>
+            <CardTitle className="text-lg">
+              Generated Images ({data.images.length})
+            </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            {data.images.map((img) => (
-              <div key={img.id} className="space-y-2">
-                <img
-                  src={`/api/files/${img.file_path}`}
-                  alt="Generated portrait"
-                  className="rounded-md max-w-md"
-                />
-                <div className="text-xs text-[var(--muted-foreground)] space-y-1">
-                  <p>Provider: {img.provider} | {img.width}x{img.height}</p>
-                  {img.prompt_used && <p>Prompt: {img.prompt_used}</p>}
-                </div>
-              </div>
-            ))}
+          <CardContent>
+            <ImageGallery images={data.images} requestId={requestId} />
           </CardContent>
         </Card>
       )}
@@ -224,6 +215,212 @@ export function AuditDetail({ requestId }: { requestId: string }) {
           </CardContent>
         </Card>
       )}
+
+      {/* Retry */}
+      {data.status === "failed" && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Retry from Step</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-3">
+              <select
+                value={effectiveRetryStep}
+                onChange={(e) => setRetryStep(e.target.value)}
+                className="flex-1 rounded-md border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm"
+              >
+                {PIPELINE_STEPS.map((s) => (
+                  <option key={s.value} value={s.value}>{s.label}</option>
+                ))}
+              </select>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={retryGeneration.isPending}
+                onClick={() =>
+                  retryGeneration.mutate(
+                    { id: requestId, fromStep: effectiveRetryStep },
+                    { onSuccess: () => navigate(`/audit/${requestId}`) },
+                  )
+                }
+              >
+                <RotateCcw className="h-4 w-4 mr-1" />
+                {retryGeneration.isPending ? "Retrying…" : "Retry"}
+              </Button>
+            </div>
+            {retryGeneration.isError && (
+              <p className="text-xs text-[var(--destructive)] mt-2">
+                {retryGeneration.error?.message}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+function imageUrl(img: GeneratedImage, requestId: string) {
+  // file_path may be absolute or relative; extract just the filename
+  const filename = img.file_path.split("/").pop();
+  return `/output/${requestId}/${filename}`;
+}
+
+function ImageGallery({ images, requestId }: { images: GeneratedImage[]; requestId: string }) {
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+
+  // Sort by created_at so attempt order is chronological
+  const sorted = [...images].sort(
+    (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+  );
+
+  return (
+    <>
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+        {sorted.map((img, i) => (
+          <button
+            key={img.id}
+            onClick={() => setLightboxIndex(i)}
+            className="group relative rounded-md overflow-hidden border hover:ring-2 hover:ring-[var(--ring)] transition-all text-left"
+          >
+            <img
+              src={imageUrl(img, requestId)}
+              alt={`Attempt ${i + 1}`}
+              className="w-full aspect-square object-cover"
+            />
+            {/* Overlay badges */}
+            <div className="absolute top-2 left-2 flex flex-col gap-1">
+              <Badge variant="secondary" className="text-xs">
+                #{i + 1}
+              </Badge>
+              <Badge variant="outline" className="text-xs bg-[var(--background)]/80">
+                {img.provider}
+              </Badge>
+            </div>
+            {img.validation_score != null && (
+              <div className="absolute top-2 right-2">
+                <Badge
+                  variant={img.validation_score >= 70 ? "success" : "destructive"}
+                  className="text-xs"
+                >
+                  {img.validation_score.toFixed(0)}
+                </Badge>
+              </div>
+            )}
+            {/* Hover hint */}
+            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
+              <span className="text-white opacity-0 group-hover:opacity-100 text-sm font-medium drop-shadow-md transition-opacity">
+                Click to enlarge
+              </span>
+            </div>
+          </button>
+        ))}
+      </div>
+      {lightboxIndex !== null && (
+        <Lightbox
+          images={sorted}
+          requestId={requestId}
+          currentIndex={lightboxIndex}
+          onClose={() => setLightboxIndex(null)}
+          onNavigate={setLightboxIndex}
+        />
+      )}
+    </>
+  );
+}
+
+function Lightbox({
+  images,
+  requestId,
+  currentIndex,
+  onClose,
+  onNavigate,
+}: {
+  images: GeneratedImage[];
+  requestId: string;
+  currentIndex: number;
+  onClose: () => void;
+  onNavigate: (index: number) => void;
+}) {
+  const img = images[currentIndex];
+  const hasPrev = currentIndex > 0;
+  const hasNext = currentIndex < images.length - 1;
+
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+      if (e.key === "ArrowLeft" && hasPrev) onNavigate(currentIndex - 1);
+      if (e.key === "ArrowRight" && hasNext) onNavigate(currentIndex + 1);
+    },
+    [onClose, onNavigate, currentIndex, hasPrev, hasNext],
+  );
+
+  useEffect(() => {
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [handleKeyDown]);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center"
+      onClick={onClose}
+    >
+      <div
+        className="relative max-w-4xl max-h-[90vh] mx-4"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Close button */}
+        <button
+          onClick={onClose}
+          className="absolute -top-10 right-0 text-white hover:text-gray-300 transition-colors"
+        >
+          <X className="w-6 h-6" />
+        </button>
+
+        {/* Image */}
+        <img
+          src={imageUrl(img, requestId)}
+          alt={`Attempt ${currentIndex + 1}`}
+          className="max-h-[80vh] rounded-md object-contain"
+        />
+
+        {/* Info bar */}
+        <div className="flex items-center justify-between mt-3 text-white text-sm">
+          <div className="flex items-center gap-2">
+            <Badge variant="secondary">Attempt #{currentIndex + 1}</Badge>
+            <Badge variant="outline" className="text-white border-white/40">
+              {img.provider}
+            </Badge>
+            {img.validation_score != null && (
+              <Badge variant={img.validation_score >= 70 ? "success" : "destructive"}>
+                Score: {img.validation_score.toFixed(1)}
+                {img.validation_score >= 70 ? " (passed)" : " (failed)"}
+              </Badge>
+            )}
+          </div>
+          <span className="text-white/60">
+            {img.width}x{img.height}
+          </span>
+        </div>
+
+        {/* Navigation arrows */}
+        {hasPrev && (
+          <button
+            onClick={() => onNavigate(currentIndex - 1)}
+            className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-12 text-white hover:text-gray-300 transition-colors"
+          >
+            <ChevronLeft className="w-8 h-8" />
+          </button>
+        )}
+        {hasNext && (
+          <button
+            onClick={() => onNavigate(currentIndex + 1)}
+            className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-12 text-white hover:text-gray-300 transition-colors"
+          >
+            <ChevronRight className="w-8 h-8" />
+          </button>
+        )}
+      </div>
     </div>
   );
 }
