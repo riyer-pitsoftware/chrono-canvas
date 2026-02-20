@@ -1,0 +1,42 @@
+{
+  "clothing_accuracy": {
+    "description": "Validates that clothing matches the historical period",
+    "weight": 0.3,
+    "rules": [
+      {"name": "period_appropriate_materials", "description": "Clothing materials should match what was available in the period"},
+      {"name": "no_anachronistic_items", "description": "No items that didn't exist in the period (e.g., buttons before 13th century)"},
+      {"name": "status_appropriate", "description": "Clothing should match the social status of the figure"},
+      {"name": "regional_accuracy", "description": "Clothing style should match the geographic region"}
+    ]
+  },
+  "cultural_accuracy": {
+    "description": "Validates cultural elements in the portrait",
+    "weight": 0.25,
+    "rules": [
+      {"name": "hairstyle_accuracy", "description": "Hairstyle should match period and cultural norms"},
+      {"name": "jewelry_accuracy", "description": "Jewelry and accessories should be period-appropriate"},
+      {"name": "cultural_symbols", "description": "Any cultural or religious symbols should be accurate"},
+      {"name": "skin_tone_respect", "description": "Skin tone should reflect the figure's known heritage"}
+    ]
+  },
+  "temporal_accuracy": {
+    "description": "Validates that no anachronistic elements are present",
+    "weight": 0.25,
+    "rules": [
+      {"name": "no_modern_elements", "description": "No modern items like glasses (before invention), watches, etc."},
+      {"name": "architecture_background", "description": "Any background architecture should match the period"},
+      {"name": "technology_check", "description": "No technology that didn't exist in the period"},
+      {"name": "writing_systems", "description": "Any text should use appropriate writing systems"}
+    ]
+  },
+  "artistic_style": {
+    "description": "Validates that the art style matches the period",
+    "weight": 0.2,
+    "rules": [
+      {"name": "period_art_style", "description": "Art style should reflect the artistic traditions of the period"},
+      {"name": "color_palette", "description": "Color palette should be appropriate for the period's art"},
+      {"name": "composition", "description": "Composition should follow period conventions"},
+      {"name": "medium_consistency", "description": "The simulated medium should be consistent throughout"}
+    ]
+  }
+}

@@ -1,0 +1,58 @@
+{
+  "ancient_egypt": {
+    "male_common": ["shendyt (linen kilt)", "bare chest or linen tunic"],
+    "female_common": ["kalasiris (linen sheath dress)", "beaded collar"],
+    "royal": ["nemes headdress", "uraeus cobra crown", "pectoral necklace", "pleated linen robe"],
+    "materials": ["linen", "gold", "lapis lazuli", "turquoise", "carnelian"],
+    "colors": ["white", "gold", "blue", "red"]
+  },
+  "classical_greece": {
+    "male_common": ["chiton (tunic)", "himation (cloak)", "leather sandals"],
+    "female_common": ["peplos", "chiton with pins", "himation"],
+    "royal": ["purple-dyed chiton", "gold laurel wreath", "elaborate fibulae"],
+    "materials": ["wool", "linen", "leather"],
+    "colors": ["white", "saffron", "purple", "crimson"]
+  },
+  "roman": {
+    "male_common": ["tunica", "toga (citizens)", "caligae (boots)"],
+    "female_common": ["stola", "palla (shawl)", "vittae (headband)"],
+    "royal": ["toga praetexta", "purple robes", "laurel crown", "senatorial stripe"],
+    "materials": ["wool", "linen", "silk (imported)"],
+    "colors": ["white", "purple (royal)", "red", "gold"]
+  },
+  "medieval": {
+    "male_common": ["tunic", "hose", "leather belt", "coif"],
+    "female_common": ["kirtle", "surcoat", "wimple", "veil"],
+    "royal": ["ermine-trimmed robes", "crown", "heraldic surcoat", "chain of office"],
+    "materials": ["wool", "linen", "velvet", "fur"],
+    "colors": ["muted earth tones (common)", "rich jewel tones (nobility)"]
+  },
+  "renaissance": {
+    "male_common": ["doublet", "hose", "codpiece", "flat cap"],
+    "female_common": ["bodice", "farthingale", "chemise", "headdress"],
+    "royal": ["slashed doublet with jewels", "ruff collar", "ermine", "brocade"],
+    "materials": ["silk", "velvet", "brocade", "lace"],
+    "colors": ["rich reds", "deep blues", "gold", "black"]
+  },
+  "enlightenment": {
+    "male_common": ["coat", "waistcoat", "knee breeches", "cravat", "tricorn hat"],
+    "female_common": ["robe à la française", "pannier", "corset", "fichu"],
+    "royal": ["powdered wig", "elaborate embroidered coat", "silk stockings"],
+    "materials": ["silk", "satin", "cotton", "lace"],
+    "colors": ["pastels", "powder blue", "rose", "cream", "gold"]
+  },
+  "victorian": {
+    "male_common": ["frock coat", "top hat", "cravat", "waistcoat"],
+    "female_common": ["bustle dress", "corset", "bonnet", "gloves"],
+    "royal": ["military dress uniform", "sash and medals", "formal court dress"],
+    "materials": ["cotton", "silk", "wool", "jet (jewelry)"],
+    "colors": ["black", "navy", "deep purple", "white"]
+  },
+  "east_asian": {
+    "chinese_common": ["hanfu", "changshan", "tangzhuang"],
+    "japanese_common": ["kimono", "hakama", "obi"],
+    "royal": ["dragon robe (longpao)", "twelve-symbol imperial robe", "formal kamishimo"],
+    "materials": ["silk", "cotton", "brocade"],
+    "colors": ["imperial yellow (China)", "red", "indigo (Japan)", "white"]
+  }
+}
