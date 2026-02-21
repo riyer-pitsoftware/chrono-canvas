@@ -15,6 +15,9 @@ class Settings(BaseSettings):
     anthropic_api_key: str = ""
     openai_api_key: str = ""
 
+    # Web Search
+    brave_search_api_key: str = ""
+
     # LLM Routing
     default_llm_provider: str = "ollama"
     ollama_model: str = "llama3.1:8b"

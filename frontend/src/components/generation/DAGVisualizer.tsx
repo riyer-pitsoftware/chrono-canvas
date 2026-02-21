@@ -83,14 +83,15 @@ interface DAGVisualizerProps {
 const AGENT_NODE_DEFS = [
   { id: 'extraction', label: 'Extraction', x: 0, y: 60 },
   { id: 'research', label: 'Research', x: 155, y: 60 },
-  { id: 'prompt_generation', label: 'Prompt Gen', x: 310, y: 60 },
-  { id: 'image_generation', label: 'Image Gen', x: 465, y: 60 },
-  { id: 'validation', label: 'Validation', x: 620, y: 60 },
-  { id: 'face_swap', label: 'Face Swap', x: 775, y: 60 },
-  { id: 'export', label: 'Export', x: 925, y: 60 },
+  { id: 'face_search', label: 'Face Search', x: 310, y: 60 },
+  { id: 'prompt_generation', label: 'Prompt Gen', x: 465, y: 60 },
+  { id: 'image_generation', label: 'Image Gen', x: 620, y: 60 },
+  { id: 'validation', label: 'Validation', x: 775, y: 60 },
+  { id: 'face_swap', label: 'Face Swap', x: 930, y: 60 },
+  { id: 'export', label: 'Export', x: 1080, y: 60 },
 ];
 
-const END_NODE_DEF = { id: 'END', x: 1070, y: 60 };
+const END_NODE_DEF = { id: 'END', x: 1225, y: 60 };
 
 const GRAY_MARKER = { type: MarkerType.ArrowClosed, width: 10, height: 10 };
 const RED_MARKER = { type: MarkerType.ArrowClosed, width: 10, height: 10, color: '#ef4444' };
@@ -109,7 +110,8 @@ const LABEL_AMBER = { fontSize: 9, fill: '#d97706' };
 const STATIC_EDGES: Edge[] = [
   // Direct happy-path edges
   { id: 'e-ex-re', source: 'extraction', target: 'research', style: EDGE_STYLE_DIRECT, markerEnd: GRAY_MARKER },
-  { id: 'e-re-pg', source: 'research', target: 'prompt_generation', style: EDGE_STYLE_DIRECT, markerEnd: GRAY_MARKER },
+  { id: 'e-re-fsr', source: 'research', target: 'face_search', style: EDGE_STYLE_DIRECT, markerEnd: GRAY_MARKER },
+  { id: 'e-fsr-pg', source: 'face_search', target: 'prompt_generation', style: EDGE_STYLE_DIRECT, markerEnd: GRAY_MARKER },
   { id: 'e-pg-ig', source: 'prompt_generation', target: 'image_generation', style: EDGE_STYLE_DIRECT, markerEnd: GRAY_MARKER },
   { id: 'e-fs-ex', source: 'face_swap', target: 'export', style: EDGE_STYLE_DIRECT, markerEnd: GRAY_MARKER },
   { id: 'e-ex-end', source: 'export', target: 'END', style: EDGE_STYLE_DIRECT, markerEnd: GRAY_MARKER },

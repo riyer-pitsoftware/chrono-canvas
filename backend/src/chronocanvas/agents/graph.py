@@ -7,6 +7,7 @@ from chronocanvas.agents.decisions import (
 )
 from chronocanvas.agents.nodes.extraction import extraction_node
 from chronocanvas.agents.nodes.export import export_node
+from chronocanvas.agents.nodes.face_search import face_search_node
 from chronocanvas.agents.nodes.face_swap import face_swap_node
 from chronocanvas.agents.nodes.image_generation import image_generation_node
 from chronocanvas.agents.nodes.orchestrator import orchestrator_node
@@ -23,6 +24,7 @@ def build_graph() -> StateGraph:
     graph.add_node("orchestrator", orchestrator_node)
     graph.add_node("extraction", extraction_node)
     graph.add_node("research", research_node)
+    graph.add_node("face_search", face_search_node)
     graph.add_node("prompt_generation", prompt_generation_node)
     graph.add_node("image_generation", image_generation_node)
     graph.add_node("validation", validation_node)
@@ -33,7 +35,8 @@ def build_graph() -> StateGraph:
     graph.set_entry_point("orchestrator")
     graph.add_edge("orchestrator", "extraction")
     graph.add_edge("extraction", "research")
-    graph.add_edge("research", "prompt_generation")
+    graph.add_edge("research", "face_search")
+    graph.add_edge("face_search", "prompt_generation")
     graph.add_edge("prompt_generation", "image_generation")
 
     graph.add_conditional_edges(

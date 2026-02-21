@@ -35,6 +35,11 @@ class AgentState(TypedDict, total=False):
     validation_score: float
     validation_passed: bool
 
+    # Face Search
+    face_search_url: str
+    face_search_query: str
+    face_search_provider: str
+
     # Face Swap
     source_face_path: str
     swapped_image_path: str
