@@ -9,6 +9,22 @@
 - Python 3.11+ (for backend development outside Docker)
 - 8 GB RAM minimum; 16 GB recommended if running local LLMs
 
+### FaceFusion (optional)
+
+Face-swap compositing is handled by a locally cloned copy of [FaceFusion](https://github.com/facefusion/facefusion). It is only required when `IMAGE_PROVIDER=facefusion`.
+
+1. Clone FaceFusion somewhere on your machine:
+   ```bash
+   git clone https://github.com/facefusion/facefusion.git ~/code/facefusion
+   ```
+2. Set `FACEFUSION_SOURCE_PATH` in your `.env` to the absolute path of that clone:
+   ```
+   FACEFUSION_SOURCE_PATH=/home/yourname/code/facefusion
+   ```
+3. Set `IMAGE_PROVIDER=facefusion` in `.env`.
+
+The directory is bind-mounted into the `facefusion` Docker service at `/facefusion`. ONNX models are downloaded on first use into the `ff_models` Docker volume and persisted across restarts. Leave `IMAGE_PROVIDER=mock` (the default) to skip this entirely.
+
 ---
 
 ## Starting the dev stack
