@@ -55,4 +55,10 @@ dump.rdb
 
 # Logs
 *.log
+
+# Local tooling
 .beads/
+.claude/
+
+# macOS
+**/.DS_Store
