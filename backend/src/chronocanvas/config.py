@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     openai_api_key: str = ""
 
     # Web Search
-    brave_search_api_key: str = ""
+    serpapi_key: str = ""
 
     # LLM Routing
     default_llm_provider: str = "ollama"

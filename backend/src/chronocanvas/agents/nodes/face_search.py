@@ -13,33 +13,29 @@ logger = logging.getLogger(__name__)
 SEARCH_QUERY_TEMPLATE = "{figure_name} historical portrait photograph"
 
 
-async def _search_brave(query: str) -> list[dict]:
-    """Query Brave Image Search API. Returns list of result dicts with 'url' and 'thumbnail'."""
-    headers = {
-        "Accept": "application/json",
-        "Accept-Encoding": "gzip",
-        "X-Subscription-Token": settings.brave_search_api_key,
+async def _search_serpapi(query: str) -> list[dict]:
+    """Query SerpAPI Google Images. Returns list of result dicts with 'url' and 'thumbnail'."""
+    params = {
+        "engine": "google_images",
+        "q": query,
+        "ijn": "0",
+        "api_key": settings.serpapi_key,
     }
-    params = {"q": query, "count": 5, "safesearch": "strict", "search_lang": "en"}
 
     async with httpx.AsyncClient(timeout=10.0) as client:
-        resp = await client.get(
-            "https://api.search.brave.com/res/v1/images/search",
-            headers=headers,
-            params=params,
-        )
+        resp = await client.get("https://serpapi.com/search.json", params=params)
         resp.raise_for_status()
         data = resp.json()
 
-    results = data.get("results", [])
+    results = data.get("images_results", [])
     return [
         {
-            "url": r.get("url", ""),
-            "thumbnail": r.get("thumbnail", {}).get("src", ""),
+            "url": r.get("original", ""),
+            "thumbnail": r.get("thumbnail", ""),
             "title": r.get("title", ""),
         }
         for r in results
-        if r.get("url")
+        if r.get("original") or r.get("thumbnail")
     ]
 
 
@@ -75,8 +71,8 @@ async def face_search_node(state: AgentState) -> AgentState:
         trace.append({"agent": "face_search", "timestamp": time.time(), "skipped": True, "reason": "no_figure_name"})
         return {**state, "current_agent": "face_search", "agent_trace": trace}
 
-    if not settings.brave_search_api_key:
-        logger.info("Face search: BRAVE_SEARCH_API_KEY not set, skipping")
+    if not settings.serpapi_key:
+        logger.info("Face search: SERPAPI_KEY not set, skipping")
         trace.append({"agent": "face_search", "timestamp": time.time(), "skipped": True, "reason": "no_api_key"})
         return {**state, "current_agent": "face_search", "agent_trace": trace}
 
@@ -87,12 +83,12 @@ async def face_search_node(state: AgentState) -> AgentState:
         return {**state, "current_agent": "face_search", "agent_trace": trace}
 
     query = SEARCH_QUERY_TEMPLATE.format(figure_name=figure_name)
-    logger.info(f"Face search: querying for '{query}'")
+    logger.info(f"Face search: querying SerpAPI for '{query}'")
 
     try:
-        results = await _search_brave(query)
+        results = await _search_serpapi(query)
     except Exception as e:
-        logger.warning(f"Face search: Brave API error: {e}")
+        logger.warning(f"Face search: SerpAPI error: {e}")
         trace.append({
             "agent": "face_search",
             "timestamp": time.time(),
@@ -116,16 +112,16 @@ async def face_search_node(state: AgentState) -> AgentState:
     request_id = state.get("request_id", "unknown")
     output_dir = Path(settings.output_dir) / request_id
 
-    # Try each result until one downloads successfully
+    # Try original URLs first, fall back to thumbnails
     downloaded_path = None
     used_url = None
     for result in results:
-        url = result.get("thumbnail") or result.get("url")
-        if not url:
-            continue
-        downloaded_path = await _download_image(url, output_dir)
+        for url in filter(None, [result.get("url"), result.get("thumbnail")]):
+            downloaded_path = await _download_image(url, output_dir)
+            if downloaded_path:
+                used_url = url
+                break
         if downloaded_path:
-            used_url = result.get("url", url)
             break
 
     if not downloaded_path:
@@ -157,6 +153,6 @@ async def face_search_node(state: AgentState) -> AgentState:
         "source_face_path": downloaded_path,
         "face_search_url": used_url,
         "face_search_query": query,
-        "face_search_provider": "brave",
+        "face_search_provider": "serpapi",
         "agent_trace": trace,
     }
