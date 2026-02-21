@@ -12,23 +12,30 @@ import { AuditList } from "@/pages/AuditList";
 import { Timeline } from "@/pages/Timeline";
 
 function getPage(path: string) {
-  if (path.startsWith("/audit/")) {
-    const requestId = path.slice("/audit/".length);
+  const qIdx = path.indexOf("?");
+  const pathname = qIdx === -1 ? path : path.slice(0, qIdx);
+  const search = qIdx === -1 ? "" : path.slice(qIdx + 1);
+
+  if (pathname.startsWith("/audit/")) {
+    const requestId = pathname.slice("/audit/".length);
     return <AuditDetail requestId={requestId} />;
   }
 
-  if (path.startsWith("/guide/")) {
-    const section = path.slice("/guide/".length);
+  if (pathname.startsWith("/guide/")) {
+    const section = pathname.slice("/guide/".length);
     return <Guide section={section} />;
   }
 
-  switch (path) {
+  switch (pathname) {
     case "/timeline":
       return <Timeline />;
     case "/figures":
       return <FigureLibrary />;
-    case "/generate":
-      return <Generate />;
+    case "/generate": {
+      const params = new URLSearchParams(search);
+      const figureId = params.get("figure_id") ?? undefined;
+      return <Generate figureId={figureId} />;
+    }
     case "/validate":
       return <Validate />;
     case "/export":

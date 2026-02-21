@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,21 +9,24 @@ import {
   useGenerationImages,
   useUploadFace,
 } from "@/api/hooks/useGeneration";
+import { useFigure } from "@/api/hooks/useFigures";
 import { useGenerationWS } from "@/api/hooks/useGenerationWS";
 import { PipelineStepper } from "@/components/generation/PipelineStepper";
 import { DAGVisualizer } from "@/components/generation/DAGVisualizer";
 import { StreamingText } from "@/components/generation/StreamingText";
 import { useNavigation } from "@/stores/navigation";
 
-export function Generate() {
+export function Generate({ figureId }: { figureId?: string }) {
   const [inputText, setInputText] = useState("");
   const [activeRequestId, setActiveRequestId] = useState<string | null>(null);
   const [faceId, setFaceId] = useState<string | null>(null);
   const [facePreview, setFacePreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const autoTriggered = useRef(false);
   const { navigate } = useNavigation();
   const createGeneration = useCreateGeneration();
   const uploadFace = useUploadFace();
+  const { data: figure } = useFigure(figureId ?? "");
   const activeRequest = useGeneration(activeRequestId ?? "");
   const isRunning = !!activeRequest.data && activeRequest.data.status !== "completed" && activeRequest.data.status !== "failed";
   const { imageProgress, streamingText, streamingAgent } = useGenerationWS(activeRequestId, isRunning);
@@ -31,10 +34,22 @@ export function Generate() {
     activeRequest.data?.status === "completed" ? (activeRequestId ?? "") : "",
   );
 
+  // When navigated from the Timeline with a figureId, pre-fill and auto-trigger
+  useEffect(() => {
+    if (!figure || autoTriggered.current || activeRequestId) return;
+    autoTriggered.current = true;
+    const text = figure.name;
+    setInputText(text);
+    createGeneration.mutate(
+      { input_text: text, figure_id: figure.id },
+      { onSuccess: (data) => setActiveRequestId(data.id) },
+    );
+  }, [figure]);
+
   const handleGenerate = () => {
     if (!inputText.trim()) return;
     createGeneration.mutate(
-      { input_text: inputText, ...(faceId ? { face_id: faceId } : {}) },
+      { input_text: inputText, ...(figureId ? { figure_id: figureId } : {}), ...(faceId ? { face_id: faceId } : {}) },
       {
         onSuccess: (data) => {
           setActiveRequestId(data.id);
