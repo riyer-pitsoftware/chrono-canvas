@@ -45,44 +45,56 @@ All configuration is via environment variables. Copy `.env.example` to `.env` to
 
 **Never commit `.env` to version control.**
 
+> **Source of truth**: `.env.example` and `backend/src/chronocanvas/config.py` are
+> kept in sync by `scripts/check_env_keys.py`, which runs in CI on every push.
+> Per-task LLM routing defaults live in `backend/src/chronocanvas/llm/router.py`
+> (`DEFAULT_ROUTING` dict); `DEFAULT_LLM_PROVIDER` is the global fallback.
+
 ### LLM providers
 
 | Variable | Description | Default |
 |---|---|---|
-| `DEFAULT_LLM_PROVIDER` | Fallback provider when no task-specific routing applies | `ollama` |
+| `DEFAULT_LLM_PROVIDER` | Global fallback provider; per-task overrides in `llm/router.py` | `ollama` |
 | `OLLAMA_BASE_URL` | Ollama endpoint | `http://localhost:11434` |
 | `OLLAMA_MODEL` | Model name for Ollama | `llama3.1:8b` |
 | `ANTHROPIC_API_KEY` | Anthropic API key (required for Claude) | — |
-| `CLAUDE_MODEL` | Claude model ID | `claude-sonnet-4-6` |
+| `CLAUDE_MODEL` | Claude model ID | `claude-sonnet-4-5-20250929` |
 | `OPENAI_API_KEY` | OpenAI API key | — |
 | `OPENAI_MODEL` | OpenAI model | `gpt-4o` |
+| `SERPAPI_KEY` | SerpAPI key for face image web search (optional) | — |
 
 ### Image generation
 
 | Variable | Description | Default |
 |---|---|---|
 | `IMAGE_PROVIDER` | `mock`, `comfyui`, or `facefusion` | `mock` |
+| `SD_API_URL` | Stable Diffusion API endpoint | `http://localhost:7860` |
 | `COMFYUI_API_URL` | ComfyUI API endpoint | `http://localhost:8188` |
 | `COMFYUI_MODEL` | `sdxl` or `flux` | `sdxl` |
-| `COMFYUI_SDXL_CHECKPOINT` | SDXL checkpoint filename | — |
+| `COMFYUI_SDXL_CHECKPOINT` | SDXL checkpoint filename | `juggernautXL_v9.safetensors` |
 | `FACEFUSION_API_URL` | FaceFusion API endpoint | `http://localhost:7861` |
 
 ### Database and cache
 
-| Variable | Description |
-|---|---|
-| `DATABASE_URL` | PostgreSQL connection string (asyncpg format) |
-| `REDIS_URL` | Redis connection string |
+| Variable | Description | Default |
+|---|---|---|
+| `DATABASE_URL` | PostgreSQL connection string (asyncpg format) | `postgresql+asyncpg://...` |
+| `REDIS_URL` | Redis connection string | `redis://localhost:6379/0` |
 
 ### Application
 
 | Variable | Description | Default |
 |---|---|---|
+| `API_HOST` | API bind address | `0.0.0.0` |
+| `API_PORT` | API bind port | `8000` |
+| `CORS_ORIGINS` | JSON array of allowed origins | `["http://localhost:3000"]` |
+| `SECRET_KEY` | Secret for signing tokens — **change in production** | `change-me-in-production` |
+| `CONTENT_MODERATION_ENABLED` | Enable keyword input validation (default on) | `true` |
 | `OUTPUT_DIR` | Directory for generated images | `./output` |
 | `UPLOAD_DIR` | Directory for uploaded face images | `./uploads` |
+| `RATE_LIMIT_RPM` | API rate limit (requests per minute) | `60` |
+| `LLM_MAX_CONCURRENT` | Max concurrent LLM calls | `5` |
 | `LOG_LEVEL` | Logging level | `INFO` |
-| `CORS_ORIGINS` | Comma-separated allowed origins | `http://localhost:3000` |
-| `SERPAPI_KEY` | SerpAPI key for face image web search (optional) | — |
 
 ---
 

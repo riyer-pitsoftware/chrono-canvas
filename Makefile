@@ -1,4 +1,4 @@
-.PHONY: dev up down build seed test lint migrate frontend backend cli clean
+.PHONY: dev up down build seed test lint migrate frontend backend cli clean check-env
 
 # Development
 dev: up
@@ -34,6 +34,10 @@ test-backend:
 
 test-cli:
 	cd cli && pytest -v
+
+# Config drift check
+check-env:
+	python scripts/check_env_keys.py
 
 # Linting
 lint:
