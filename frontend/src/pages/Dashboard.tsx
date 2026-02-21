@@ -3,11 +3,13 @@ import { Badge } from "@/components/ui/badge";
 import { useFigures } from "@/api/hooks/useFigures";
 import { useGenerations } from "@/api/hooks/useGeneration";
 import { useCostSummary } from "@/api/hooks/useAgents";
+import { useNavigation } from "@/stores/navigation";
 
 export function Dashboard() {
   const figures = useFigures();
   const generations = useGenerations();
   const costs = useCostSummary();
+  const { navigate } = useNavigation();
 
   return (
     <div>
@@ -44,7 +46,11 @@ export function Dashboard() {
           )}
           <div className="space-y-3">
             {generations.data?.items.slice(0, 5).map((gen) => (
-              <div key={gen.id} className="flex items-center justify-between p-3 rounded-md border border-[var(--border)]">
+              <div
+                key={gen.id}
+                onClick={() => navigate(`/audit/${gen.id}`)}
+                className="flex items-center justify-between p-3 rounded-md border border-[var(--border)] cursor-pointer hover:bg-[var(--accent)] transition-colors"
+              >
                 <div>
                   <p className="font-medium">{gen.input_text.slice(0, 60)}</p>
                   <p className="text-sm text-[var(--muted-foreground)]">
