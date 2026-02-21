@@ -53,7 +53,7 @@ def build_graph() -> StateGraph:
     graph.add_conditional_edges(
         "validation",
         should_continue_after_validation,
-        {"continue": "facial_compositing", "regenerate": "prompt_generation", "error": END},
+        {"continue": "facial_compositing", "error": END},
     )
 
     graph.add_edge("facial_compositing", "export")
