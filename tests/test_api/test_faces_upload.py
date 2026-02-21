@@ -3,14 +3,14 @@ import tempfile
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-from historylens.main import app
+from chronocanvas.main import app
 
 
 @pytest.fixture(autouse=True)
 def _set_upload_dir(monkeypatch):
     with tempfile.TemporaryDirectory() as tmpdir:
-        monkeypatch.setattr("historylens.api.routes.faces.settings.upload_dir", tmpdir)
-        monkeypatch.setattr("historylens.config.settings.upload_dir", tmpdir)
+        monkeypatch.setattr("chronocanvas.api.routes.faces.settings.upload_dir", tmpdir)
+        monkeypatch.setattr("chronocanvas.config.settings.upload_dir", tmpdir)
         yield tmpdir
 
 

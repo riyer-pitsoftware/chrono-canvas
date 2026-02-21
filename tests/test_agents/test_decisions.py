@@ -1,4 +1,4 @@
-from historylens.agents.decisions import (
+from chronocanvas.agents.decisions import (
     should_continue_after_image,
     should_continue_after_validation,
 )

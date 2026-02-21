@@ -4,8 +4,8 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from historylens.agents.nodes.face_swap import face_swap_node
-from historylens.imaging.base import ImageResult
+from chronocanvas.agents.nodes.face_swap import face_swap_node
+from chronocanvas.imaging.base import ImageResult
 
 
 def _base_state(tmp_path: str, **overrides) -> dict:
@@ -86,7 +86,7 @@ async def test_success_path():
         )
 
         with patch(
-            "historylens.agents.nodes.face_swap.FaceFusionClient"
+            "chronocanvas.agents.nodes.face_swap.FaceFusionClient"
         ) as mock_cls:
             mock_client = AsyncMock()
             mock_client.generate.return_value = mock_result
@@ -126,7 +126,7 @@ async def test_graceful_degradation_on_exception():
         )
 
         with patch(
-            "historylens.agents.nodes.face_swap.FaceFusionClient"
+            "chronocanvas.agents.nodes.face_swap.FaceFusionClient"
         ) as mock_cls:
             mock_client = AsyncMock()
             mock_client.generate.side_effect = RuntimeError("FaceFusion server down")

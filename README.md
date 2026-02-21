@@ -1,4 +1,4 @@
-# HistoryLens
+# ChronoCanvas
 
 Agentic historical education toolkit that generates historically accurate portraits using AI agents, multi-LLM routing, and image generation.
 

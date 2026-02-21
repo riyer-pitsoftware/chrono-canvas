@@ -9,6 +9,7 @@ import {
   useGenerationImages,
   useUploadFace,
 } from "@/api/hooks/useGeneration";
+import { useGenerationWS } from "@/api/hooks/useGenerationWS";
 import { PipelineStepper } from "@/components/generation/PipelineStepper";
 import { useNavigation } from "@/stores/navigation";
 
@@ -22,6 +23,8 @@ export function Generate() {
   const createGeneration = useCreateGeneration();
   const uploadFace = useUploadFace();
   const activeRequest = useGeneration(activeRequestId ?? "");
+  const isRunning = !!activeRequest.data && activeRequest.data.status !== "completed" && activeRequest.data.status !== "failed";
+  const { imageProgress } = useGenerationWS(activeRequestId, isRunning);
   const images = useGenerationImages(
     activeRequest.data?.status === "completed" ? (activeRequestId ?? "") : "",
   );
@@ -176,6 +179,7 @@ export function Generate() {
                     status={activeRequest.data.status}
                     agentTrace={activeRequest.data.agent_trace}
                     llmCalls={activeRequest.data.llm_calls ?? undefined}
+                    imageProgress={imageProgress}
                   />
                 </div>
               )}

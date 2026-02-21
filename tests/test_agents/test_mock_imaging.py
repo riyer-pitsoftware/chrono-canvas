@@ -2,7 +2,7 @@ import pytest
 from pathlib import Path
 import tempfile
 
-from historylens.imaging.mock_generator import MockImageGenerator
+from chronocanvas.imaging.mock_generator import MockImageGenerator
 
 
 @pytest.mark.asyncio

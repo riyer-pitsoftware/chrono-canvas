@@ -11,11 +11,11 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 os.environ["DATABASE_URL"] = "sqlite+aiosqlite:///test.db"
 os.environ["REDIS_URL"] = "redis://localhost:6379/1"
 os.environ["IMAGE_PROVIDER"] = "mock"
-os.environ["OUTPUT_DIR"] = "/tmp/historylens_test_output"
-os.environ["UPLOAD_DIR"] = "/tmp/historylens_test_uploads"
+os.environ["OUTPUT_DIR"] = "/tmp/chronocanvas_test_output"
+os.environ["UPLOAD_DIR"] = "/tmp/chronocanvas_test_uploads"
 
-from historylens.db.base import Base
-from historylens.db.models import *  # noqa
+from chronocanvas.db.base import Base
+from chronocanvas.db.models import *  # noqa
 
 
 @pytest.fixture(scope="session")

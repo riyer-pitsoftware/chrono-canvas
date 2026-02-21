@@ -2,7 +2,7 @@ import asyncio
 
 import pytest
 
-from historylens.llm.rate_limiter import RateLimiter
+from chronocanvas.llm.rate_limiter import RateLimiter
 
 
 @pytest.mark.asyncio

@@ -43,7 +43,10 @@
       "Bash(npx tsc:*)",
       "Bash(python:*)",
       "Bash(PYTHONPATH=src python:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(PYTHONPATH=backend/src python -m pytest:*)",
+      "Bash(git mv:*)"
     ]
   }
 }

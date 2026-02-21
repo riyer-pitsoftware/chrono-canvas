@@ -1,4 +1,4 @@
-from historylens.agents.state import AgentState
+from chronocanvas.agents.state import AgentState
 
 
 def test_agent_state_creation():

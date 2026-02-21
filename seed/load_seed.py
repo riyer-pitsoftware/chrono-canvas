@@ -10,16 +10,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 # Add backend src to path
 sys.path.insert(0, str(Path(__file__).parent.parent / "backend" / "src"))
 
-from historylens.db.engine import async_session, engine
-from historylens.db.base import Base
-from historylens.db.models import *  # noqa
-from historylens.services.figure import load_figures_from_json
+from chronocanvas.db.engine import async_session, engine
+from chronocanvas.db.base import Base
+from chronocanvas.db.models import *  # noqa
+from chronocanvas.services.figure import load_figures_from_json
 
 SEED_DIR = Path(__file__).parent
 
 
 async def load_periods(session: AsyncSession) -> int:
-    from historylens.db.models.period import Period
+    from chronocanvas.db.models.period import Period
     from sqlalchemy import select
 
     periods_path = SEED_DIR / "periods.json"

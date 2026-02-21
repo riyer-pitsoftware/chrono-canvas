@@ -1,7 +1,7 @@
 import pytest
 
-from historylens.db.repositories.figures import FigureRepository
-from historylens.db.repositories.requests import RequestRepository
+from chronocanvas.db.repositories.figures import FigureRepository
+from chronocanvas.db.repositories.requests import RequestRepository
 
 
 @pytest.mark.asyncio

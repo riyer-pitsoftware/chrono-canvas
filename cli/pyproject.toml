@@ -3,9 +3,9 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "historylens-cli"
+name = "chronocanvas-cli"
 version = "0.1.0"
-description = "CLI for HistoryLens"
+description = "CLI for ChronoCanvas"
 requires-python = ">=3.11"
 dependencies = [
     "typer>=0.15.0",
@@ -14,7 +14,7 @@ dependencies = [
 ]
 
 [project.scripts]
-historylens = "historylens_cli.main:app"
+chronocanvas = "chronocanvas_cli.main:app"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/historylens_cli"]
+packages = ["src/chronocanvas_cli"]

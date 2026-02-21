@@ -5,15 +5,15 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-from historylens.main import app
+from chronocanvas.main import app
 
 
 @pytest.fixture(autouse=True)
 def _setup_dirs(monkeypatch):
     with tempfile.TemporaryDirectory() as tmpdir:
-        monkeypatch.setattr("historylens.config.settings.upload_dir", tmpdir)
-        monkeypatch.setattr("historylens.config.settings.output_dir", tmpdir)
-        monkeypatch.setattr("historylens.api.routes.generation.settings.upload_dir", tmpdir)
+        monkeypatch.setattr("chronocanvas.config.settings.upload_dir", tmpdir)
+        monkeypatch.setattr("chronocanvas.config.settings.output_dir", tmpdir)
+        monkeypatch.setattr("chronocanvas.api.routes.generation.settings.upload_dir", tmpdir)
         yield tmpdir
 
 
@@ -26,7 +26,7 @@ async def test_create_generation_with_face_id(_setup_dirs):
     face_file = faces_dir / "abc123.jpg"
     face_file.write_bytes(b"fake face")
 
-    with patch("historylens.api.routes.generation.run_generation_pipeline") as mock_pipeline:
+    with patch("chronocanvas.api.routes.generation.run_generation_pipeline") as mock_pipeline:
         async with AsyncClient(
             transport=ASGITransport(app=app), base_url="http://test"
         ) as client:
@@ -45,7 +45,7 @@ async def test_create_generation_with_face_id(_setup_dirs):
 
 @pytest.mark.asyncio
 async def test_create_generation_without_face_id():
-    with patch("historylens.api.routes.generation.run_generation_pipeline") as mock_pipeline:
+    with patch("chronocanvas.api.routes.generation.run_generation_pipeline") as mock_pipeline:
         async with AsyncClient(
             transport=ASGITransport(app=app), base_url="http://test"
         ) as client:

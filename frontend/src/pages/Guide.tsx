@@ -92,17 +92,17 @@ const uiPages = [
 ];
 
 const cliCommands = [
-  { command: "historylens add figure", description: "Add a historical figure to the database" },
-  { command: "historylens generate", description: "Generate a portrait from a text description" },
-  { command: "historylens batch", description: "Run batch generation from a JSON file" },
-  { command: "historylens status", description: "Check the status of a generation request" },
-  { command: "historylens download", description: "Download the generated image" },
-  { command: "historylens list figures", description: "List historical figures with search/filter" },
-  { command: "historylens list generations", description: "List generation requests" },
-  { command: "historylens validate", description: "Show validation results for a generation" },
-  { command: "historylens agents list", description: "List all available agents" },
-  { command: "historylens agents llm-status", description: "Check LLM provider availability" },
-  { command: "historylens agents costs", description: "Show LLM cost summary" },
+  { command: "chronocanvas add figure", description: "Add a historical figure to the database" },
+  { command: "chronocanvas generate", description: "Generate a portrait from a text description" },
+  { command: "chronocanvas batch", description: "Run batch generation from a JSON file" },
+  { command: "chronocanvas status", description: "Check the status of a generation request" },
+  { command: "chronocanvas download", description: "Download the generated image" },
+  { command: "chronocanvas list figures", description: "List historical figures with search/filter" },
+  { command: "chronocanvas list generations", description: "List generation requests" },
+  { command: "chronocanvas validate", description: "Show validation results for a generation" },
+  { command: "chronocanvas agents list", description: "List all available agents" },
+  { command: "chronocanvas agents llm-status", description: "Check LLM provider availability" },
+  { command: "chronocanvas agents costs", description: "Show LLM cost summary" },
 ];
 
 const routingTable = [
@@ -173,7 +173,7 @@ export function Guide() {
             Guide
           </h2>
           <p className="text-[var(--muted-foreground)]">
-            Everything you need to know about using HistoryLens.
+            Everything you need to know about using ChronoCanvas.
           </p>
         </div>
 
@@ -184,10 +184,10 @@ export function Guide() {
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
                 <Sparkles className="w-5 h-5" />
-                What is HistoryLens?
+                What is ChronoCanvas?
               </CardTitle>
               <CardDescription>
-                HistoryLens is an open-source toolkit that generates historically-accurate portraits using a 7-agent AI pipeline.
+                ChronoCanvas is an open-source toolkit that generates historically-accurate portraits using a 7-agent AI pipeline.
                 It's built for educators, historians, and content creators who need period-accurate character depictions.
               </CardDescription>
             </CardHeader>

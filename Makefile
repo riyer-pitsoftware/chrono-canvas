@@ -2,7 +2,7 @@
 
 # Development
 dev: up
-	@echo "HistoryLens running at http://localhost:3000"
+	@echo "ChronoCanvas running at http://localhost:3000"
 
 up:
 	docker compose -f docker-compose.dev.yml up --build -d
@@ -22,7 +22,7 @@ migration:
 
 # Seed data
 seed:
-	cd backend && python -m historylens.seed.load_seed
+	cd backend && python -m chronocanvas.seed.load_seed
 
 # Testing
 test:
@@ -52,7 +52,7 @@ frontend-build:
 
 # Backend (local dev)
 backend:
-	cd backend && uvicorn historylens.main:app --reload --host 0.0.0.0 --port 8000
+	cd backend && uvicorn chronocanvas.main:app --reload --host 0.0.0.0 --port 8000
 
 # CLI
 cli:

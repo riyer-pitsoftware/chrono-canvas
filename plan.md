@@ -1,8 +1,8 @@
-# HistoryLens — Product Requirements Document
+# ChronoCanvas — Product Requirements Document
 
 ## Overview
 
-HistoryLens is an open-source, agentic toolkit that generates historically-accurate portraits of historical figures using a 7-agent AI pipeline. It is built for educators, historians, and content creators who need visually compelling, period-accurate character depictions.
+ChronoCanvas is an open-source, agentic toolkit that generates historically-accurate portraits of historical figures using a 7-agent AI pipeline. It is built for educators, historians, and content creators who need visually compelling, period-accurate character depictions.
 
 **Deployment model:** Local Docker Compose stack with no cloud dependency — runs entirely on your hardware with optional cloud LLM providers.
 
@@ -148,17 +148,17 @@ Default task-to-provider mapping:
 
 | Command | Description |
 |---|---|
-| `historylens add figure` | Add a historical figure to the database |
-| `historylens generate` | Generate a portrait from a text description |
-| `historylens batch` | Run batch generation from a JSON file |
-| `historylens status` | Check the status of a generation request |
-| `historylens download` | Download the generated image |
-| `historylens list figures` | List historical figures with search/filter |
-| `historylens list generations` | List generation requests |
-| `historylens validate` | Show validation results for a generation |
-| `historylens agents list` | List all available agents |
-| `historylens agents llm-status` | Check LLM provider availability |
-| `historylens agents costs` | Show LLM cost summary |
+| `chronocanvas add figure` | Add a historical figure to the database |
+| `chronocanvas generate` | Generate a portrait from a text description |
+| `chronocanvas batch` | Run batch generation from a JSON file |
+| `chronocanvas status` | Check the status of a generation request |
+| `chronocanvas download` | Download the generated image |
+| `chronocanvas list figures` | List historical figures with search/filter |
+| `chronocanvas list generations` | List generation requests |
+| `chronocanvas validate` | Show validation results for a generation |
+| `chronocanvas agents list` | List all available agents |
+| `chronocanvas agents llm-status` | Check LLM provider availability |
+| `chronocanvas agents costs` | Show LLM cost summary |
 
 ### API
 
@@ -199,33 +199,33 @@ open http://localhost:3000  # Open the web UI
 ### Project Structure
 
 ```
-history-faces/
+chrono-canvas/
 ├── frontend/          # React + TypeScript + Vite
 │   └── src/
 │       ├── pages/     # One file per page
 │       ├── components/# Shared UI components
 │       └── api/       # API hooks
 ├── backend/           # FastAPI + LangGraph
-│   └── src/historylens/
+│   └── src/chronocanvas/
 │       ├── agents/    # Agent implementations
 │       ├── llm/       # LLM router and providers
 │       └── api/       # REST endpoints
 ├── cli/               # CLI tool (Click-based)
-│   └── src/historylens_cli/
+│   └── src/chronocanvas_cli/
 │       └── commands/  # One file per command group
 └── docker-compose.yml
 ```
 
 ### How to Add a New Agent
 
-1. Create `backend/src/historylens/agents/your_agent.py` implementing the `BaseAgent` interface
-2. Register it in the LangGraph workflow in `backend/src/historylens/agents/workflow.py`
-3. Add a task type to `backend/src/historylens/llm/router.py` if it needs LLM routing
+1. Create `backend/src/chronocanvas/agents/your_agent.py` implementing the `BaseAgent` interface
+2. Register it in the LangGraph workflow in `backend/src/chronocanvas/agents/workflow.py`
+3. Add a task type to `backend/src/chronocanvas/llm/router.py` if it needs LLM routing
 
 ### How to Add a New LLM Provider
 
-1. Implement the provider interface in `backend/src/historylens/llm/providers/`
-2. Add it to the provider registry in `backend/src/historylens/llm/router.py`
+1. Implement the provider interface in `backend/src/chronocanvas/llm/providers/`
+2. Add it to the provider registry in `backend/src/chronocanvas/llm/router.py`
 3. Add env vars to `.env.example`
 
 ### Running Tests

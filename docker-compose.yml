@@ -2,9 +2,9 @@ services:
   db:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: historylens
-      POSTGRES_PASSWORD: historylens
-      POSTGRES_DB: historylens
+      POSTGRES_USER: chronocanvas
+      POSTGRES_PASSWORD: chronocanvas
+      POSTGRES_DB: chronocanvas
     volumes:
       - pgdata:/var/lib/postgresql/data
     ports:
@@ -12,7 +12,7 @@ services:
     networks:
       - db-net
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U historylens"]
+      test: ["CMD-SHELL", "pg_isready -U chronocanvas"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -40,7 +40,7 @@ services:
       dockerfile: docker/Dockerfile.api
     env_file: .env
     environment:
-      DATABASE_URL: postgresql+asyncpg://historylens:historylens@db:5432/historylens
+      DATABASE_URL: postgresql+asyncpg://chronocanvas:chronocanvas@db:5432/chronocanvas
       REDIS_URL: redis://redis:6379/0
       COMFYUI_API_URL: http://host.docker.internal:8188
     ports:

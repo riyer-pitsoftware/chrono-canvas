@@ -4,13 +4,13 @@ from pathlib import Path
 
 import pytest
 
-from historylens.agents.nodes.export import export_node
+from chronocanvas.agents.nodes.export import export_node
 
 
 @pytest.mark.asyncio
 async def test_export_copies_swapped_image(monkeypatch):
     with tempfile.TemporaryDirectory() as tmpdir:
-        monkeypatch.setattr("historylens.agents.nodes.export.settings.output_dir", tmpdir)
+        monkeypatch.setattr("chronocanvas.agents.nodes.export.settings.output_dir", tmpdir)
 
         # Create fake images
         gen_image = Path(tmpdir) / "generated.png"
@@ -56,7 +56,7 @@ async def test_export_copies_swapped_image(monkeypatch):
 @pytest.mark.asyncio
 async def test_export_without_face_swap(monkeypatch):
     with tempfile.TemporaryDirectory() as tmpdir:
-        monkeypatch.setattr("historylens.agents.nodes.export.settings.output_dir", tmpdir)
+        monkeypatch.setattr("chronocanvas.agents.nodes.export.settings.output_dir", tmpdir)
 
         gen_image = Path(tmpdir) / "generated.png"
         gen_image.write_bytes(b"original image bytes")

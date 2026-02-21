@@ -1,4 +1,4 @@
-from historylens.agents.graph import build_graph
+from chronocanvas.agents.graph import build_graph
 
 
 def test_graph_builds_successfully():

@@ -1,8 +1,8 @@
-# PRD: Audit Trail for HistoryLens Pipeline
+# PRD: Audit Trail for ChronoCanvas Pipeline
 
 ## Problem
 
-HistoryLens generates portraits through a 7-agent LLM pipeline, but provides no meaningful visibility into what each agent actually did. Raw LLM prompts and responses are discarded after parsing, validation gives a numeric score with no reasoning, and the frontend shows only tiny cost badges. Users cannot debug bad outputs or trace the decision chain from input to final image.
+ChronoCanvas generates portraits through a 7-agent LLM pipeline, but provides no meaningful visibility into what each agent actually did. Raw LLM prompts and responses are discarded after parsing, validation gives a numeric score with no reasoning, and the frontend shows only tiny cost badges. Users cannot debug bad outputs or trace the decision chain from input to final image.
 
 ## Goals
 

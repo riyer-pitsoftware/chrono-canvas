@@ -1,7 +1,7 @@
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-from historylens.main import app
+from chronocanvas.main import app
 
 
 @pytest.mark.asyncio
@@ -13,4 +13,4 @@ async def test_health_endpoint():
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "ok"
-        assert data["service"] == "historylens"
+        assert data["service"] == "chronocanvas"

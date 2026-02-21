@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "historylens"
+name = "chronocanvas"
 version = "0.1.0"
 description = "Agentic historical education toolkit"
 requires-python = ">=3.11"
@@ -25,6 +25,7 @@ dependencies = [
     "python-multipart>=0.0.18",
     "python-jose[cryptography]>=3.3.0",
     "aiofiles>=24.1.0",
+    "websockets>=10.4",
 ]
 
 [project.optional-dependencies]
@@ -38,7 +39,7 @@ dev = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/historylens"]
+packages = ["src/chronocanvas"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

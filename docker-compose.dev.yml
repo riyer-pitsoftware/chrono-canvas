@@ -2,15 +2,15 @@ services:
   db:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: historylens
-      POSTGRES_PASSWORD: historylens
-      POSTGRES_DB: historylens
+      POSTGRES_USER: chronocanvas
+      POSTGRES_PASSWORD: chronocanvas
+      POSTGRES_DB: chronocanvas
     volumes:
       - pgdata:/var/lib/postgresql/data
     ports:
       - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U historylens"]
+      test: ["CMD-SHELL", "pg_isready -U chronocanvas"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -35,7 +35,7 @@ services:
       dockerfile: docker/Dockerfile.api
     env_file: .env
     environment:
-      DATABASE_URL: postgresql+asyncpg://historylens:historylens@db:5432/historylens
+      DATABASE_URL: postgresql+asyncpg://chronocanvas:chronocanvas@db:5432/chronocanvas
       REDIS_URL: redis://redis:6379/0
       LOG_LEVEL: DEBUG
       PYTHONPATH: /app/src
@@ -50,7 +50,7 @@ services:
       - ./backend/src:/app/src
       - ./output:/app/output
       - ./uploads:/app/uploads
-    command: uvicorn historylens.main:app --reload --host 0.0.0.0 --port 8000
+    command: uvicorn chronocanvas.main:app --reload --host 0.0.0.0 --port 8000
     security_opt:
       - no-new-privileges:true
     cap_drop:

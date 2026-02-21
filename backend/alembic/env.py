@@ -5,9 +5,9 @@ from alembic import context
 from sqlalchemy import pool
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
-from historylens.config import settings
-from historylens.db.base import Base
-from historylens.db.models import *  # noqa: F401,F403
+from chronocanvas.config import settings
+from chronocanvas.db.base import Base
+from chronocanvas.db.models import *  # noqa: F401,F403
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.database_url)

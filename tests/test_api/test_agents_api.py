@@ -1,7 +1,7 @@
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-from historylens.main import app
+from chronocanvas.main import app
 
 
 @pytest.mark.asyncio

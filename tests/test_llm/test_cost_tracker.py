@@ -1,4 +1,4 @@
-from historylens.llm.cost_tracker import CostTracker
+from chronocanvas.llm.cost_tracker import CostTracker
 
 
 def test_cost_tracker_record():

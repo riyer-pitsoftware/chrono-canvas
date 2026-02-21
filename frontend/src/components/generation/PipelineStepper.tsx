@@ -1,6 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle, Circle, Loader, XCircle } from "lucide-react";
 import type { LLMCallDetail } from "@/api/types";
+import type { ImageProgress } from "@/api/hooks/useGenerationWS";
 
 const PIPELINE_STAGES = [
   { key: "extraction", label: "Extraction" },
@@ -17,6 +18,7 @@ interface PipelineStepperProps {
   status: string;
   agentTrace: Array<Record<string, unknown>>;
   llmCalls?: LLMCallDetail[];
+  imageProgress?: ImageProgress | null;
 }
 
 function getStageStatus(
@@ -31,7 +33,7 @@ function getStageStatus(
   return "pending";
 }
 
-export function PipelineStepper({ currentAgent, status, agentTrace, llmCalls = [] }: PipelineStepperProps) {
+export function PipelineStepper({ currentAgent, status, agentTrace, llmCalls = [], imageProgress }: PipelineStepperProps) {
   const completedAgents = new Set(agentTrace.map((t) => String(t.agent)));
 
   const callsByAgent = new Map<string, LLMCallDetail[]>();
@@ -81,7 +83,20 @@ export function PipelineStepper({ currentAgent, status, agentTrace, llmCalls = [
                     ${totalCost.toFixed(6)}
                   </Badge>
                 )}
+                {stage.key === "image_generation" && stageStatus === "running" && imageProgress && (
+                  <span className="text-xs text-[var(--muted-foreground)]">
+                    Step {imageProgress.step}/{imageProgress.total}
+                  </span>
+                )}
               </div>
+              {stage.key === "image_generation" && stageStatus === "running" && imageProgress && (
+                <div className="mt-1 h-1.5 w-full rounded-full bg-[var(--muted)] overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-blue-500 transition-all duration-300"
+                    style={{ width: `${Math.round((imageProgress.step / imageProgress.total) * 100)}%` }}
+                  />
+                </div>
+              )}
               {summary && (
                 <p className="text-xs text-[var(--muted-foreground)] truncate">{summary}</p>
               )}

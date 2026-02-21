@@ -17,7 +17,7 @@ export function Sidebar({ currentPath, onNavigate }: { currentPath: string; onNa
       <div className="p-6">
         <h1 className="text-xl font-bold flex items-center gap-2">
           <Cpu className="w-6 h-6" />
-          HistoryLens
+          ChronoCanvas
         </h1>
       </div>
       <nav className="flex-1 px-3">
