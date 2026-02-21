@@ -8,6 +8,7 @@ from chronocanvas.llm.providers.claude import ClaudeProvider
 from chronocanvas.llm.providers.ollama import OllamaProvider
 from chronocanvas.llm.providers.openai import OpenAIProvider
 from chronocanvas.llm.rate_limiter import RateLimiter
+from chronocanvas.redis_client import publish_progress
 
 logger = logging.getLogger(__name__)
 
@@ -78,6 +79,73 @@ class LLMRouter:
         response.system_prompt = system_prompt
         response.user_prompt = prompt
         response.duration_ms = elapsed_ms
+
+        self.cost_tracker.record(
+            provider=response.provider,
+            model=response.model,
+            input_tokens=response.input_tokens,
+            output_tokens=response.output_tokens,
+            cost=response.cost,
+            task_type=task_type,
+        )
+
+        return response
+
+    async def generate_stream(
+        self,
+        prompt: str,
+        task_type: TaskType = TaskType.GENERAL,
+        request_id: str = "",
+        agent_name: str = "",
+        system_prompt: str | None = None,
+        temperature: float = 0.7,
+        max_tokens: int = 2000,
+        json_mode: bool = False,
+        provider_override: str | None = None,
+    ) -> LLMResponse:
+        if provider_override and provider_override in self.providers:
+            provider = self.providers[provider_override]
+        else:
+            provider = self.get_provider(task_type)
+
+        if not await provider.is_available():
+            for name, p in self.providers.items():
+                if name != provider.name and await p.is_available():
+                    logger.warning(f"Falling back from {provider.name} to {name}")
+                    provider = p
+                    break
+
+        channel = f"generation:{request_id}" if request_id else None
+
+        async def on_token(token: str) -> None:
+            if channel:
+                await publish_progress(channel, {
+                    "type": "llm_token",
+                    "agent": agent_name,
+                    "token": token,
+                })
+
+        start = time.perf_counter()
+        async with self.rate_limiter:
+            response = await provider.generate_stream(
+                prompt=prompt,
+                system_prompt=system_prompt,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                json_mode=json_mode,
+                on_token=on_token,
+            )
+        elapsed_ms = (time.perf_counter() - start) * 1000
+
+        response.system_prompt = system_prompt
+        response.user_prompt = prompt
+        response.duration_ms = elapsed_ms
+
+        if channel:
+            await publish_progress(channel, {
+                "type": "llm_stream_end",
+                "agent": agent_name,
+            })
 
         self.cost_tracker.record(
             provider=response.provider,

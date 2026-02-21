@@ -9,14 +9,20 @@ export interface ImageProgress {
  * Connect to the generation WebSocket and surface real-time progress.
  *
  * - Returns `imageProgress` with step/total during the image_generation phase.
+ * - Returns `streamingText` + `streamingAgent` for live LLM token output.
  * - Automatically disconnects when the generation completes or fails.
  */
 export function useGenerationWS(requestId: string | null, enabled: boolean) {
   const [imageProgress, setImageProgress] = useState<ImageProgress | null>(null);
+  const [streamingText, setStreamingText] = useState<string>("");
+  const [streamingAgent, setStreamingAgent] = useState<string | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
     if (!requestId || !enabled) return;
+
+    setStreamingText("");
+    setStreamingAgent(null);
 
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const ws = new WebSocket(
@@ -32,18 +38,32 @@ export function useGenerationWS(requestId: string | null, enabled: boolean) {
         return;
       }
 
-      if (data.type === "image_progress") {
+      if (data.type === "llm_token") {
+        const agent = data.agent as string;
+        const token = data.token as string;
+        setStreamingAgent(agent);
+        setStreamingText((prev) => prev + token);
+      } else if (data.type === "llm_stream_end") {
+        // Keep text visible until the next agent starts
+        setStreamingAgent(null);
+      } else if (data.type === "image_progress") {
         setImageProgress({
           step: data.step as number,
           total: data.total as number,
         });
       } else {
-        // Any non-progress event that isn't image_generation clears the bar
         if (data.agent && data.agent !== "image_generation") {
           setImageProgress(null);
         }
+        // New agent starting — clear previous streaming text
+        if (data.agent) {
+          setStreamingText("");
+          setStreamingAgent(null);
+        }
         if (data.status === "completed" || data.status === "failed") {
           setImageProgress(null);
+          setStreamingText("");
+          setStreamingAgent(null);
           ws.close();
         }
       }
@@ -59,5 +79,5 @@ export function useGenerationWS(requestId: string | null, enabled: boolean) {
     };
   }, [requestId, enabled]);
 
-  return { imageProgress };
+  return { imageProgress, streamingText, streamingAgent };
 }

@@ -65,6 +65,8 @@ Browse and search 100 pre-loaded historical figures spanning Ancient through Mod
 ### Generation
 Enter a text description or select an existing figure → the autonomous 7-agent pipeline produces a portrait with real-time progress tracking at each stage.
 
+LLM responses from the Research and Prompt Generation agents stream token-by-token to the UI via WebSocket. Partial text appears word-by-word with a blinking cursor while the model is generating, dramatically reducing perceived latency. The stream is published to Redis pub/sub as `llm_token` events and relayed by the existing WebSocket endpoint.
+
 ### Validation
 Automated historical accuracy scoring on a 0–100 scale. Figures scoring 70+ pass automatically. Flagged anachronisms are displayed for review.
 
@@ -173,6 +175,16 @@ Default task-to-provider mapping:
 | `GET` | `/api/export/{id}` | Download portrait + metadata |
 | `GET` | `/api/agents/status` | Agent health status |
 | `GET` | `/api/agents/metrics` | LLM usage and cost metrics |
+| `WS` | `/ws/generation/{id}` | Real-time generation events (agent progress, LLM token stream, image steps) |
+
+#### WebSocket message types
+
+| `type` | Fields | Description |
+|---|---|---|
+| `llm_token` | `agent`, `token` | Single token chunk from a streaming LLM call |
+| `llm_stream_end` | `agent` | LLM stream finished for this agent |
+| `image_progress` | `step`, `total` | Image generation diffusion step progress |
+| `completed` / `failed` | `status` | Terminal generation event |
 
 ---
 
@@ -225,6 +237,9 @@ chrono-canvas/
 ### How to Add a New LLM Provider
 
 1. Implement the provider interface in `backend/src/chronocanvas/llm/providers/`
+   - Override `generate()` for standard completions
+   - Override `generate_stream()` to enable token streaming (call `await on_token(chunk)` per token, return the full `LLMResponse` at the end)
+   - If streaming is not implemented, the base class falls back to `generate()` automatically
 2. Add it to the provider registry in `backend/src/chronocanvas/llm/router.py`
 3. Add env vars to `.env.example`
 

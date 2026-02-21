@@ -47,7 +47,7 @@ NEGATIVE_PROMPT = (
 async def prompt_generation_node(state: AgentState) -> AgentState:
     logger.info(f"Prompt generation agent: creating prompt for {state.get('figure_name', '')}")
 
-    response = await llm_router.generate(
+    response = await llm_router.generate_stream(
         prompt=PROMPT_GEN_TEMPLATE.format(
             figure_name=state.get("figure_name", ""),
             historical_context=state.get("historical_context", ""),
@@ -56,6 +56,8 @@ async def prompt_generation_node(state: AgentState) -> AgentState:
             art_style_reference=state.get("art_style_reference", ""),
         ),
         task_type=TaskType.PROMPT_GENERATION,
+        request_id=state.get("request_id", ""),
+        agent_name="prompt_generation",
         temperature=0.8,
         max_tokens=1000,
     )

@@ -11,6 +11,8 @@ import {
 } from "@/api/hooks/useGeneration";
 import { useGenerationWS } from "@/api/hooks/useGenerationWS";
 import { PipelineStepper } from "@/components/generation/PipelineStepper";
+import { DAGVisualizer } from "@/components/generation/DAGVisualizer";
+import { StreamingText } from "@/components/generation/StreamingText";
 import { useNavigation } from "@/stores/navigation";
 
 export function Generate() {
@@ -24,7 +26,7 @@ export function Generate() {
   const uploadFace = useUploadFace();
   const activeRequest = useGeneration(activeRequestId ?? "");
   const isRunning = !!activeRequest.data && activeRequest.data.status !== "completed" && activeRequest.data.status !== "failed";
-  const { imageProgress } = useGenerationWS(activeRequestId, isRunning);
+  const { imageProgress, streamingText, streamingAgent } = useGenerationWS(activeRequestId, isRunning);
   const images = useGenerationImages(
     activeRequest.data?.status === "completed" ? (activeRequestId ?? "") : "",
   );
@@ -168,6 +170,25 @@ export function Generate() {
                 <div className="text-[var(--destructive)]">
                   <p className="text-sm font-medium">Error</p>
                   <p>{activeRequest.data.error_message}</p>
+                </div>
+              )}
+
+              {(streamingText || streamingAgent) && (
+                <StreamingText
+                  agent={streamingAgent ?? activeRequest.data.current_agent ?? ""}
+                  text={streamingText}
+                  isStreaming={!!streamingAgent}
+                />
+              )}
+
+              {activeRequest.data && (
+                <div>
+                  <p className="text-sm text-[var(--muted-foreground)] mb-2">Pipeline Graph</p>
+                  <DAGVisualizer
+                    currentAgent={activeRequest.data.current_agent}
+                    status={activeRequest.data.status}
+                    agentTrace={activeRequest.data.agent_trace ?? []}
+                  />
                 </div>
               )}
 

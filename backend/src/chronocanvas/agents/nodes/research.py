@@ -29,7 +29,7 @@ Respond with valid JSON only."""
 async def research_node(state: AgentState) -> AgentState:
     logger.info(f"Research agent: researching {state.get('figure_name', 'unknown')}")
 
-    response = await llm_router.generate(
+    response = await llm_router.generate_stream(
         prompt=RESEARCH_PROMPT.format(
             figure_name=state.get("figure_name", ""),
             time_period=state.get("time_period", ""),
@@ -37,6 +37,8 @@ async def research_node(state: AgentState) -> AgentState:
             occupation=state.get("occupation", ""),
         ),
         task_type=TaskType.RESEARCH,
+        request_id=state.get("request_id", ""),
+        agent_name="research",
         temperature=0.5,
         max_tokens=3000,
         json_mode=True,

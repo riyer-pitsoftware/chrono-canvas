@@ -1,3 +1,5 @@
+from collections.abc import Awaitable, Callable
+
 import openai
 
 from chronocanvas.config import settings
@@ -47,6 +49,58 @@ class OpenAIProvider(LLMProvider):
 
         return LLMResponse(
             content=response.choices[0].message.content or "",
+            provider=self.name,
+            model=self.model,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            cost=cost,
+        )
+
+    async def generate_stream(
+        self,
+        prompt: str,
+        system_prompt: str | None = None,
+        temperature: float = 0.7,
+        max_tokens: int = 2000,
+        json_mode: bool = False,
+        on_token: Callable[[str], Awaitable[None]] | None = None,
+    ) -> LLMResponse:
+        messages = []
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        messages.append({"role": "user", "content": prompt})
+
+        kwargs: dict = {
+            "model": self.model,
+            "messages": messages,
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+            "stream": True,
+            "stream_options": {"include_usage": True},
+        }
+        if json_mode:
+            kwargs["response_format"] = {"type": "json_object"}
+
+        full_text = ""
+        input_tokens = 0
+        output_tokens = 0
+
+        stream = await self.client.chat.completions.create(**kwargs)
+        async for chunk in stream:
+            delta = chunk.choices[0].delta.content if chunk.choices else None
+            if delta:
+                full_text += delta
+                if on_token:
+                    await on_token(delta)
+            if chunk.usage:
+                input_tokens = chunk.usage.prompt_tokens
+                output_tokens = chunk.usage.completion_tokens
+
+        pricing = OPENAI_PRICING.get(self.model, {"input": 0, "output": 0})
+        cost = input_tokens * pricing["input"] + output_tokens * pricing["output"]
+
+        return LLMResponse(
+            content=full_text,
             provider=self.name,
             model=self.model,
             input_tokens=input_tokens,
