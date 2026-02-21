@@ -7,6 +7,7 @@ import { useNavigation } from "@/stores/navigation";
 import { PipelineStepper } from "@/components/generation/PipelineStepper";
 import { StateInspector } from "@/components/generation/StateInspector";
 import { CostTimeline } from "@/components/generation/CostTimeline";
+import { DAGVisualizer } from "@/components/generation/DAGVisualizer";
 import { BookOpen, ChevronDown, ChevronLeft, ChevronRight, RotateCcw, Trash2, X } from "lucide-react";
 import type { GeneratedImage } from "@/api/types";
 
@@ -92,20 +93,13 @@ export function AuditDetail({ requestId }: { requestId: string }) {
         </CardContent>
       </Card>
 
-      {/* Cost & Latency Timeline */}
-      {data.llm_calls.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Cost &amp; Latency Breakdown</CardTitle>
-            <p className="text-sm text-[var(--muted-foreground)]">
-              Bar width = wall-clock duration · Hover a segment to highlight the row
-            </p>
-          </CardHeader>
-          <CardContent>
-            <CostTimeline llmCalls={data.llm_calls} />
-          </CardContent>
-        </Card>
-      )}
+      {/* DAG + Cost & Latency — tabbed card */}
+      <DAGCostCard
+        currentAgent={data.current_agent ?? null}
+        status={data.status}
+        agentTrace={data.agent_trace ?? []}
+        llmCalls={data.llm_calls}
+      />
 
       {/* LLM Call Sections */}
       {data.llm_calls.length > 0 && (
@@ -337,10 +331,10 @@ function AgentStepsCard({ agentTrace, requestId }: { agentTrace: Array<Record<st
                 ) : (
                   <Badge variant="outline" className="text-xs text-green-700 border-green-300">completed</Badge>
                 )}
-                {entry.reason && (
+                {!!entry.reason && (
                   <span className="text-xs text-[var(--muted-foreground)]">{String(entry.reason)}</span>
                 )}
-                {agent === "face_search" && !skipped && entry.source_url && (
+                {agent === "face_search" && !skipped && !!entry.source_url && (
                   <a
                     href={String(entry.source_url)}
                     target="_blank"
@@ -426,6 +420,78 @@ function AgentStepsCard({ agentTrace, requestId }: { agentTrace: Array<Record<st
             </div>
           );
         })}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── DAG + Cost tabbed card ────────────────────────────────────────────────────
+
+type DAGCostTab = "dag" | "cost";
+
+function DAGCostCard({
+  currentAgent,
+  status,
+  agentTrace,
+  llmCalls,
+}: {
+  currentAgent: string | null;
+  status: string;
+  agentTrace: Array<Record<string, unknown>>;
+  llmCalls: import("@/api/types").LLMCallDetail[];
+}) {
+  const [activeTab, setActiveTab] = useState<DAGCostTab>("dag");
+  const hasCost = llmCalls.length > 0;
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-lg">
+            {activeTab === "dag" ? "Pipeline DAG" : "Cost & Latency Breakdown"}
+          </CardTitle>
+          <div className="flex rounded-md border border-[var(--border)] overflow-hidden text-sm">
+            <button
+              onClick={() => setActiveTab("dag")}
+              className={`px-3 py-1 transition-colors ${
+                activeTab === "dag"
+                  ? "bg-[var(--foreground)] text-[var(--background)]"
+                  : "hover:bg-[var(--accent)] text-[var(--muted-foreground)]"
+              }`}
+            >
+              DAG
+            </button>
+            <button
+              onClick={() => setActiveTab("cost")}
+              disabled={!hasCost}
+              className={`px-3 py-1 transition-colors border-l border-[var(--border)] ${
+                activeTab === "cost"
+                  ? "bg-[var(--foreground)] text-[var(--background)]"
+                  : hasCost
+                  ? "hover:bg-[var(--accent)] text-[var(--muted-foreground)]"
+                  : "opacity-40 cursor-not-allowed text-[var(--muted-foreground)]"
+              }`}
+            >
+              Cost &amp; Latency
+            </button>
+          </div>
+        </div>
+        <p className="text-sm text-[var(--muted-foreground)]">
+          {activeTab === "dag"
+            ? "Nodes completed this run are highlighted green; conditional edges show the path taken"
+            : "Bar width = wall-clock duration · Hover a segment to highlight the row"}
+        </p>
+      </CardHeader>
+      <CardContent>
+        {activeTab === "dag" ? (
+          <DAGVisualizer
+            currentAgent={currentAgent}
+            status={status}
+            agentTrace={agentTrace}
+          />
+        ) : (
+          <CostTimeline llmCalls={llmCalls} />
+        )}
       </CardContent>
     </Card>
   );
