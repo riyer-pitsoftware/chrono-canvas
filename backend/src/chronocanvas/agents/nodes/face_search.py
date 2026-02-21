@@ -7,10 +7,14 @@ import httpx
 
 from chronocanvas.agents.state import AgentState
 from chronocanvas.config import settings
+from chronocanvas.security import is_safe_url, validate_image_magic
 
 logger = logging.getLogger(__name__)
 
 SEARCH_QUERY_TEMPLATE = "{figure_name} historical portrait photograph"
+
+# Hard cap on downloaded image size (5 MB) to prevent zip-bomb / memory exhaustion
+_MAX_DOWNLOAD_BYTES = 5 * 1024 * 1024
 
 
 async def _search_serpapi(query: str) -> list[dict]:
@@ -41,6 +45,9 @@ async def _search_serpapi(query: str) -> list[dict]:
 
 async def _download_image(url: str, output_dir: Path) -> str | None:
     """Download image from URL, save to output_dir, return local path or None on failure."""
+    if not is_safe_url(url):
+        logger.debug(f"Blocked unsafe URL: {url}")
+        return None
     try:
         async with httpx.AsyncClient(
             timeout=15.0,
@@ -52,11 +59,19 @@ async def _download_image(url: str, output_dir: Path) -> str | None:
             content_type = resp.headers.get("content-type", "")
             if not content_type.startswith("image/"):
                 return None
+            # Enforce size cap — read up to limit + 1 byte to detect oversize
+            data = resp.content
+            if len(data) > _MAX_DOWNLOAD_BYTES:
+                logger.debug(f"Image too large ({len(data)} bytes) from {url}")
+                return None
+            if not validate_image_magic(data):
+                logger.debug(f"Invalid image magic bytes from {url}")
+                return None
             ext = "jpg" if "jpeg" in content_type or "jpg" in content_type else "png"
             filename = f"face_search_{uuid.uuid4().hex}.{ext}"
             output_dir.mkdir(parents=True, exist_ok=True)
             filepath = output_dir / filename
-            filepath.write_bytes(resp.content)
+            filepath.write_bytes(data)
             return str(filepath)
     except Exception as e:
         logger.debug(f"Failed to download image from {url}: {e}")

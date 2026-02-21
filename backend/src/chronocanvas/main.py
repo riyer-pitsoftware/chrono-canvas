@@ -1,9 +1,10 @@
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from chronocanvas.api.middleware import AuditLoggingMiddleware
 from chronocanvas.api.router import api_router
@@ -13,6 +14,16 @@ from chronocanvas.redis_client import close_redis
 
 logging.basicConfig(level=getattr(logging, settings.log_level))
 logger = logging.getLogger(__name__)
+
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next) -> Response:
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["X-XSS-Protection"] = "0"  # modern browsers use CSP instead
+        return response
 
 
 @asynccontextmanager
@@ -44,6 +55,7 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
     app.add_middleware(AuditLoggingMiddleware)
+    app.add_middleware(SecurityHeadersMiddleware)
 
     # API routes
     app.include_router(api_router)
@@ -51,9 +63,9 @@ def create_app() -> FastAPI:
     # WebSocket
     app.websocket("/ws/generation/{request_id}")(generation_websocket)
 
-    # Static files for generated images and uploads
-    app.mount("/output", StaticFiles(directory=settings.output_dir, check_dir=False), name="output")
-    app.mount("/uploads", StaticFiles(directory=settings.upload_dir, check_dir=False), name="uploads")
+    # Static files for generated images and uploads (dirs created in lifespan)
+    app.mount("/output", StaticFiles(directory=settings.output_dir), name="output")
+    app.mount("/uploads", StaticFiles(directory=settings.upload_dir), name="uploads")
 
     return app
 

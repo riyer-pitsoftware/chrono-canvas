@@ -1,7 +1,7 @@
 import asyncio
 import json
 import logging
-import random
+import secrets
 import uuid
 from collections.abc import Awaitable, Callable
 from pathlib import Path
@@ -187,7 +187,7 @@ class ComfyUIClient(ImageGenerator):
         output_dir.mkdir(parents=True, exist_ok=True)
 
         if seed is None:
-            seed = random.randint(0, 2**32 - 1)
+            seed = secrets.randbits(32)
 
         model = settings.comfyui_model
         if model == "sdxl":

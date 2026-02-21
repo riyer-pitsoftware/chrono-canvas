@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from chronocanvas.api.schemas.figures import (
@@ -19,7 +19,7 @@ router = APIRouter(prefix="/figures", tags=["figures"])
 async def list_figures(
     offset: int = 0,
     limit: int = 50,
-    search: str | None = None,
+    search: str | None = Query(default=None, max_length=200),
     session: AsyncSession = Depends(get_session),
 ):
     repo = FigureRepository(session)

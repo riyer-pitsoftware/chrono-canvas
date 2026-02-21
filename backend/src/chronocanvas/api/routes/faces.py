@@ -4,6 +4,7 @@ from pathlib import Path
 from fastapi import APIRouter, HTTPException, UploadFile
 
 from chronocanvas.config import settings
+from chronocanvas.security import validate_image_magic
 
 router = APIRouter(prefix="/faces", tags=["faces"])
 
@@ -22,6 +23,9 @@ async def upload_face(file: UploadFile):
     data = await file.read()
     if len(data) > MAX_SIZE:
         raise HTTPException(status_code=400, detail="File exceeds 10MB limit")
+
+    if not validate_image_magic(data):
+        raise HTTPException(status_code=400, detail="File content does not match a supported image format")
 
     ext_map = {"image/jpeg": "jpg", "image/png": "png", "image/webp": "webp"}
     ext = ext_map[file.content_type]
