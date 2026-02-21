@@ -87,7 +87,7 @@ const AGENT_NODE_DEFS = [
   { id: 'prompt_generation', label: 'Prompt Gen', x: 465, y: 60 },
   { id: 'image_generation', label: 'Image Gen', x: 620, y: 60 },
   { id: 'validation', label: 'Validation', x: 775, y: 60 },
-  { id: 'face_swap', label: 'Face Swap', x: 930, y: 60 },
+  { id: 'facial_compositing', label: 'Facial Compositing', x: 930, y: 60 },
   { id: 'export', label: 'Export', x: 1080, y: 60 },
 ];
 
@@ -113,7 +113,7 @@ const STATIC_EDGES: Edge[] = [
   { id: 'e-re-fsr', source: 'research', target: 'face_search', style: EDGE_STYLE_DIRECT, markerEnd: GRAY_MARKER },
   { id: 'e-fsr-pg', source: 'face_search', target: 'prompt_generation', style: EDGE_STYLE_DIRECT, markerEnd: GRAY_MARKER },
   { id: 'e-pg-ig', source: 'prompt_generation', target: 'image_generation', style: EDGE_STYLE_DIRECT, markerEnd: GRAY_MARKER },
-  { id: 'e-fs-ex', source: 'face_swap', target: 'export', style: EDGE_STYLE_DIRECT, markerEnd: GRAY_MARKER },
+  { id: 'e-fs-ex', source: 'facial_compositing', target: 'export', style: EDGE_STYLE_DIRECT, markerEnd: GRAY_MARKER },
   { id: 'e-ex-end', source: 'export', target: 'END', style: EDGE_STYLE_DIRECT, markerEnd: GRAY_MARKER },
   // Conditional: image_generation
   {
@@ -143,7 +143,7 @@ const STATIC_EDGES: Edge[] = [
   {
     id: 'e-va-fs',
     source: 'validation',
-    target: 'face_swap',
+    target: 'facial_compositing',
     label: 'continue',
     labelStyle: LABEL_GRAY,
     labelBgStyle: LABEL_BG,

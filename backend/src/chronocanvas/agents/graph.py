@@ -8,7 +8,7 @@ from chronocanvas.agents.decisions import (
 from chronocanvas.agents.nodes.extraction import extraction_node
 from chronocanvas.agents.nodes.export import export_node
 from chronocanvas.agents.nodes.face_search import face_search_node
-from chronocanvas.agents.nodes.face_swap import face_swap_node
+from chronocanvas.agents.nodes.facial_compositing import facial_compositing_node
 from chronocanvas.agents.nodes.image_generation import image_generation_node
 from chronocanvas.agents.nodes.orchestrator import orchestrator_node
 from chronocanvas.agents.nodes.prompt_generation import prompt_generation_node
@@ -28,7 +28,7 @@ def build_graph() -> StateGraph:
     graph.add_node("prompt_generation", prompt_generation_node)
     graph.add_node("image_generation", image_generation_node)
     graph.add_node("validation", validation_node)
-    graph.add_node("face_swap", face_swap_node)
+    graph.add_node("facial_compositing", facial_compositing_node)
     graph.add_node("export", export_node)
 
     # Define edges
@@ -48,10 +48,10 @@ def build_graph() -> StateGraph:
     graph.add_conditional_edges(
         "validation",
         should_continue_after_validation,
-        {"continue": "face_swap", "regenerate": "prompt_generation", "error": END},
+        {"continue": "facial_compositing", "regenerate": "prompt_generation", "error": END},
     )
 
-    graph.add_edge("face_swap", "export")
+    graph.add_edge("facial_compositing", "export")
     graph.add_edge("export", END)
 
     return graph

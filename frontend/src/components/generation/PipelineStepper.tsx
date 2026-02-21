@@ -10,7 +10,7 @@ const PIPELINE_STAGES = [
   { key: "prompt_generation", label: "Prompt Generation" },
   { key: "image_generation", label: "Image Generation" },
   { key: "validation", label: "Validation" },
-  { key: "face_swap", label: "Face Swap" },
+  { key: "facial_compositing", label: "Facial Compositing" },
   { key: "export", label: "Export" },
 ] as const;
 

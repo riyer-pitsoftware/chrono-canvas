@@ -19,7 +19,7 @@ const PIPELINE_STEPS = [
   { value: "prompt_generation", label: "Prompt Generation" },
   { value: "image_generation", label: "Image Generation" },
   { value: "validation", label: "Validation" },
-  { value: "face_swap", label: "Face Swap" },
+  { value: "facial_compositing", label: "Facial Compositing" },
   { value: "export", label: "Export" },
 ];
 
@@ -173,7 +173,7 @@ export function AuditDetail({ requestId }: { requestId: string }) {
         </Card>
       )}
 
-      {/* Agent Steps (non-LLM nodes: face_search, face_swap) */}
+      {/* Agent Steps (non-LLM nodes: face_search, facial_compositing) */}
       <AgentStepsCard agentTrace={data.agent_trace ?? []} requestId={requestId} />
 
       {/* Agent State Inspector */}
@@ -297,7 +297,7 @@ export function AuditDetail({ requestId }: { requestId: string }) {
 }
 
 // Agents that produce trace entries but no LLM calls
-const NON_LLM_AGENTS = ["face_search", "face_swap"];
+const NON_LLM_AGENTS = ["face_search", "facial_compositing"];
 
 function AgentStepsCard({ agentTrace, requestId }: { agentTrace: Array<Record<string, unknown>>; requestId: string }) {
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
@@ -390,8 +390,8 @@ function AgentStepsCard({ agentTrace, requestId }: { agentTrace: Array<Record<st
                     </>
                   )}
 
-                  {/* face_swap details */}
-                  {agent === "face_swap" && !skipped && (
+                  {/* facial_compositing details */}
+                  {agent === "facial_compositing" && !skipped && (
                     <>
                       {entry.source_face && (
                         <div>

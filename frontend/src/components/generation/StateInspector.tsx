@@ -11,7 +11,7 @@ const AGENT_LABELS: Record<string, string> = {
   prompt_generation: "Prompt Generation",
   image_generation: "Image Generation",
   validation: "Validation",
-  face_swap: "Face Swap",
+  facial_compositing: "Facial Compositing",
   export: "Export",
 };
 

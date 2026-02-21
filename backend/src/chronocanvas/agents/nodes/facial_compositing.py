@@ -11,42 +11,42 @@ from chronocanvas.imaging.mock_face_swap import MockFaceSwapClient
 logger = logging.getLogger(__name__)
 
 
-def _get_face_swap_client():
+def _get_compositing_client():
     if settings.image_provider == "facefusion":
         return FaceFusionClient()
     return MockFaceSwapClient()
 
 
-async def face_swap_node(state: AgentState) -> AgentState:
+async def facial_compositing_node(state: AgentState) -> AgentState:
     source_face_path = state.get("source_face_path", "")
     trace = list(state.get("agent_trace", []))
 
     if not source_face_path:
         trace.append({
-            "agent": "face_swap",
+            "agent": "facial_compositing",
             "timestamp": time.time(),
             "skipped": True,
         })
         return {
             **state,
-            "current_agent": "face_swap",
+            "current_agent": "facial_compositing",
             "agent_trace": trace,
         }
 
-    logger.info(f"Face swap agent: swapping face for {state.get('figure_name', '')}")
+    logger.info(f"Facial compositing agent: compositing face for {state.get('figure_name', '')}")
     image_path = state.get("image_path", "")
 
     if not image_path or not Path(image_path).exists():
-        logger.warning("Face swap: no generated image found, skipping")
+        logger.warning("Facial compositing: no generated image found, skipping")
         trace.append({
-            "agent": "face_swap",
+            "agent": "facial_compositing",
             "timestamp": time.time(),
             "skipped": True,
             "reason": "no_image",
         })
         return {
             **state,
-            "current_agent": "face_swap",
+            "current_agent": "facial_compositing",
             "agent_trace": trace,
         }
 
@@ -56,8 +56,8 @@ async def face_swap_node(state: AgentState) -> AgentState:
         original_copy = original_path.parent / f"original_{original_path.name}"
         shutil.copy2(image_path, original_copy)
 
-        # Run face swap (mock when IMAGE_PROVIDER != "facefusion")
-        client = _get_face_swap_client()
+        # Run facial compositing (mock when IMAGE_PROVIDER != "facefusion")
+        client = _get_compositing_client()
         request_id = state.get("request_id", "unknown")
         output_dir = Path(settings.output_dir) / request_id
 
@@ -69,7 +69,7 @@ async def face_swap_node(state: AgentState) -> AgentState:
         )
 
         trace.append({
-            "agent": "face_swap",
+            "agent": "facial_compositing",
             "timestamp": time.time(),
             "skipped": False,
             "source_face": source_face_path,
@@ -79,16 +79,16 @@ async def face_swap_node(state: AgentState) -> AgentState:
 
         return {
             **state,
-            "current_agent": "face_swap",
+            "current_agent": "facial_compositing",
             "swapped_image_path": result.file_path,
             "original_image_path": str(original_copy),
             "agent_trace": trace,
         }
 
     except Exception as e:
-        logger.exception("Face swap failed, continuing with original image")
+        logger.exception("Facial compositing failed, continuing with original image")
         trace.append({
-            "agent": "face_swap",
+            "agent": "facial_compositing",
             "timestamp": time.time(),
             "skipped": False,
             "error": True,
@@ -96,6 +96,6 @@ async def face_swap_node(state: AgentState) -> AgentState:
         })
         return {
             **state,
-            "current_agent": "face_swap",
+            "current_agent": "facial_compositing",
             "agent_trace": trace,
         }

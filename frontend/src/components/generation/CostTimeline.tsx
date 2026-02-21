@@ -11,7 +11,7 @@ const AGENT_COLORS: Record<string, string> = {
   prompt_generation:"#f59e0b", // amber
   image_generation: "#f97316", // orange
   validation:       "#ef4444", // red
-  face_swap:        "#ec4899", // pink
+  facial_compositing: "#ec4899", // pink
   export:           "#8b5cf6", // violet
 };
 
@@ -55,7 +55,7 @@ function aggregate(calls: LLMCallDetail[]): AgentMetrics[] {
     }
   }
   // Return in pipeline order
-  const ORDER = ["orchestrator","extraction","research","face_search","prompt_generation","image_generation","validation","face_swap","export"];
+  const ORDER = ["orchestrator","extraction","research","face_search","prompt_generation","image_generation","validation","facial_compositing","export"];
   return [...map.values()].sort((a, b) => {
     const ai = ORDER.indexOf(a.agent);
     const bi = ORDER.indexOf(b.agent);
@@ -129,7 +129,7 @@ const AGENT_LABELS: Record<string, string> = {
   prompt_generation: "Prompt Generation",
   image_generation: "Image Generation",
   validation: "Validation",
-  face_swap: "Face Swap",
+  facial_compositing: "Facial Compositing",
   export: "Export",
 };
 

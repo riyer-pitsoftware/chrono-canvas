@@ -23,7 +23,7 @@ _SNAPSHOT_EXCLUDE = frozenset({
 
 VALID_RETRY_STEPS = frozenset([
     "orchestrator", "extraction", "research", "prompt_generation",
-    "image_generation", "validation", "face_swap", "export",
+    "image_generation", "validation", "facial_compositing", "export",
 ])
 
 # Maps each step to the predecessor node to pass as `as_node` in aupdate_state,
@@ -34,8 +34,8 @@ _PREDECESSOR_NODE: dict[str, str] = {
     "prompt_generation": "research",
     "image_generation": "prompt_generation",
     "validation": "image_generation",
-    "face_swap": "validation",
-    "export": "face_swap",
+    "facial_compositing": "validation",
+    "export": "facial_compositing",
 }
 
 _STATUS_MAP: dict[str, RequestStatus] = {
@@ -45,7 +45,7 @@ _STATUS_MAP: dict[str, RequestStatus] = {
     "prompt_generation": RequestStatus.GENERATING_PROMPT,
     "image_generation": RequestStatus.GENERATING_IMAGE,
     "validation": RequestStatus.VALIDATING,
-    "face_swap": RequestStatus.SWAPPING_FACE,
+    "facial_compositing": RequestStatus.SWAPPING_FACE,
     "export": RequestStatus.COMPLETED,
 }
 

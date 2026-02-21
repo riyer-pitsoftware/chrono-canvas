@@ -36,7 +36,7 @@ const pipelineSteps = [
   { name: "Prompt Gen", provider: "Claude", description: "Creates period-accurate image generation prompts" },
   { name: "Image Gen", provider: "—", description: "Produces portrait via Stable Diffusion or ComfyUI" },
   { name: "Validation", provider: "Ollama", description: "Scores historical accuracy (0–100) and flags issues" },
-  { name: "Face Swap", provider: "FaceFusion", description: "Blends uploaded face into the generated portrait" },
+  { name: "Facial Compositing", provider: "FaceFusion", description: "Blends uploaded face into the generated portrait" },
   { name: "Export", provider: "—", description: "Packages portrait as PNG with JSON metadata" },
 ];
 
@@ -194,7 +194,7 @@ Respond with valid JSON only.`,
     id: "face_search",
     label: "Face Search",
     provider: "SerpAPI",
-    why: "Stable Diffusion alone can't know what a historical figure looked like. By fetching real portrait images from the web, this agent provides reference material that can anchor the generation. It also supplies the pool of face images used by the Face Swap step if the user didn't upload their own.",
+    why: "Stable Diffusion alone can't know what a historical figure looked like. By fetching real portrait images from the web, this agent provides reference material that can anchor the generation. It also supplies the pool of face images used by the Facial Compositing step if the user didn't upload their own.",
     promptTemplate: `{figure_name} historical portrait photograph`,
     promptNote: "This is a search query template, not an LLM prompt. Results are fetched from Google Images via SerpAPI.",
     tips: [
@@ -302,8 +302,8 @@ Respond with valid JSON only.`,
     ],
   },
   {
-    id: "face_swap",
-    label: "Face Swap",
+    id: "facial_compositing",
+    label: "Facial Compositing",
     provider: "FaceFusion",
     why: "If the user uploads a reference face, this step blends their likeness into the generated portrait using FaceFusion. The entire step is skipped if no face was uploaded, making it an optional layer of personalization on top of the core pipeline.",
     promptTemplate: null,
@@ -311,11 +311,11 @@ Respond with valid JSON only.`,
     tips: [
       {
         title: "Use a front-facing reference photo",
-        detail: "Face swap accuracy drops significantly with profile or angled shots. Ask users to upload a well-lit, front-facing portrait for best results.",
+        detail: "Facial compositing accuracy drops significantly with profile or angled shots. Ask users to upload a well-lit, front-facing portrait for best results.",
       },
       {
         title: "Match pose in the generated portrait",
-        detail: "Add `front-facing portrait, looking directly at viewer` to the prompt generation requirements so the generated pose is compatible with the face swap.",
+        detail: "Add `front-facing portrait, looking directly at viewer` to the prompt generation requirements so the generated pose is compatible with facial compositing.",
       },
     ],
   },

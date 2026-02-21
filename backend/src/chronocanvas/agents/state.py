@@ -40,7 +40,7 @@ class AgentState(TypedDict, total=False):
     face_search_query: str
     face_search_provider: str
 
-    # Face Swap
+    # Facial Compositing
     source_face_path: str
     swapped_image_path: str
     original_image_path: str
