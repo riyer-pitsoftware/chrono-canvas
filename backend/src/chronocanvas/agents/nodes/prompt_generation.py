@@ -3,7 +3,7 @@ import time
 
 from chronocanvas.agents.state import AgentState
 from chronocanvas.llm.base import TaskType
-from chronocanvas.llm.router import llm_router
+from chronocanvas.llm.router import get_llm_router
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +47,7 @@ NEGATIVE_PROMPT = (
 async def prompt_generation_node(state: AgentState) -> AgentState:
     logger.info(f"Prompt generation agent: creating prompt for {state.get('figure_name', '')}")
 
-    response = await llm_router.generate_stream(
+    response = await get_llm_router().generate_stream(
         prompt=PROMPT_GEN_TEMPLATE.format(
             figure_name=state.get("figure_name", ""),
             historical_context=state.get("historical_context", ""),

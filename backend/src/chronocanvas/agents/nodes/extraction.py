@@ -4,7 +4,7 @@ import time
 
 from chronocanvas.agents.state import AgentState
 from chronocanvas.llm.base import TaskType
-from chronocanvas.llm.router import llm_router
+from chronocanvas.llm.router import get_llm_router
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +26,7 @@ async def extraction_node(state: AgentState) -> AgentState:
 
     input_text = state.get("input_text", "")
 
-    response = await llm_router.generate(
+    response = await get_llm_router().generate(
         prompt=EXTRACTION_PROMPT.format(input_text=input_text),
         task_type=TaskType.EXTRACTION,
         temperature=0.3,

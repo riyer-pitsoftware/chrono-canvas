@@ -4,7 +4,7 @@ import time
 
 from chronocanvas.agents.state import AgentState
 from chronocanvas.llm.base import TaskType
-from chronocanvas.llm.router import llm_router
+from chronocanvas.llm.router import get_llm_router
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +35,7 @@ Respond with valid JSON only."""
 async def validation_node(state: AgentState) -> AgentState:
     logger.info(f"Validation agent: validating output for {state.get('figure_name', '')}")
 
-    response = await llm_router.generate(
+    response = await get_llm_router().generate(
         prompt=VALIDATION_PROMPT.format(
             figure_name=state.get("figure_name", ""),
             time_period=state.get("time_period", ""),

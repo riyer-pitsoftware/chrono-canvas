@@ -37,13 +37,14 @@ _STATUS_MAP: dict[str, RequestStatus] = {
 }
 
 
-def _make_runner(repo: RequestRepository, session: object) -> GenerationRunner:
+def _make_runner(repo: RequestRepository, session: object, graph: object) -> GenerationRunner:
     return GenerationRunner(
         repo=repo,
         session=session,
         publisher=ProgressPublisher(),
         projector=RequestStateProjector(),
         recorder=ImageAttemptRecorder(),
+        graph=graph,
     )
 
 
@@ -80,7 +81,7 @@ async def run_generation_pipeline(
                 initial_state["source_face_path"] = source_face_path
 
             config = {"configurable": {"thread_id": request_id}}
-            await _make_runner(repo, session).run(request_id, initial_state, config, channel)
+            await _make_runner(repo, session, agent_graph).run(request_id, initial_state, config, channel)
 
         except Exception as e:
             logger.exception("Generation pipeline failed for %s", request_id)
@@ -122,7 +123,7 @@ async def retry_generation_pipeline(request_id: str, from_step: str) -> None:
                 "message": f"Retrying from {from_step}...",
             })
 
-            runner = _make_runner(repo, session)
+            runner = _make_runner(repo, session, agent_graph)
 
             if from_step == "orchestrator":
                 initial_state: AgentState = {

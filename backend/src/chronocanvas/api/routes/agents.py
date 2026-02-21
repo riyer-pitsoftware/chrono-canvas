@@ -6,7 +6,7 @@ from chronocanvas.api.schemas.agents import (
     CostSummaryResponse,
     LLMAvailabilityResponse,
 )
-from chronocanvas.llm.router import llm_router
+from chronocanvas.llm.router import get_llm_router
 
 router = APIRouter(prefix="/agents", tags=["agents"])
 
@@ -32,11 +32,11 @@ async def list_agents():
 
 @router.get("/llm-status", response_model=LLMAvailabilityResponse)
 async def llm_availability():
-    availability = await llm_router.check_availability()
+    availability = await get_llm_router().check_availability()
     return LLMAvailabilityResponse(providers=availability)
 
 
 @router.get("/costs", response_model=CostSummaryResponse)
 async def cost_summary():
-    summary = llm_router.cost_tracker.summary()
+    summary = get_llm_router().cost_tracker.summary()
     return CostSummaryResponse(**summary)

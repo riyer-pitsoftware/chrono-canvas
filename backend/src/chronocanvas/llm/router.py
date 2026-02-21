@@ -165,5 +165,18 @@ class LLMRouter:
         return result
 
 
-# Singleton
-llm_router = LLMRouter()
+_llm_router: LLMRouter | None = None
+
+
+def get_llm_router() -> LLMRouter:
+    """Return the process-wide LLMRouter, creating it on first call.
+
+    Tests can substitute a different instance before the first call by
+    setting ``chronocanvas.llm.router._llm_router = <mock>`` (or via
+    ``monkeypatch.setattr``).  Production code should always call this
+    function rather than importing the bare name.
+    """
+    global _llm_router
+    if _llm_router is None:
+        _llm_router = LLMRouter()
+    return _llm_router

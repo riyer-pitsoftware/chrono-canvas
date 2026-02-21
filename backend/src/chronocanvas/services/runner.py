@@ -1,6 +1,5 @@
 from typing import Any
 
-from chronocanvas.agents.graph import agent_graph
 from chronocanvas.agents.state import AgentState
 from chronocanvas.db.models.request import RequestStatus
 from chronocanvas.db.repositories.requests import RequestRepository
@@ -11,7 +10,11 @@ from chronocanvas.services.state_projector import RequestStateProjector
 
 class GenerationRunner:
     """Streams the LangGraph agent graph, persisting incremental state to DB and
-    publishing progress events to Redis as each node completes."""
+    publishing progress events to Redis as each node completes.
+
+    ``graph`` is injected so tests can substitute a lightweight graph without
+    touching the module-level singleton.
+    """
 
     def __init__(
         self,
@@ -20,12 +23,14 @@ class GenerationRunner:
         publisher: ProgressPublisher,
         projector: RequestStateProjector,
         recorder: ImageAttemptRecorder,
+        graph: Any,
     ) -> None:
         self._repo = repo
         self._session = session
         self._publisher = publisher
         self._projector = projector
         self._recorder = recorder
+        self._graph = graph
 
     async def run(
         self,
@@ -40,7 +45,7 @@ class GenerationRunner:
         """
         final_state: dict[str, Any] | None = None
 
-        async for event in agent_graph.astream(initial_state, config=config):
+        async for event in self._graph.astream(initial_state, config=config):
             for node_name, node_state in event.items():
                 current_agent = node_state.get("current_agent", node_name)
 
