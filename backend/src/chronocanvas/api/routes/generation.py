@@ -22,6 +22,7 @@ from chronocanvas.config import settings
 from chronocanvas.db.engine import get_session
 from chronocanvas.db.repositories.images import ImageRepository
 from chronocanvas.db.repositories.requests import RequestRepository
+from chronocanvas.content_moderation import check_input
 from chronocanvas.services.generation import (
     VALID_RETRY_STEPS,
     retry_generation_pipeline,
@@ -37,6 +38,10 @@ async def create_generation(
     background_tasks: BackgroundTasks,
     session: AsyncSession = Depends(get_session),
 ):
+    is_safe, reason = check_input(data.input_text)
+    if not is_safe:
+        raise HTTPException(status_code=422, detail=reason)
+
     repo = RequestRepository(session)
     request = await repo.create(
         input_text=data.input_text,

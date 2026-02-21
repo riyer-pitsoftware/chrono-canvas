@@ -40,6 +40,11 @@ class Settings(BaseSettings):
     # Security
     secret_key: str = "change-me-in-production"
 
+    # Content Moderation
+    content_moderation_enabled: bool = True   # default-on keyword input validation
+    # Optional layers (all off by default):
+    # ENABLE_PUBLIC_DOMAIN_CHECK, ENABLE_PROMPT_GUARDRAIL via separate flags when implemented
+
     # Storage
     upload_dir: str = "./uploads"
     output_dir: str = "./output"

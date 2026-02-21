@@ -3,6 +3,7 @@ from langgraph.graph import END, StateGraph
 from chronocanvas.agents.checkpointer import checkpointer
 from chronocanvas.agents.decisions import (
     should_continue_after_image,
+    should_continue_after_orchestrator,
     should_continue_after_validation,
 )
 from chronocanvas.agents.nodes.extraction import extraction_node
@@ -33,7 +34,11 @@ def build_graph() -> StateGraph:
 
     # Define edges
     graph.set_entry_point("orchestrator")
-    graph.add_edge("orchestrator", "extraction")
+    graph.add_conditional_edges(
+        "orchestrator",
+        should_continue_after_orchestrator,
+        {"continue": "extraction", "error": END},
+    )
     graph.add_edge("extraction", "research")
     graph.add_edge("research", "face_search")
     graph.add_edge("face_search", "prompt_generation")
