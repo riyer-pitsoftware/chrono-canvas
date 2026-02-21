@@ -81,6 +81,30 @@ services:
     tmpfs:
       - /tmp
 
+  worker:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.api
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://chronocanvas:chronocanvas@db:5432/chronocanvas
+      REDIS_URL: redis://redis:6379/0
+      PYTHONPATH: /app/src
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend/src:/app/src
+      - ./output:/app/output
+      - ./uploads:/app/uploads
+    command: arq chronocanvas.worker.WorkerSettings
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
   frontend:
     image: node:20-alpine
     working_dir: /app

@@ -1,6 +1,8 @@
 import logging
 from contextlib import asynccontextmanager
 
+from arq import create_pool
+from arq.connections import RedisSettings
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -33,8 +35,10 @@ async def lifespan(app: FastAPI):
     import os
     os.makedirs(settings.output_dir, exist_ok=True)
     os.makedirs(settings.upload_dir, exist_ok=True)
+    app.state.arq_pool = await create_pool(RedisSettings.from_dsn(settings.redis_url))
     yield
     logger.info("ChronoCanvas shutting down")
+    await app.state.arq_pool.close()
     await close_redis()
 
 

@@ -3,7 +3,7 @@ import shutil
 import uuid
 from pathlib import Path
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from chronocanvas.api.schemas.generation import (
@@ -23,11 +23,7 @@ from chronocanvas.db.engine import get_session
 from chronocanvas.db.repositories.images import ImageRepository
 from chronocanvas.db.repositories.requests import RequestRepository
 from chronocanvas.content_moderation import check_input
-from chronocanvas.services.generation import (
-    VALID_RETRY_STEPS,
-    retry_generation_pipeline,
-    run_generation_pipeline,
-)
+from chronocanvas.services.generation import VALID_RETRY_STEPS
 
 router = APIRouter(prefix="/generate", tags=["generation"])
 
@@ -35,7 +31,7 @@ router = APIRouter(prefix="/generate", tags=["generation"])
 @router.post("", response_model=GenerationResponse, status_code=201)
 async def create_generation(
     data: GenerationCreate,
-    background_tasks: BackgroundTasks,
+    request: Request,
     session: AsyncSession = Depends(get_session),
 ):
     is_safe, reason = check_input(data.input_text)
@@ -43,7 +39,7 @@ async def create_generation(
         raise HTTPException(status_code=422, detail=reason)
 
     repo = RequestRepository(session)
-    request = await repo.create(
+    gen_request = await repo.create(
         input_text=data.input_text,
         figure_id=data.figure_id,
         status="pending",
@@ -57,30 +53,33 @@ async def create_generation(
             raise HTTPException(status_code=404, detail="Face not found")
         source_face_path = matches[0]
 
-    background_tasks.add_task(
-        run_generation_pipeline, str(request.id), data.input_text,
+    await request.app.state.arq_pool.enqueue_job(
+        "run_generation_pipeline_task",
+        str(gen_request.id), data.input_text,
         source_face_path=source_face_path,
     )
 
-    return GenerationResponse.model_validate(request)
+    return GenerationResponse.model_validate(gen_request)
 
 
 @router.post("/batch", response_model=BatchGenerationResponse, status_code=201)
 async def create_batch_generation(
     data: BatchGenerationCreate,
-    background_tasks: BackgroundTasks,
+    request: Request,
     session: AsyncSession = Depends(get_session),
 ):
     repo = RequestRepository(session)
     request_ids = []
     for item in data.items:
-        request = await repo.create(
+        gen_request = await repo.create(
             input_text=item.input_text,
             figure_id=item.figure_id,
             status="pending",
         )
-        request_ids.append(request.id)
-        background_tasks.add_task(run_generation_pipeline, str(request.id), item.input_text)
+        request_ids.append(gen_request.id)
+        await request.app.state.arq_pool.enqueue_job(
+            "run_generation_pipeline_task", str(gen_request.id), item.input_text
+        )
     await session.commit()
 
     return BatchGenerationResponse(request_ids=request_ids, total=len(request_ids))
@@ -220,7 +219,7 @@ async def get_generation_images(
 async def retry_generation(
     request_id: uuid.UUID,
     from_step: str,
-    background_tasks: BackgroundTasks,
+    request: Request,
     session: AsyncSession = Depends(get_session),
 ):
     if from_step not in VALID_RETRY_STEPS:
@@ -230,15 +229,17 @@ async def retry_generation(
         )
 
     repo = RequestRepository(session)
-    request = await repo.get(request_id)
-    if not request:
+    gen_request = await repo.get(request_id)
+    if not gen_request:
         raise HTTPException(status_code=404, detail="Generation request not found")
 
-    if request.status not in ("failed", "completed"):
+    if gen_request.status not in ("failed", "completed"):
         raise HTTPException(
             status_code=409,
-            detail=f"Cannot retry a generation with status '{request.status}'",
+            detail=f"Cannot retry a generation with status '{gen_request.status}'",
         )
 
-    background_tasks.add_task(retry_generation_pipeline, str(request_id), from_step)
-    return GenerationResponse.model_validate(request)
+    await request.app.state.arq_pool.enqueue_job(
+        "retry_generation_pipeline_task", str(request_id), from_step
+    )
+    return GenerationResponse.model_validate(gen_request)
