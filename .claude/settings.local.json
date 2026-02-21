@@ -46,7 +46,12 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(PYTHONPATH=backend/src python -m pytest:*)",
-      "Bash(git mv:*)"
+      "Bash(git mv:*)",
+      "Bash(docker info:)",
+      "Bash(docker stop history-faces-api-1 history-faces-db-1 history-faces-frontend-1 history-faces-redis-1 && docker rm history-faces-api-1 history-faces-db-1 history-faces-frontend-1 history-faces-redis-1 2>&1)",
+      "Bash(ls /Users/riyer/code/chrono-canvas/docs/ && git -C /Users/riyer/code/chrono-canvas diff --stat HEAD 2>&1)",
+      "Bash(git:*)",
+      "Bash(tail:*)"
     ]
   }
 }
