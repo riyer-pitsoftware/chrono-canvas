@@ -68,11 +68,27 @@ async def _execute_graph(
     Pass ``initial_state=None`` to resume from an existing LangGraph checkpoint.
     """
     final_state: dict[str, Any] | None = None
+    # Accumulate every image generation attempt so all are persisted, including
+    # intermediate attempts that were regenerated after a failed validation.
+    image_attempts: list[dict[str, Any]] = []
 
     async for event in agent_graph.astream(initial_state, config=config):
         for node_name, node_state in event.items():
             current_agent = node_state.get("current_agent", node_name)
             status = _STATUS_MAP.get(current_agent, RequestStatus.PENDING)
+
+            # Capture each image generation attempt as it happens
+            if current_agent == "image_generation" and node_state.get("image_path"):
+                image_attempts.append({
+                    "image_path": node_state["image_path"],
+                    "provider": node_state.get("image_provider", "mock"),
+                    "prompt": node_state.get("image_prompt", ""),
+                    "validation_score": None,
+                })
+
+            # Associate the validation score with the most recent attempt
+            if current_agent == "validation" and image_attempts:
+                image_attempts[-1]["validation_score"] = node_state.get("validation_score")
 
             update_kwargs: dict = {
                 "status": status,
@@ -141,22 +157,30 @@ async def _execute_graph(
 
         await repo.update(request_id, **update_data)
 
-        if final_state.get("image_path"):
-            original_path = final_state.get("original_image_path") or final_state["image_path"]
-            image = GeneratedImage(
-                request_id=uuid.UUID(request_id),
-                figure_id=None,
-                file_path=original_path,
-                prompt_used=final_state.get("image_prompt", ""),
-                provider=final_state.get("image_provider", "mock"),
-                width=512,
-                height=512,
-                validation_score=final_state.get("validation_score"),
-            )
-            session.add(image)
+        if image_attempts:
+            # Persist every attempt; for the last one, use original_image_path if
+            # facial compositing saved a copy before overwriting.
+            for i, attempt in enumerate(image_attempts):
+                is_last = i == len(image_attempts) - 1
+                file_path = (
+                    (final_state.get("original_image_path") or attempt["image_path"])
+                    if is_last
+                    else attempt["image_path"]
+                )
+                session.add(GeneratedImage(
+                    request_id=uuid.UUID(request_id),
+                    figure_id=None,
+                    file_path=file_path,
+                    prompt_used=attempt["prompt"],
+                    provider=attempt["provider"],
+                    width=512,
+                    height=512,
+                    validation_score=attempt["validation_score"],
+                ))
 
+            # If facial compositing ran, also record the composited result
             if final_state.get("swapped_image_path"):
-                swapped_image = GeneratedImage(
+                session.add(GeneratedImage(
                     request_id=uuid.UUID(request_id),
                     figure_id=None,
                     file_path=final_state["swapped_image_path"],
@@ -165,8 +189,31 @@ async def _execute_graph(
                     width=512,
                     height=512,
                     validation_score=final_state.get("validation_score"),
-                )
-                session.add(swapped_image)
+                ))
+        elif final_state.get("image_path"):
+            # Fallback: streaming loop missed events (e.g. resumed checkpoint)
+            original_path = final_state.get("original_image_path") or final_state["image_path"]
+            session.add(GeneratedImage(
+                request_id=uuid.UUID(request_id),
+                figure_id=None,
+                file_path=original_path,
+                prompt_used=final_state.get("image_prompt", ""),
+                provider=final_state.get("image_provider", "mock"),
+                width=512,
+                height=512,
+                validation_score=final_state.get("validation_score"),
+            ))
+            if final_state.get("swapped_image_path"):
+                session.add(GeneratedImage(
+                    request_id=uuid.UUID(request_id),
+                    figure_id=None,
+                    file_path=final_state["swapped_image_path"],
+                    prompt_used=final_state.get("image_prompt", ""),
+                    provider="facefusion",
+                    width=512,
+                    height=512,
+                    validation_score=final_state.get("validation_score"),
+                ))
 
         await session.commit()
 
