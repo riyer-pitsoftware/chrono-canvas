@@ -273,6 +273,47 @@ async def run_generation_pipeline(
             })
 
 
+def _rebuild_state_from_db(request: Any, from_step: str) -> "AgentState":
+    """Reconstruct AgentState from database fields when checkpoint is unavailable.
+
+    Used as a fallback when the in-memory LangGraph checkpoint is gone (e.g.
+    after a server restart).  Rebuilds from the denormalized DB columns first,
+    then enriches with any richer fields stored in the predecessor node's
+    ``state_snapshot`` inside ``agent_trace``.
+    """
+    state: AgentState = {
+        "request_id": str(request.id),
+        "input_text": request.input_text,
+        "agent_trace": list(request.agent_trace or []),
+        "llm_calls": list(request.llm_calls or []),
+        "retry_count": 0,
+        "should_regenerate": False,
+        "error": None,
+    }
+
+    # Populate from dedicated JSONB columns
+    for k, v in (request.extracted_data or {}).items():
+        if v is not None:
+            state[k] = v  # type: ignore[literal-required]
+    for k, v in (request.research_data or {}).items():
+        if v is not None:
+            state[k] = v  # type: ignore[literal-required]
+    if request.generated_prompt:
+        state["image_prompt"] = request.generated_prompt  # type: ignore[typeddict-unknown-key]
+
+    # Enrich from the predecessor's state_snapshot for fields not in dedicated columns
+    predecessor = _PREDECESSOR_NODE.get(from_step)
+    if predecessor:
+        for entry in reversed(request.agent_trace or []):
+            if entry.get("agent") == predecessor and entry.get("state_snapshot"):
+                for k, v in entry["state_snapshot"].items():
+                    if k not in state:
+                        state[k] = v  # type: ignore[literal-required]
+                break
+
+    return state
+
+
 async def retry_generation_pipeline(request_id: str, from_step: str) -> None:
     """Resume a failed generation pipeline from a specific step.
 
@@ -280,9 +321,13 @@ async def retry_generation_pipeline(request_id: str, from_step: str) -> None:
     and re-runs the graph from that point.  ``from_step="orchestrator"`` performs
     a full restart using the original input stored in the database.
 
-    Note: requires the in-process MemorySaver checkpoint to still be alive.
-    If the server has restarted since the original run, retrying from
-    ``orchestrator`` is the safe fallback (it doesn't rely on checkpoint state).
+    **Durability**: the in-process ``MemorySaver`` checkpoint is best-effort —
+    it is lost on server restart.  For non-orchestrator retries this function
+    automatically detects a missing checkpoint and reconstructs equivalent state
+    from the durable database fields (``extracted_data``, ``research_data``,
+    ``generated_prompt``, and per-node ``state_snapshot`` entries in
+    ``agent_trace``).  ``from_step="orchestrator"`` always performs a clean
+    restart and never relies on checkpoint state.
     """
     channel = f"generation:{request_id}"
     config = {"configurable": {"thread_id": request_id}}
@@ -334,11 +379,27 @@ async def retry_generation_pipeline(request_id: str, from_step: str) -> None:
                 # Rewind checkpoint: update state as if the predecessor node just ran,
                 # so LangGraph will run `from_step` next when we call astream(None).
                 predecessor = _PREDECESSOR_NODE[from_step]
-                await agent_graph.aupdate_state(
-                    config,
-                    {"error": None, "should_regenerate": False, "retry_count": 0},
-                    as_node=predecessor,
-                )
+
+                # Detect whether the checkpoint survived (it won't after a restart).
+                current_snapshot = await agent_graph.aget_state(config)
+                if current_snapshot.values:
+                    # Checkpoint is alive — only reset transient control flags.
+                    update_values: AgentState = {
+                        "error": None,
+                        "should_regenerate": False,
+                        "retry_count": 0,
+                    }  # type: ignore[typeddict-item]
+                else:
+                    # Checkpoint is gone — reconstruct full state from the DB so
+                    # the pipeline can continue without a full restart.
+                    logger.info(
+                        "Checkpoint missing for %s (server may have restarted); "
+                        "reconstructing state from DB (from_step=%s)",
+                        request_id, from_step,
+                    )
+                    update_values = _rebuild_state_from_db(request, from_step)
+
+                await agent_graph.aupdate_state(config, update_values, as_node=predecessor)
                 await _execute_graph(request_id, None, config, channel, repo, session)
 
         except Exception as e:
