@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class GenerationCreate(BaseModel):
@@ -104,11 +104,11 @@ class AuditDetailResponse(BaseModel):
     error_message: str | None = None
     total_cost: float = 0.0
     total_duration_ms: float = 0.0
-    llm_calls: list[LLMCallDetail] = []
+    llm_calls: list[LLMCallDetail] = Field(default_factory=list)
     validation_score: float | None = None
     validation_passed: bool | None = None
     validation_reasoning: str | None = None
-    validation_categories: list[ValidationCategoryDetail] = []
-    images: list[ImageResponse] = []
-    state_snapshots: list[StateSnapshot] = []
-    agent_trace: list[dict[str, Any]] = []
+    validation_categories: list[ValidationCategoryDetail] = Field(default_factory=list)
+    images: list[ImageResponse] = Field(default_factory=list)
+    state_snapshots: list[StateSnapshot] = Field(default_factory=list)
+    agent_trace: list[dict[str, Any]] = Field(default_factory=list)

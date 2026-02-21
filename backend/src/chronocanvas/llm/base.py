@@ -3,7 +3,7 @@ from collections.abc import Awaitable, Callable
 from enum import StrEnum
 from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class TaskType(StrEnum):
@@ -22,7 +22,7 @@ class LLMResponse(BaseModel):
     input_tokens: int = 0
     output_tokens: int = 0
     cost: float = 0.0
-    metadata: dict[str, Any] = {}
+    metadata: dict[str, Any] = Field(default_factory=dict)
     system_prompt: str | None = None
     user_prompt: str | None = None
     duration_ms: float = 0.0

@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from pathlib import Path
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class ImageResult(BaseModel):
@@ -9,7 +9,7 @@ class ImageResult(BaseModel):
     width: int
     height: int
     provider: str
-    generation_params: dict = {}
+    generation_params: dict = Field(default_factory=dict)
 
 
 class ImageGenerator(ABC):
