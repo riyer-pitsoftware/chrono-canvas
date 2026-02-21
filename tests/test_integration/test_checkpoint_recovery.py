@@ -9,7 +9,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from chronocanvas.db.models.request import GenerationRequest
-from chronocanvas.services.generation import _rebuild_state_from_db, _PREDECESSOR_NODE
+from chronocanvas.services.retry import _PREDECESSOR_NODE, RetryCoordinator
+
+_rebuild_state_from_db = RetryCoordinator().rebuild_state_from_db
 
 
 # ---------------------------------------------------------------------------
@@ -162,7 +164,7 @@ async def test_retry_falls_back_to_db_when_checkpoint_missing():
     with (
         patch("chronocanvas.services.generation.async_session") as mock_ctx,
         patch("chronocanvas.services.generation.agent_graph") as mock_graph,
-        patch("chronocanvas.services.generation.publish_progress", new_callable=AsyncMock),
+        patch("chronocanvas.services.generation.ProgressPublisher", return_value=AsyncMock()),
         patch("chronocanvas.services.generation.RequestRepository") as mock_repo_cls,
         patch("chronocanvas.services.generation.ImageRepository", return_value=mock_image_repo),
     ):
@@ -211,7 +213,7 @@ async def test_retry_uses_minimal_reset_when_checkpoint_alive():
     with (
         patch("chronocanvas.services.generation.async_session") as mock_ctx,
         patch("chronocanvas.services.generation.agent_graph") as mock_graph,
-        patch("chronocanvas.services.generation.publish_progress", new_callable=AsyncMock),
+        patch("chronocanvas.services.generation.ProgressPublisher", return_value=AsyncMock()),
         patch("chronocanvas.services.generation.RequestRepository") as mock_repo_cls,
         patch("chronocanvas.services.generation.ImageRepository", return_value=mock_image_repo),
     ):

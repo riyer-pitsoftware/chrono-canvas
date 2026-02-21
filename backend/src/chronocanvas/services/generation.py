@@ -7,6 +7,10 @@ from chronocanvas.db.engine import async_session
 from chronocanvas.db.models.request import RequestStatus
 from chronocanvas.db.repositories.images import ImageRepository
 from chronocanvas.db.repositories.requests import RequestRepository
+from chronocanvas.db.repositories.validation_rules import (
+    AdminSettingRepository,
+    ValidationRuleRepository,
+)
 from chronocanvas.services.image_recorder import ImageAttemptRecorder
 from chronocanvas.services.progress import ProgressPublisher
 from chronocanvas.services.retry import RetryCoordinator
@@ -68,6 +72,11 @@ async def run_generation_pipeline(
                 "message": "Extracting figure details...",
             })
 
+            rule_repo = ValidationRuleRepository(session)
+            setting_repo = AdminSettingRepository(session)
+            validation_weights = await rule_repo.get_weights()
+            validation_threshold = await setting_repo.get_pass_threshold()
+
             initial_state: AgentState = {
                 "request_id": request_id,
                 "input_text": input_text,
@@ -76,12 +85,15 @@ async def run_generation_pipeline(
                 "retry_count": 0,
                 "should_regenerate": False,
                 "error": None,
+                "validation_rule_weights": validation_weights,
+                "validation_pass_threshold": validation_threshold,
             }
             if source_face_path:
                 initial_state["source_face_path"] = source_face_path
 
             config = {"configurable": {"thread_id": request_id}}
-            await _make_runner(repo, session, agent_graph).run(request_id, initial_state, config, channel)
+            runner = _make_runner(repo, session, agent_graph)
+            await runner.run(request_id, initial_state, config, channel)
 
         except Exception as e:
             logger.exception("Generation pipeline failed for %s", request_id)

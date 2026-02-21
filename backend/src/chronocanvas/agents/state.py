@@ -30,6 +30,10 @@ class AgentState(TypedDict, total=False):
     image_provider: str
     generation_params: dict[str, Any]
 
+    # Validation config (loaded at pipeline start from DB)
+    validation_rule_weights: dict[str, float]
+    validation_pass_threshold: float
+
     # Validation
     validation_results: list[dict[str, Any]]
     validation_score: float

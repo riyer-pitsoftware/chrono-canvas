@@ -16,10 +16,10 @@ from chronocanvas.api.schemas.generation import (
     ImageResponse,
 )
 from chronocanvas.config import settings
+from chronocanvas.content_moderation import check_input
 from chronocanvas.db.engine import get_session
 from chronocanvas.db.repositories.images import ImageRepository
 from chronocanvas.db.repositories.requests import RequestRepository
-from chronocanvas.content_moderation import check_input
 from chronocanvas.security import confine_path
 from chronocanvas.services.audit import AuditProjector
 from chronocanvas.services.generation import VALID_RETRY_STEPS

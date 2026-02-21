@@ -1,8 +1,9 @@
 import uuid
+from datetime import datetime
 from enum import StrEnum
 from typing import TYPE_CHECKING
 
-from sqlalchemy import ForeignKey, String, Text
+from sqlalchemy import DateTime, ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -42,6 +43,11 @@ class GenerationRequest(Base, UUIDMixin, TimestampMixin):
     agent_trace: Mapped[dict | None] = mapped_column(JSONB, default=list)
     llm_costs: Mapped[dict | None] = mapped_column(JSONB, default=dict)
     llm_calls: Mapped[dict | None] = mapped_column(JSONB, default=list)
+
+    # Human-in-the-loop review (set when a human overrides a failed validation)
+    human_review_status: Mapped[str | None] = mapped_column(String(50))  # "accepted" | "rejected"
+    human_review_notes: Mapped[str | None] = mapped_column(Text)
+    human_reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     figure: Mapped["Figure | None"] = relationship(back_populates="requests")
     images: Mapped[list["GeneratedImage"]] = relationship(

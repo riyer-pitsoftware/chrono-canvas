@@ -59,8 +59,24 @@ async def validation_node(state: AgentState) -> AgentState:
             "passed": True,
         }
 
-    overall_score = data.get("overall_score", 75.0)
-    passed = overall_score >= 70
+    # Use weighted scoring if rule weights are present in state; fallback to simple average
+    rule_weights: dict[str, float] = state.get("validation_rule_weights") or {}
+    pass_threshold: float = state.get("validation_pass_threshold") or 70.0
+
+    llm_overall = data.get("overall_score", 75.0)
+    results_list = data.get("results", [])
+    if rule_weights and results_list:
+        weighted_sum = 0.0
+        weight_total = 0.0
+        for r in results_list:
+            w = rule_weights.get(r.get("category", ""), 0.25)
+            weighted_sum += r.get("score", 0.0) * w
+            weight_total += w
+        overall_score = weighted_sum / weight_total if weight_total > 0 else llm_overall
+    else:
+        overall_score = llm_overall
+
+    passed = overall_score >= pass_threshold
 
     trace = state.get("agent_trace", [])
     trace.append({

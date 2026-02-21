@@ -1,6 +1,16 @@
 from fastapi import APIRouter
 
-from chronocanvas.api.routes import agents, export, faces, figures, generation, health, timeline, validation
+from chronocanvas.api.routes import (
+    admin,
+    agents,
+    export,
+    faces,
+    figures,
+    generation,
+    health,
+    timeline,
+    validation,
+)
 
 api_router = APIRouter(prefix="/api")
 
@@ -12,3 +22,4 @@ api_router.include_router(generation.router)
 api_router.include_router(validation.router)
 api_router.include_router(export.router)
 api_router.include_router(agents.router)
+api_router.include_router(admin.router)

@@ -138,6 +138,48 @@ export interface TimelineFigureListResponse {
   year_max: number;
 }
 
+// ── Validation Admin ──────────────────────────────────────────────────────
+
+export interface ValidationRule {
+  id: string;
+  category: string;
+  display_name: string;
+  weight: number;
+  description: string | null;
+  enabled: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ValidationRulesConfig {
+  rules: ValidationRule[];
+  pass_threshold: number;
+}
+
+export interface ValidationQueueCategory {
+  category: string;
+  rule_name: string;
+  score: number;
+  passed: boolean;
+  details: string | null;
+}
+
+export interface ValidationQueueItem {
+  request_id: string;
+  input_text: string;
+  figure_name: string | null;
+  overall_score: number;
+  categories: ValidationQueueCategory[];
+  image_url: string | null;
+  human_review_status: string | null;
+  created_at: string;
+}
+
+export interface ValidationQueueResponse {
+  items: ValidationQueueItem[];
+  total: number;
+}
+
 export interface AuditDetail {
   id: string;
   input_text: string;

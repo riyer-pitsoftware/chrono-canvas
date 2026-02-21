@@ -11,6 +11,8 @@ def should_continue_after_orchestrator(state: AgentState) -> str:
 def should_continue_after_validation(state: AgentState) -> str:
     if state.get("error"):
         return "error"
+    if state.get("should_regenerate"):
+        return "regenerate"
     return "continue"
 
 
