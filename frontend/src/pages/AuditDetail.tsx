@@ -8,7 +8,7 @@ import { PipelineStepper } from "@/components/generation/PipelineStepper";
 import { StateInspector } from "@/components/generation/StateInspector";
 import { CostTimeline } from "@/components/generation/CostTimeline";
 import { DAGVisualizer } from "@/components/generation/DAGVisualizer";
-import { BookOpen, ChevronDown, ChevronLeft, ChevronRight, RotateCcw, Trash2, X } from "lucide-react";
+import { BookOpen, ChevronDown, ChevronLeft, ChevronRight, Download, ExternalLink, RotateCcw, Trash2, X } from "lucide-react";
 import type { GeneratedImage } from "@/api/types";
 
 const PIPELINE_STEPS = [
@@ -544,11 +544,20 @@ function ImageGallery({ images, requestId }: { images: GeneratedImage[]; request
                 </Badge>
               </div>
             )}
-            {/* Hover hint */}
-            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
+            {/* Hover overlay */}
+            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center gap-3">
               <span className="text-white opacity-0 group-hover:opacity-100 text-sm font-medium drop-shadow-md transition-opacity">
-                Click to enlarge
+                Enlarge
               </span>
+              <a
+                href={imageUrl(img, requestId)}
+                download
+                className="opacity-0 group-hover:opacity-100 text-white hover:text-gray-200 transition-opacity drop-shadow-md"
+                title="Download"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <Download className="w-5 h-5" />
+              </a>
             </div>
           </button>
         ))}
@@ -635,9 +644,28 @@ function Lightbox({
               </Badge>
             )}
           </div>
-          <span className="text-white/60">
-            {img.width}x{img.height}
-          </span>
+          <div className="flex items-center gap-3">
+            <span className="text-white/60">{img.width}x{img.height}</span>
+            <a
+              href={imageUrl(img, requestId)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1 text-white/80 hover:text-white transition-colors"
+              title="Open in new tab"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <ExternalLink className="w-4 h-4" />
+            </a>
+            <a
+              href={imageUrl(img, requestId)}
+              download
+              className="flex items-center gap-1 text-white/80 hover:text-white transition-colors"
+              title="Download image"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Download className="w-4 h-4" />
+            </a>
+          </div>
         </div>
 
         {/* Navigation arrows */}
