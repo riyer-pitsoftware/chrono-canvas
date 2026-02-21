@@ -1,0 +1,34 @@
+FROM python:3.11-slim
+
+# System packages: ffmpeg + curl required by FaceFusion pre_check;
+# libGL / libglib for opencv headless
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        ffmpeg \
+        curl \
+        libgl1 \
+        libglib2.0-0 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Python dependencies — FaceFusion core (no Gradio UI needed)
+RUN pip install --no-cache-dir \
+    fastapi==0.115.0 \
+    "uvicorn[standard]==0.30.6" \
+    pydantic==2.9.2 \
+    numpy==2.2.1 \
+    onnx==1.20.1 \
+    onnxruntime==1.20.1 \
+    "opencv-python-headless==4.10.0.84" \
+    tqdm==4.67.3 \
+    scipy==1.14.1
+
+# Copy the wrapper server
+COPY docker/facefusion_server.py /app/facefusion_server.py
+
+WORKDIR /app
+
+# FaceFusion source is mounted at /facefusion at runtime (see docker-compose)
+ENV PYTHONPATH=/facefusion
+
+EXPOSE 7861
+
+CMD ["python", "/app/facefusion_server.py"]

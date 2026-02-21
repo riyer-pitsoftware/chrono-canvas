@@ -29,6 +29,29 @@ services:
     security_opt:
       - no-new-privileges:true
 
+  facefusion:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.facefusion
+    ports:
+      - "7861:7861"
+    volumes:
+      # FaceFusion source code
+      - /Users/riyer/code/facefusion:/facefusion
+      # Persist downloaded ONNX models between restarts
+      - ff_models:/facefusion/.assets
+      # Shared image directories with the api service
+      - ./output:/app/output
+      - ./uploads:/app/uploads
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7861/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    security_opt:
+      - no-new-privileges:true
+
   api:
     build:
       context: .
@@ -75,3 +98,4 @@ services:
 volumes:
   pgdata:
   frontend_node_modules:
+  ff_models:
