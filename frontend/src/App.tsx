@@ -16,6 +16,11 @@ function getPage(path: string) {
     return <AuditDetail requestId={requestId} />;
   }
 
+  if (path.startsWith("/guide/")) {
+    const section = path.slice("/guide/".length);
+    return <Guide section={section} />;
+  }
+
   switch (path) {
     case "/figures":
       return <FigureLibrary />;

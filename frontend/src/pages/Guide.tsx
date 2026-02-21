@@ -14,11 +14,15 @@ import {
   BookOpen,
   Sparkles,
   Activity,
+  ChevronDown,
+  ChevronRight,
+  Lightbulb,
 } from "lucide-react";
 
 const tocItems = [
   { id: "getting-started", label: "Getting Started" },
   { id: "pipeline", label: "The Pipeline" },
+  { id: "agent-deep-dive", label: "Agent Deep Dive" },
   { id: "using-ui", label: "Using the UI" },
   { id: "configuration", label: "Configuration" },
   { id: "cli-reference", label: "CLI Reference" },
@@ -28,9 +32,11 @@ const pipelineSteps = [
   { name: "Orchestrator", provider: "Ollama", description: "Receives request and creates an execution plan" },
   { name: "Extraction", provider: "Ollama", description: "Parses text into structured figure data" },
   { name: "Research", provider: "Claude", description: "Enriches data with historical context and facts" },
+  { name: "Face Search", provider: "SerpAPI", description: "Fetches reference portrait images from the web" },
   { name: "Prompt Gen", provider: "Claude", description: "Creates period-accurate image generation prompts" },
-  { name: "Image Gen", provider: "—", description: "Produces portrait via Stable Diffusion or FaceFusion" },
+  { name: "Image Gen", provider: "—", description: "Produces portrait via Stable Diffusion or ComfyUI" },
   { name: "Validation", provider: "Ollama", description: "Scores historical accuracy (0–100) and flags issues" },
+  { name: "Face Swap", provider: "FaceFusion", description: "Blends uploaded face into the generated portrait" },
   { name: "Export", provider: "—", description: "Packages portrait as PNG with JSON metadata" },
 ];
 
@@ -114,9 +120,237 @@ const routingTable = [
   { task: "General", provider: "Ollama", reason: "Default fallback, no API cost" },
 ];
 
-export function Guide() {
+interface AgentGuideEntry {
+  id: string;
+  label: string;
+  provider: string;
+  why: string;
+  promptTemplate: string | null;
+  promptNote?: string;
+  tips: { title: string; detail: string }[];
+}
+
+const PIPELINE_GUIDE: AgentGuideEntry[] = [
+  {
+    id: "extraction",
+    label: "Extraction",
+    provider: "Ollama",
+    why: "The user's input is free-form text—\"Cleopatra, Queen of Egypt\" could mean many things. This agent parses that into structured fields (name, time period, region, occupation) that every downstream agent can reliably use. Without it, each agent would have to re-interpret the raw input and risk disagreeing with each other.",
+    promptTemplate: `Extract historical figure information from the following text.
+Return a JSON object with these fields:
+- figure_name: string (full name of the historical figure)
+- time_period: string (era or century)
+- region: string (geographic region/country)
+- occupation: string (primary role or title)
+- attributes: object (any additional attributes mentioned)
+
+Text: {input_text}
+
+Respond with valid JSON only.`,
+    tips: [
+      {
+        title: "Add a context field",
+        detail: "Append `- context: string (notable qualifier, e.g. \"early career\" or \"in exile\")` to capture life-phase nuance that affects clothing and setting.",
+      },
+      {
+        title: "Lower temperature for reliability",
+        detail: "This call uses temperature=0.3. Try 0.1 for more deterministic JSON output, especially if you see occasional parse failures.",
+      },
+    ],
+  },
+  {
+    id: "research",
+    label: "Research",
+    provider: "Claude",
+    why: "Knowing who someone was isn't enough to paint them. This agent adds the rich sensory detail—what fabrics they wore, their known physical features, the art style of their era—that turns a name into a portrait prompt. It's why Claude is used here: historical enrichment requires real reasoning, not just retrieval.",
+    promptTemplate: `You are a historical research expert. Research the following historical figure
+for the purpose of generating an accurate portrait.
+
+Figure: {figure_name}
+Time Period: {time_period}
+Region: {region}
+Occupation: {occupation}
+
+Provide detailed information as JSON with these fields:
+- historical_context: string (2-3 sentences about their life and significance)
+- clothing_details: string (accurate period clothing, fabrics, colors)
+- physical_description: string (known physical features, build, hair, complexion)
+- art_style_reference: string (art style of their era, e.g. "Renaissance oil painting")
+- sources: list of strings (reference descriptions)
+
+Respond with valid JSON only.`,
+    tips: [
+      {
+        title: "Add notable_accessories",
+        detail: "Add `- notable_accessories: string` to capture crowns, weapons, or jewelry that define the figure's iconography—these often matter more than clothing.",
+      },
+      {
+        title: "Request a color palette",
+        detail: "Add `- color_palette: string (3-4 hex codes or named colors typical of their portrait tradition)` for even more precise prompt grounding.",
+      },
+    ],
+  },
+  {
+    id: "face_search",
+    label: "Face Search",
+    provider: "SerpAPI",
+    why: "Stable Diffusion alone can't know what a historical figure looked like. By fetching real portrait images from the web, this agent provides reference material that can anchor the generation. It also supplies the pool of face images used by the Face Swap step if the user didn't upload their own.",
+    promptTemplate: `{figure_name} historical portrait photograph`,
+    promptNote: "This is a search query template, not an LLM prompt. Results are fetched from Google Images via SerpAPI.",
+    tips: [
+      {
+        title: "Bias toward a specific medium",
+        detail: "Append \" oil painting\" or \" engraving\" to the query to prefer a particular visual style in the reference images.",
+      },
+      {
+        title: "Prefer public domain",
+        detail: "Appending \" site:commons.wikimedia.org\" biases results toward freely licensed images, useful if you're building on top of the reference.",
+      },
+    ],
+  },
+  {
+    id: "prompt_generation",
+    label: "Prompt Generation",
+    provider: "Claude",
+    why: "Stable Diffusion XL speaks a very specific dialect: comma-separated tags with emphasis weights like `(sharp facial features:1.2)`. This agent translates the research text—which is rich but prose-form—into that syntax. The system prompt teaches Claude the SDXL grammar so you don't have to.",
+    promptTemplate: `You are an expert at crafting Stable Diffusion XL prompts for photorealistic historical portraits.
+
+Based on the following research, create a detailed SDXL prompt for generating a highly realistic portrait photograph.
+
+Figure: {figure_name}
+Historical Context: {historical_context}
+Clothing: {clothing_details}
+Physical Description: {physical_description}
+Art Style: {art_style_reference}
+
+Requirements:
+1. Use comma-separated tag style (SDXL responds best to this format)
+2. Start with: "photorealistic portrait, (masterpiece:1.2), (best quality:1.2), (ultra detailed face:1.3)"
+3. Describe facial features precisely: skin texture, facial bone structure, eye color and shape
+4. Include period-accurate clothing, hairstyle, and accessories with specific detail
+5. Add lighting tags: Rembrandt lighting, soft key light, (catchlights in eyes:1.1)
+6. Add camera tags: 85mm lens, shallow depth of field, sharp focus on eyes, bokeh background
+7. Add quality tags: RAW photo, 8K, DSLR, (detailed skin texture:1.2), film grain
+8. Use emphasis syntax for important elements: (sharp facial features:1.2), (realistic skin:1.3)
+9. Keep it under 200 words — SDXL works better with concise, weighted prompts
+
+Return ONLY the prompt text, no explanations.`,
+    tips: [
+      {
+        title: "Shift to a painterly style",
+        detail: "Add `(oil painting texture:1.2), impasto brushwork` to the requirements list to make the output look like a period painting rather than a photograph.",
+      },
+      {
+        title: "Boost face sharpness",
+        detail: "Increase the weight on `(ultra detailed face:1.3)` to `(ultra detailed face:1.5)` — but watch for over-sharpening artifacts at very high weights.",
+      },
+    ],
+  },
+  {
+    id: "image_generation",
+    label: "Image Generation",
+    provider: "Stable Diffusion / ComfyUI",
+    why: "The actual diffusion step. No LLM is involved here—the prompt from the previous agent is sent directly to the image provider. This is intentionally the only non-LLM step: image quality is the provider's job, and keeping it separate makes it easy to swap providers.",
+    promptTemplate: null,
+    promptNote: "No LLM prompt. The output of Prompt Generation is sent directly to the configured image provider (Stable Diffusion API or ComfyUI). Configure IMAGE_PROVIDER in .env.",
+    tips: [
+      {
+        title: "Use a real provider",
+        detail: "Set `IMAGE_PROVIDER=stable_diffusion` and `SD_API_URL=http://localhost:7860` in .env. The mock provider returns placeholder images—useful for testing the pipeline without a GPU.",
+      },
+      {
+        title: "Increase generation steps",
+        detail: "Edit `generation_params.steps` in the image generation node to increase from the default 20 to 30–40 for higher quality, at the cost of generation time.",
+      },
+    ],
+  },
+  {
+    id: "validation",
+    label: "Validation",
+    provider: "Ollama",
+    why: "Image generation is non-deterministic—the model might produce something anachronistic or wrong. Validation catches this before the user sees it. Scores below 70 trigger automatic regeneration (up to 2 retries) with a corrected prompt. Ollama is used here because scoring doesn't need frontier reasoning—it needs consistency and cost efficiency.",
+    promptTemplate: `You are a historical accuracy validator. Evaluate the following image generation
+prompt for historical accuracy.
+
+Figure: {figure_name}
+Time Period: {time_period}
+Region: {region}
+Image Prompt: {image_prompt}
+
+Score each category 0-100 and provide details:
+1. clothing_accuracy: Are the clothes period-appropriate?
+2. cultural_accuracy: Are cultural elements correct?
+3. temporal_accuracy: Are there anachronistic elements?
+4. artistic_style: Does the art style match the period?
+
+Return JSON with:
+- results: list of objects with (category, rule_name, passed, score, details, reasoning)
+- overall_score: float 0-100
+- overall_reasoning: 2-4 sentences summarizing the overall assessment
+- passed: boolean (true if overall_score >= 70)
+
+Respond with valid JSON only.`,
+    tips: [
+      {
+        title: "Adjust the pass threshold",
+        detail: "The 70-point threshold is set in `validation_node`. Lower it to 50 for more lenient acceptance, or raise it to 85 if historical accuracy is critical for your use case.",
+      },
+      {
+        title: "Add a costume_era_match rule",
+        detail: "Add `5. costume_era_match: Does the overall costume match a single coherent time period?` to catch mixed-era outfits that slip past the individual category checks.",
+      },
+    ],
+  },
+  {
+    id: "face_swap",
+    label: "Face Swap",
+    provider: "FaceFusion",
+    why: "If the user uploads a reference face, this step blends their likeness into the generated portrait using FaceFusion. The entire step is skipped if no face was uploaded, making it an optional layer of personalization on top of the core pipeline.",
+    promptTemplate: null,
+    promptNote: "No LLM prompt. FaceFusion performs face detection and blending purely with computer vision. Configure FACEFUSION_API_URL in .env.",
+    tips: [
+      {
+        title: "Use a front-facing reference photo",
+        detail: "Face swap accuracy drops significantly with profile or angled shots. Ask users to upload a well-lit, front-facing portrait for best results.",
+      },
+      {
+        title: "Match pose in the generated portrait",
+        detail: "Add `front-facing portrait, looking directly at viewer` to the prompt generation requirements so the generated pose is compatible with the face swap.",
+      },
+    ],
+  },
+  {
+    id: "export",
+    label: "Export",
+    provider: "—",
+    why: "Packages the final result—image file, metadata JSON (figure data, prompt used, validation score, LLM costs)—so it can be downloaded or referenced later. This is the only step that writes to permanent storage outside the generation's working directory.",
+    promptTemplate: null,
+    promptNote: "No LLM prompt. Pure file I/O: copies the output image to the export path and writes a JSON sidecar with generation metadata.",
+    tips: [
+      {
+        title: "Switch to JPEG for smaller files",
+        detail: "Set `EXPORT_FORMAT=jpeg` in .env to get significantly smaller files. PNG is the default for lossless archival quality.",
+      },
+      {
+        title: "Read the JSON sidecar",
+        detail: "Every export writes a `.json` file alongside the image with the full prompt, validation scores, and LLM costs—useful for reproducing or comparing generations.",
+      },
+    ],
+  },
+];
+
+interface GuideProps {
+  section?: string;
+}
+
+export function Guide({ section }: GuideProps) {
   const [activeSection, setActiveSection] = useState(tocItems[0].id);
+  const [expandedAgents, setExpandedAgents] = useState<Record<string, boolean>>(() => {
+    if (section) return { [section]: true };
+    return {};
+  });
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
+  const agentRefs = useRef<Record<string, HTMLElement | null>>({});
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -138,9 +372,25 @@ export function Guide() {
     return () => observer.disconnect();
   }, []);
 
+  // Deep-link: scroll to agent section when section prop changes
+  useEffect(() => {
+    if (!section) return;
+    setExpandedAgents((prev) => ({ ...prev, [section]: true }));
+    // Small delay to let expand animation settle
+    const timer = setTimeout(() => {
+      const el = agentRefs.current[section];
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 80);
+    return () => clearTimeout(timer);
+  }, [section]);
+
   function scrollTo(id: string) {
     const el = sectionRefs.current[id];
     if (el) el.scrollIntoView({ behavior: "smooth" });
+  }
+
+  function toggleAgent(id: string) {
+    setExpandedAgents((prev) => ({ ...prev, [id]: !prev[id] }));
   }
 
   return (
@@ -187,7 +437,7 @@ export function Guide() {
                 What is ChronoCanvas?
               </CardTitle>
               <CardDescription>
-                ChronoCanvas is an open-source toolkit that generates historically-accurate portraits using a 7-agent AI pipeline.
+                ChronoCanvas is an open-source toolkit that generates historically-accurate portraits using a 9-agent AI pipeline.
                 It's built for educators, historians, and content creators who need period-accurate character depictions.
               </CardDescription>
             </CardHeader>
@@ -208,9 +458,9 @@ export function Guide() {
           <h3 className="text-xl font-semibold mb-4">The Pipeline</h3>
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">7-Agent Flow</CardTitle>
+              <CardTitle className="text-lg">9-Agent Flow</CardTitle>
               <CardDescription>
-                Each generation passes through seven autonomous agents in sequence.
+                Each generation passes through nine autonomous agents in sequence.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -246,6 +496,79 @@ export function Guide() {
               </div>
             </CardContent>
           </Card>
+        </section>
+
+        {/* Agent Deep Dive */}
+        <section id="agent-deep-dive" ref={(el) => { sectionRefs.current["agent-deep-dive"] = el; }}>
+          <h3 className="text-xl font-semibold mb-2">Agent Deep Dive</h3>
+          <p className="text-sm text-[var(--muted-foreground)] mb-4">
+            Why each agent exists, the prompt it uses, and how to change its behavior.
+          </p>
+          <div className="space-y-2">
+            {PIPELINE_GUIDE.map((agent) => {
+              const isOpen = expandedAgents[agent.id] ?? false;
+              return (
+                <div
+                  key={agent.id}
+                  ref={(el) => { agentRefs.current[agent.id] = el; }}
+                  className="border border-[var(--border)] rounded-lg overflow-hidden"
+                >
+                  <button
+                    onClick={() => toggleAgent(agent.id)}
+                    className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-[var(--accent)] transition-colors"
+                  >
+                    {isOpen
+                      ? <ChevronDown className="w-4 h-4 shrink-0 text-[var(--muted-foreground)]" />
+                      : <ChevronRight className="w-4 h-4 shrink-0 text-[var(--muted-foreground)]" />
+                    }
+                    <span className="font-medium">{agent.label}</span>
+                    <Badge variant="outline" className="text-xs ml-1">{agent.provider}</Badge>
+                  </button>
+
+                  {isOpen && (
+                    <div className="px-4 pb-5 space-y-5 border-t border-[var(--border)]">
+                      {/* Why */}
+                      <div className="mt-4">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted-foreground)] mb-1.5">Why this agent exists</p>
+                        <p className="text-sm text-[var(--foreground)] leading-relaxed">{agent.why}</p>
+                      </div>
+
+                      {/* Prompt */}
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted-foreground)] mb-1.5">
+                          {agent.promptTemplate ? "Prompt template" : "No LLM prompt"}
+                        </p>
+                        {agent.promptNote && (
+                          <p className="text-xs text-[var(--muted-foreground)] mb-2 italic">{agent.promptNote}</p>
+                        )}
+                        {agent.promptTemplate && (
+                          <pre className="text-xs bg-[var(--muted)] p-3 rounded-md overflow-auto whitespace-pre-wrap leading-relaxed border border-[var(--border)]">
+                            {agent.promptTemplate}
+                          </pre>
+                        )}
+                      </div>
+
+                      {/* Tips */}
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted-foreground)] mb-2">Try changing this</p>
+                        <div className="space-y-2">
+                          {agent.tips.map((tip) => (
+                            <div key={tip.title} className="flex gap-2.5 text-sm p-3 rounded-md bg-yellow-50 border border-yellow-200 dark:bg-yellow-950 dark:border-yellow-900">
+                              <Lightbulb className="w-4 h-4 shrink-0 text-yellow-600 dark:text-yellow-400 mt-0.5" />
+                              <div>
+                                <p className="font-medium text-yellow-900 dark:text-yellow-200">{tip.title}</p>
+                                <p className="text-yellow-800 dark:text-yellow-300 mt-0.5">{tip.detail}</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </section>
 
         {/* Using the UI */}
