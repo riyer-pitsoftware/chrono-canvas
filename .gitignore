@@ -60,5 +60,8 @@ dump.rdb
 .beads/
 .claude/
 
+# Security scan reports
+zap-reports/
+
 # macOS
 **/.DS_Store
