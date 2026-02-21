@@ -21,12 +21,15 @@ def _get_generator():
 
 
 async def image_generation_node(state: AgentState) -> AgentState:
-    logger.info(f"Image generation agent: generating image for {state.get('figure_name', '')}")
+    request_id = state.get("request_id", "unknown")
+    logger.info(
+        "Image generation agent: generating image for %s [request_id=%s]",
+        state.get("figure_name", ""),
+        request_id,
+    )
 
     generator = _get_generator()
-    output_dir = Path(settings.output_dir) / state.get("request_id", "unknown")
-
-    request_id = state.get("request_id", "unknown")
+    output_dir = Path(settings.output_dir) / request_id
     channel = f"generation:{request_id}"
 
     async def on_progress(step: int, total: int) -> None:
@@ -64,7 +67,7 @@ async def image_generation_node(state: AgentState) -> AgentState:
             "agent_trace": trace,
         }
     except Exception as e:
-        logger.error(f"Image generation failed: {e}")
+        logger.error("Image generation failed [request_id=%s]: %s", request_id, e)
         trace = state.get("agent_trace", [])
         trace.append({
             "agent": "image_generation",

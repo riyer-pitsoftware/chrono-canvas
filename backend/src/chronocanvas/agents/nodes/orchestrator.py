@@ -25,7 +25,11 @@ async def orchestrator_node(state: AgentState) -> AgentState:
     trace.append(trace_entry)
 
     if not is_safe:
-        logger.warning(f"Orchestrator: input blocked by content moderation — {reason}")
+        logger.warning(
+            "Orchestrator: input blocked by content moderation [request_id=%s] — %s",
+            state.get("request_id", "unknown"),
+            reason,
+        )
         return {
             **state,
             "current_agent": "orchestrator",

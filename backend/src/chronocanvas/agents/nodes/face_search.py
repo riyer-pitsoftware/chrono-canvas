@@ -80,6 +80,7 @@ async def _download_image(url: str, output_dir: Path) -> str | None:
 
 async def face_search_node(state: AgentState) -> AgentState:
     figure_name = state.get("figure_name", "")
+    request_id = state.get("request_id", "unknown")
     trace = list(state.get("agent_trace", []))
 
     if not figure_name:
@@ -87,23 +88,23 @@ async def face_search_node(state: AgentState) -> AgentState:
         return {**state, "current_agent": "face_search", "agent_trace": trace}
 
     if not settings.serpapi_key:
-        logger.info("Face search: SERPAPI_KEY not set, skipping")
+        logger.info("Face search: SERPAPI_KEY not set, skipping [request_id=%s]", request_id)
         trace.append({"agent": "face_search", "timestamp": time.time(), "skipped": True, "reason": "no_api_key"})
         return {**state, "current_agent": "face_search", "agent_trace": trace}
 
     # Don't overwrite a manually uploaded face
     if state.get("source_face_path"):
-        logger.info("Face search: source_face_path already set, skipping web search")
+        logger.info("Face search: source_face_path already set, skipping web search [request_id=%s]", request_id)
         trace.append({"agent": "face_search", "timestamp": time.time(), "skipped": True, "reason": "already_set"})
         return {**state, "current_agent": "face_search", "agent_trace": trace}
 
     query = SEARCH_QUERY_TEMPLATE.format(figure_name=figure_name)
-    logger.info(f"Face search: querying SerpAPI for '{query}'")
+    logger.info("Face search: querying SerpAPI for %r [request_id=%s]", query, request_id)
 
     try:
         results = await _search_serpapi(query)
     except Exception as e:
-        logger.warning(f"Face search: SerpAPI error: {e}")
+        logger.warning("Face search: SerpAPI error [request_id=%s]: %s", request_id, e)
         trace.append({
             "agent": "face_search",
             "timestamp": time.time(),
@@ -114,7 +115,7 @@ async def face_search_node(state: AgentState) -> AgentState:
         return {**state, "current_agent": "face_search", "agent_trace": trace}
 
     if not results:
-        logger.info("Face search: no results returned")
+        logger.info("Face search: no results returned [request_id=%s]", request_id)
         trace.append({
             "agent": "face_search",
             "timestamp": time.time(),
@@ -124,7 +125,6 @@ async def face_search_node(state: AgentState) -> AgentState:
         })
         return {**state, "current_agent": "face_search", "agent_trace": trace}
 
-    request_id = state.get("request_id", "unknown")
     output_dir = Path(settings.output_dir) / request_id
 
     # Try original URLs first, fall back to thumbnails
@@ -140,7 +140,7 @@ async def face_search_node(state: AgentState) -> AgentState:
             break
 
     if not downloaded_path:
-        logger.info("Face search: could not download any result images")
+        logger.info("Face search: could not download any result images [request_id=%s]", request_id)
         trace.append({
             "agent": "face_search",
             "timestamp": time.time(),
@@ -151,7 +151,7 @@ async def face_search_node(state: AgentState) -> AgentState:
         })
         return {**state, "current_agent": "face_search", "agent_trace": trace}
 
-    logger.info(f"Face search: downloaded face image from {used_url} -> {downloaded_path}")
+    logger.info("Face search: downloaded face image %s -> %s [request_id=%s]", used_url, downloaded_path, request_id)
     trace.append({
         "agent": "face_search",
         "timestamp": time.time(),
