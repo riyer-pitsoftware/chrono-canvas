@@ -6,8 +6,15 @@ from pathlib import Path
 from chronocanvas.agents.state import AgentState
 from chronocanvas.config import settings
 from chronocanvas.imaging.facefusion_client import FaceFusionClient
+from chronocanvas.imaging.mock_face_swap import MockFaceSwapClient
 
 logger = logging.getLogger(__name__)
+
+
+def _get_face_swap_client():
+    if settings.image_provider == "facefusion":
+        return FaceFusionClient()
+    return MockFaceSwapClient()
 
 
 async def face_swap_node(state: AgentState) -> AgentState:
@@ -49,8 +56,8 @@ async def face_swap_node(state: AgentState) -> AgentState:
         original_copy = original_path.parent / f"original_{original_path.name}"
         shutil.copy2(image_path, original_copy)
 
-        # Run face swap
-        client = FaceFusionClient()
+        # Run face swap (mock when IMAGE_PROVIDER != "facefusion")
+        client = _get_face_swap_client()
         request_id = state.get("request_id", "unknown")
         output_dir = Path(settings.output_dir) / request_id
 
@@ -78,13 +85,14 @@ async def face_swap_node(state: AgentState) -> AgentState:
             "agent_trace": trace,
         }
 
-    except Exception:
+    except Exception as e:
         logger.exception("Face swap failed, continuing with original image")
         trace.append({
             "agent": "face_swap",
             "timestamp": time.time(),
             "skipped": False,
             "error": True,
+            "error_message": str(e),
         })
         return {
             **state,
