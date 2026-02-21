@@ -85,6 +85,11 @@ class ValidationCategoryDetail(BaseModel):
     reasoning: str | None = None
 
 
+class StateSnapshot(BaseModel):
+    agent: str
+    snapshot: dict[str, Any]
+
+
 class AuditDetailResponse(BaseModel):
     id: uuid.UUID
     input_text: str
@@ -105,3 +110,4 @@ class AuditDetailResponse(BaseModel):
     validation_reasoning: str | None = None
     validation_categories: list[ValidationCategoryDetail] = []
     images: list[ImageResponse] = []
+    state_snapshots: list[StateSnapshot] = []

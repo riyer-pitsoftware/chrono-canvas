@@ -126,6 +126,11 @@ export interface FaceUploadResponse {
   file_path: string;
 }
 
+export interface StateSnapshot {
+  agent: string;
+  snapshot: Record<string, unknown>;
+}
+
 export interface AuditDetail {
   id: string;
   input_text: string;
@@ -146,4 +151,5 @@ export interface AuditDetail {
   validation_reasoning: string | null;
   validation_categories: ValidationCategoryDetail[];
   images: GeneratedImage[];
+  state_snapshots: StateSnapshot[];
 }

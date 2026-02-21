@@ -13,6 +13,14 @@ from chronocanvas.redis_client import publish_progress
 
 logger = logging.getLogger(__name__)
 
+# Keys excluded from per-node state snapshots (noisy, large, or redundant)
+_SNAPSHOT_EXCLUDE = frozenset({
+    "llm_calls", "agent_trace", "request_id", "error",
+    "should_regenerate", "retry_count",
+    "source_face_path", "image_path", "export_path",
+    "swapped_image_path", "original_image_path",
+})
+
 VALID_RETRY_STEPS = frozenset([
     "orchestrator", "extraction", "research", "prompt_generation",
     "image_generation", "validation", "face_swap", "export",
@@ -87,6 +95,15 @@ async def _execute_graph(
                 }
             if node_state.get("image_prompt"):
                 update_kwargs["generated_prompt"] = node_state["image_prompt"]
+
+            # Attach a state snapshot to the trace entry for this agent
+            snapshot = {k: v for k, v in node_state.items() if k not in _SNAPSHOT_EXCLUDE}
+            trace = list(update_kwargs.get("agent_trace", []))
+            for entry in reversed(trace):
+                if entry.get("agent") == current_agent and "state_snapshot" not in entry:
+                    entry["state_snapshot"] = snapshot
+                    break
+            update_kwargs["agent_trace"] = trace
 
             await repo.update(request_id, **update_kwargs)
             await session.commit()

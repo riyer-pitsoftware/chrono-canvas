@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useAuditDetail, useDeleteGeneration, useRetryGeneration } from "@/api/hooks/useGeneration";
 import { useNavigation } from "@/stores/navigation";
 import { PipelineStepper } from "@/components/generation/PipelineStepper";
+import { StateInspector } from "@/components/generation/StateInspector";
 import { ChevronDown, ChevronLeft, ChevronRight, RotateCcw, Trash2, X } from "lucide-react";
 import type { GeneratedImage } from "@/api/types";
 
@@ -152,6 +153,19 @@ export function AuditDetail({ requestId }: { requestId: string }) {
           </CardContent>
         </Card>
       )}
+
+      {/* Agent State Inspector */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Agent State Inspector</CardTitle>
+          <p className="text-sm text-[var(--muted-foreground)]">
+            Full AgentState snapshot after each node ran. Diff view shows what each agent added or changed.
+          </p>
+        </CardHeader>
+        <CardContent>
+          <StateInspector snapshots={data.state_snapshots ?? []} />
+        </CardContent>
+      </Card>
 
       {/* Validation Section */}
       {data.validation_score != null && (

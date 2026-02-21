@@ -15,6 +15,7 @@ from chronocanvas.api.schemas.generation import (
     GenerationResponse,
     ImageResponse,
     LLMCallDetail,
+    StateSnapshot,
     ValidationCategoryDetail,
 )
 from chronocanvas.config import settings
@@ -152,6 +153,12 @@ async def get_generation_audit(
     if request.extracted_data:
         figure_name = request.extracted_data.get("figure_name")
 
+    state_snapshots = [
+        StateSnapshot(agent=entry["agent"], snapshot=entry["state_snapshot"])
+        for entry in (request.agent_trace or [])
+        if "state_snapshot" in entry
+    ]
+
     return AuditDetailResponse(
         id=request.id,
         input_text=request.input_text,
@@ -172,6 +179,7 @@ async def get_generation_audit(
         validation_reasoning=validation_reasoning,
         validation_categories=validation_categories,
         images=[ImageResponse.model_validate(img) for img in images],
+        state_snapshots=state_snapshots,
     )
 
 
