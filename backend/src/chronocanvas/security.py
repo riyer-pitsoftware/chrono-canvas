@@ -107,3 +107,28 @@ def validate_image_magic(data: bytes) -> bool:
 def sanitize_search_query(value: str, max_length: int = 200) -> str:
     """Strip leading/trailing whitespace and truncate to max_length."""
     return value.strip()[:max_length]
+
+
+# ── Path confinement ────────────────────────────────────────────────────────────
+
+from pathlib import Path  # noqa: E402 — kept near usage for locality
+
+
+def confine_path(path: Path, base: Path) -> Path:
+    """Resolve *path* and assert it stays inside *base*.
+
+    Returns the resolved path on success.  Raises ``PermissionError`` if the
+    resolved path escapes *base* (path-traversal attempt).
+
+    Both *path* and *base* are resolved with ``Path.resolve()`` so symlinks
+    and ``..`` components are fully expanded before comparison.
+    """
+    resolved = path.resolve()
+    base_resolved = base.resolve()
+    try:
+        resolved.relative_to(base_resolved)
+    except ValueError:
+        raise PermissionError(
+            f"Path {str(path)!r} escapes allowed directory {str(base)!r}"
+        )
+    return resolved

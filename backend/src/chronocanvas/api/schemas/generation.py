@@ -9,7 +9,10 @@ class GenerationCreate(BaseModel):
     input_text: str
     figure_id: uuid.UUID | None = None
     provider_override: str | None = None
-    face_id: str | None = None
+    # face_id must be the 32-char lowercase hex produced by the upload endpoint
+    # (uuid4().hex).  This pattern rejects path-traversal strings before they
+    # reach the filesystem.
+    face_id: str | None = Field(None, pattern=r"^[0-9a-f]{32}$")
 
 
 class GenerationResponse(BaseModel):

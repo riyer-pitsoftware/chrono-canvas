@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from chronocanvas.config import settings
 from chronocanvas.db.engine import get_session
 from chronocanvas.db.repositories.images import ImageRepository
+from chronocanvas.security import confine_path
 
 router = APIRouter(prefix="/export", tags=["export"])
 
@@ -23,6 +24,10 @@ async def download_image(
 
     image = images[0]
     file_path = Path(image.file_path)
+    try:
+        file_path = confine_path(file_path, Path(settings.output_dir))
+    except PermissionError:
+        raise HTTPException(status_code=403, detail="Access denied")
     if not file_path.exists():
         raise HTTPException(status_code=404, detail="Image file not found on disk")
 
@@ -37,6 +42,10 @@ async def download_image(
 async def get_export_metadata(request_id: uuid.UUID):
     export_dir = Path(settings.output_dir) / str(request_id) / "export"
     metadata_path = export_dir / "metadata.json"
+    try:
+        metadata_path = confine_path(metadata_path, Path(settings.output_dir))
+    except PermissionError:
+        raise HTTPException(status_code=403, detail="Access denied")
     if not metadata_path.exists():
         raise HTTPException(status_code=404, detail="Export metadata not found")
 
