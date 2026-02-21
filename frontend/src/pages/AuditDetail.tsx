@@ -6,7 +6,8 @@ import { useAuditDetail, useDeleteGeneration, useRetryGeneration } from "@/api/h
 import { useNavigation } from "@/stores/navigation";
 import { PipelineStepper } from "@/components/generation/PipelineStepper";
 import { StateInspector } from "@/components/generation/StateInspector";
-import { ChevronDown, ChevronLeft, ChevronRight, RotateCcw, Trash2, X } from "lucide-react";
+import { CostTimeline } from "@/components/generation/CostTimeline";
+import { BookOpen, ChevronDown, ChevronLeft, ChevronRight, RotateCcw, Trash2, X } from "lucide-react";
 import type { GeneratedImage } from "@/api/types";
 
 const PIPELINE_STEPS = [
@@ -90,6 +91,21 @@ export function AuditDetail({ requestId }: { requestId: string }) {
         </CardContent>
       </Card>
 
+      {/* Cost & Latency Timeline */}
+      {data.llm_calls.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Cost &amp; Latency Breakdown</CardTitle>
+            <p className="text-sm text-[var(--muted-foreground)]">
+              Bar width = wall-clock duration · Hover a segment to highlight the row
+            </p>
+          </CardHeader>
+          <CardContent>
+            <CostTimeline llmCalls={data.llm_calls} />
+          </CardContent>
+        </Card>
+      )}
+
       {/* LLM Call Sections */}
       {data.llm_calls.length > 0 && (
         <Card>
@@ -111,6 +127,14 @@ export function AuditDetail({ requestId }: { requestId: string }) {
                     {call.provider && (
                       <Badge variant="outline" className="text-xs">{call.provider}/{call.model}</Badge>
                     )}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); navigate(`/guide/${call.agent}`); }}
+                      className="flex items-center gap-1 text-xs text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors ml-1"
+                      title="Learn about this step"
+                    >
+                      <BookOpen className="w-3.5 h-3.5" />
+                      Learn
+                    </button>
                     <span className="text-xs text-[var(--muted-foreground)] ml-auto flex gap-3">
                       <span>{call.duration_ms < 1000 ? `${Math.round(call.duration_ms)}ms` : `${(call.duration_ms / 1000).toFixed(1)}s`}</span>
                       <span>{call.input_tokens + call.output_tokens} tokens</span>
