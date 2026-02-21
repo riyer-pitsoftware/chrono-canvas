@@ -1,218 +1,120 @@
 # ChronoCanvas
 
-Agentic historical education toolkit that generates historically accurate portraits of historical figures using a 7-agent AI pipeline, multi-LLM routing, and pluggable image generation.
+**Make history visible.**
 
-Built for educators, historians, and content creators who need visually compelling, period-accurate character depictions — runs entirely on your own hardware with no cloud dependency.
-
----
-
-## Features
-
-- **7-Agent Pipeline** — Orchestrator → Extraction → Research → Prompt Generation → Image Generation → Validation → Export
-- **Multi-LLM Routing** — Route tasks to Claude, OpenAI, or Ollama by task type; automatic fallback chain if a provider is unavailable
-- **Real-time Token Streaming** — LLM responses stream token-by-token to the UI via WebSocket, with a blinking cursor while the model generates
-- **Historical Accuracy Validation** — Automated 0–100 scoring; generations below 70 are automatically retried (up to 2 times) with a corrected prompt
-- **Face Swap** — Upload a reference photo to replace the generated face using FaceFusion
-- **Figures Library** — 100 pre-loaded historical figures across Ancient through Modern eras; add custom figures via UI or CLI
-- **Full Audit Trail** — Every LLM call (prompt, response, tokens, cost, latency) is logged and viewable in the audit detail page
-- **Pluggable Image Backend** — Switch between mock, Stable Diffusion, or FaceFusion via a single env var
-- **CLI** — Full command-line interface for automation and batch generation
+ChronoCanvas generates historically accurate, period-faithful portraits of historical figures from a text description — running entirely on your own hardware.
 
 ---
 
-## Quick Start
+## Why it exists
+
+History is text-heavy. Textbooks, Wikipedia articles, and academic papers describe historical figures in detail, but rarely show them. For educators building curriculum, historians communicating research, and content creators telling historical stories, the gap between *knowing* about a person and *seeing* them is significant.
+
+ChronoCanvas was built to close that gap. Given a description — a name, an era, a place — it researches the figure, constructs a historically grounded visual prompt, generates a period-accurate portrait, and validates the result for anachronisms. The entire pipeline runs locally: no image data leaves your machine, no cloud image API is required, and the system works without an internet connection if you configure a local LLM.
+
+---
+
+## What it does
+
+**Input:** a text description — as simple as a name, or as detailed as a paragraph.
+
+> *"Aryabhata, Indian mathematician and astronomer, Gupta period, 5th century CE"*
+
+**Output:** a historically researched, period-accurate portrait — with a full audit trail of every decision the system made, every source consulted, and every token spent to get there.
+
+---
+
+## Key features
+
+- **Local-first, private by design** — image generation runs on your hardware; cloud LLMs are optional and replaceable with Ollama
+- **Historically grounded** — a dedicated Research agent enriches every generation with verified historical context before any image is produced
+- **Automated accuracy validation** — every portrait is scored 0–100 against historical criteria; scores below 70 trigger automatic retry with a corrected prompt
+- **Timeline explorer** — browse 500 BCE to 1700 CE on an interactive slider with curated figures, weighted toward the Indian subcontinent
+- **Facial compositing** — upload a reference photo; FaceFusion replaces the generated face while preserving the historical costume and setting
+- **Full audit trail** — every LLM call (prompt, tokens, cost, latency) is logged and browsable per generation
+- **100+ seed figures** — curated across Ancient through Modern eras; add custom figures via the UI or CLI
+- **7-agent AI pipeline** — each stage has a defined role, structured output contract, and an independently configurable LLM provider
+
+---
+
+## Generation flow
+
+```mermaid
+flowchart LR
+    A([Text input]) --> B[Orchestrator\nCreates execution plan]
+    B --> C[Extraction\nParses figure identity]
+    C --> D[Research\nEnriches with historical context]
+    D --> E[Prompt Generation\nCrafts period-accurate image prompt]
+    E --> F[Image Generation\nProduces portrait]
+    F --> G{Validation\nScores 0–100}
+    G -- score ≥ 70 --> H[Export\nPackages image + metadata]
+    G -- score < 70\nup to 2 retries --> E
+    H --> I([Portrait + audit trail])
+```
+
+---
+
+## Getting started
+
+**Prerequisites:** Docker, Docker Compose, 8 GB RAM minimum.
 
 ```bash
-cp .env.example .env   # configure API keys and providers
-make dev               # start all services via Docker Compose
+# 1. Clone the repository
+git clone https://github.com/your-org/chrono-canvas.git
+cd chrono-canvas
+
+# 2. Configure your environment
+cp .env.example .env
+# Edit .env — API keys are optional; Ollama-only mode works for all tasks
+
+# 3. Start all services
+make dev
+
+# 4. Load the seed figures
+make seed
+
+# 5. Open the UI
 open http://localhost:3000
 ```
 
-**Requirements:** Docker, Docker Compose, 8 GB RAM minimum. API keys are optional — Ollama-only mode works for all tasks.
+The first run downloads model weights and Docker images — allow a few minutes. Subsequent starts are fast.
+
+> **No cloud required.** If you set `DEFAULT_LLM_PROVIDER=ollama` in `.env` and run Ollama locally, ChronoCanvas operates entirely offline.
 
 ---
 
-## Architecture
+## The UI at a glance
 
-| Component | Technology | Role |
-|---|---|---|
-| Frontend | React + TypeScript + Vite + Tailwind + shadcn/ui | Web UI |
-| Backend | FastAPI + LangGraph + SQLAlchemy (asyncpg) | API server + agent orchestration |
-| Database | PostgreSQL 16 | Persistent storage |
-| Cache | Redis 7 | Agent state checkpointing + pub/sub for streaming |
-| Image Gen | Mock / Stable Diffusion / FaceFusion | Portrait generation |
-| CLI | Typer + Rich | Command-line interface |
-
----
-
-## Agent Pipeline
-
-| # | Agent | Provider | What It Does |
-|---|---|---|---|
-| 1 | Orchestrator | Ollama | Creates execution plan, delegates to agents |
-| 2 | Extraction | Ollama | Parses input text → structured figure JSON |
-| 3 | Research | Claude | Enriches figure with historical context (streams tokens) |
-| 4 | Prompt Generation | Claude | Crafts period-accurate SDXL prompt (streams tokens) |
-| 5 | Image Generation | — | Produces portrait via configured image backend |
-| 6 | Validation | Ollama | Scores historical accuracy 0–100; triggers retry if < 70 |
-| 7 | Export | — | Packages PNG + JSON metadata for download |
-
----
-
-## Configuration
-
-All configuration is via `.env`. Copy `.env.example` to get started.
-
-### LLM Providers
-
-| Variable | Description |
+| Page | What you do here |
 |---|---|
-| `OLLAMA_BASE_URL` | Ollama endpoint (default: `http://localhost:11434`) |
-| `OLLAMA_MODEL` | Model name (default: `llama3.1:8b`) |
-| `ANTHROPIC_API_KEY` | Anthropic API key for Claude |
-| `CLAUDE_MODEL` | Claude model (default: `claude-sonnet-4-5-20250929`) |
-| `OPENAI_API_KEY` | OpenAI API key |
-| `OPENAI_MODEL` | OpenAI model (default: `gpt-4o`) |
-| `DEFAULT_LLM_PROVIDER` | Fallback provider (`ollama`) |
+| **Timeline** | Browse figures by era on a 500 BCE – 1700 CE interactive slider |
+| **Generate** | Describe a figure → watch the seven agents work in real time |
+| **Audit** | Inspect every LLM call, prompt, token count, cost, and validation score |
+| **Validate** | Review accuracy scores, anachronism flags, and retry history |
+| **Figures** | Search and manage the figures library; add custom entries |
+| **Export** | Download portraits and structured JSON metadata |
+| **Admin** | Agent health, LLM provider status, and cost tracking |
 
-### Image Generation
+---
 
-| Variable | Description |
+## The pipeline (overview)
+
+ChronoCanvas uses a LangGraph state machine. Seven agents run in sequence; each has a well-defined input contract, a structured output, and an independently configurable LLM provider. The validation agent can loop the pipeline back to prompt generation if the portrait fails its accuracy threshold.
+
+The system supports Claude, OpenAI, and Ollama, with per-task routing and an automatic fallback chain.
+
+---
+
+## Documentation
+
+| Document | Contents |
 |---|---|
-| `IMAGE_PROVIDER` | `mock` (default), `stable_diffusion`, or `facefusion` |
-| `SD_API_URL` | Stable Diffusion API endpoint |
-| `FACEFUSION_API_URL` | FaceFusion API endpoint |
-
-### Database & Cache
-
-| Variable | Description |
-|---|---|
-| `DATABASE_URL` | PostgreSQL connection string (asyncpg) |
-| `REDIS_URL` | Redis connection string |
+| [TECHNICAL.md](TECHNICAL.md) | Architecture, agent reference, full configuration guide |
+| [docs/api.md](docs/api.md) | REST API and WebSocket reference |
+| [docs/development.md](docs/development.md) | Development setup, project structure, extension guide |
 
 ---
 
-## Web UI
+## License
 
-| Page | Purpose |
-|---|---|
-| Dashboard | Recent generations, queue status, cost summary |
-| Figures | Browse, search, and add historical figures |
-| Generate | Text input → pipeline with live token streaming + progress |
-| Validate | Review accuracy scores and anachronism flags |
-| Export | Download portraits and metadata |
-| Audit | Per-generation LLM call log with prompts, tokens, and cost |
-| Admin | Agent health, LLM provider status, cost tracking |
-
----
-
-## CLI
-
-```bash
-chronocanvas add figure          # Add a historical figure
-chronocanvas generate            # Generate a portrait from text
-chronocanvas batch               # Batch generation from a JSON file
-chronocanvas status <id>         # Check generation status
-chronocanvas download <id>       # Download generated image
-chronocanvas list figures        # List figures with search/filter
-chronocanvas list generations    # List generation requests
-chronocanvas validate <id>       # Show validation results
-chronocanvas agents list         # List available agents
-chronocanvas agents llm-status   # Check LLM provider availability
-chronocanvas agents costs        # Show LLM cost summary
-```
-
----
-
-## API
-
-| Method | Endpoint | Description |
-|---|---|---|
-| `POST` | `/api/generate` | Start a generation from text or figure ID |
-| `GET` | `/api/generate/{id}` | Get generation status and progress |
-| `GET` | `/api/generate/{id}/results` | Get completed results |
-| `GET` | `/api/figures` | List figures (search, filter by period) |
-| `GET` | `/api/figures/{id}` | Get figure details |
-| `POST` | `/api/figures` | Create a figure |
-| `GET` | `/api/export/{id}` | Download portrait + metadata |
-| `GET` | `/api/agents/status` | Agent health |
-| `GET` | `/api/agents/metrics` | LLM usage and cost metrics |
-| `WS` | `/ws/generation/{id}` | Real-time events (token stream, image steps) |
-
-### WebSocket Message Types
-
-| `type` | Fields | Description |
-|---|---|---|
-| `llm_token` | `agent`, `token` | Single streamed token from an LLM call |
-| `llm_stream_end` | `agent` | LLM stream complete for this agent |
-| `image_progress` | `step`, `total` | Diffusion step progress |
-| `completed` / `failed` | `status` | Terminal generation event |
-
----
-
-## Development
-
-```bash
-make backend    # Run API server (uvicorn, hot reload)
-make frontend   # Run Vite dev server
-make test       # Run all tests
-make seed       # Load 100 seed figures into the database
-make migrate    # Run Alembic database migrations
-```
-
-### Docker
-
-```bash
-make up     # Start all services (db, redis, api, frontend)
-make down   # Stop all services
-make build  # Rebuild images
-make clean  # Full clean including volumes
-```
-
----
-
-## Project Structure
-
-```
-chrono-canvas/
-├── frontend/              # React + TypeScript + Vite
-│   └── src/
-│       ├── pages/         # One file per page
-│       ├── components/    # Shared UI components
-│       └── api/           # React Query hooks + WebSocket
-├── backend/               # FastAPI + LangGraph
-│   └── src/chronocanvas/
-│       ├── agents/        # Agent nodes + LangGraph workflow
-│       ├── llm/           # LLM router, providers, cost tracker
-│       ├── api/           # REST endpoints + WebSocket relay
-│       └── db/            # SQLAlchemy models + migrations
-├── cli/                   # CLI (Typer)
-├── seed/                  # Seed data (102 figures, 12 periods)
-├── docker/                # Dockerfiles
-└── docker-compose.yml
-```
-
-### Adding a New LLM Provider
-
-1. Create `backend/src/chronocanvas/llm/providers/your_provider.py` implementing `LLMProvider`
-2. Override `generate()` for standard completions
-3. Override `generate_stream()` to enable token streaming — call `await on_token(chunk)` per token; the base class falls back to `generate()` if not overridden
-4. Register it in `backend/src/chronocanvas/llm/router.py`
-5. Add env vars to `.env.example`
-
-### Adding a New Agent
-
-1. Create `backend/src/chronocanvas/agents/nodes/your_agent.py`
-2. Register the node in `backend/src/chronocanvas/agents/graph.py`
-3. Add a `TaskType` entry to `backend/src/chronocanvas/llm/router.py` if it needs LLM routing
-
----
-
-## Access Points
-
-| Service | URL |
-|---|---|
-| Frontend | http://localhost:3000 |
-| API / Swagger | http://localhost:8000/docs |
-| PostgreSQL | localhost:5432 |
-| Redis | localhost:6379 |
+See [LICENSE](LICENSE).
