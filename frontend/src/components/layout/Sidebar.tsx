@@ -1,7 +1,8 @@
-import { BookOpen, Download, FileSearch, Image, LayoutDashboard, Settings, Shield, Users, Cpu } from "lucide-react";
+import { BookOpen, Download, FileSearch, Image, LayoutDashboard, Settings, Shield, Users, Cpu, Scroll } from "lucide-react";
 
 const navItems = [
   { label: "Dashboard", href: "/", icon: LayoutDashboard },
+  { label: "Timeline", href: "/timeline", icon: Scroll },
   { label: "Figures", href: "/figures", icon: Users },
   { label: "Generate", href: "/generate", icon: Image },
   { label: "Validate", href: "/validate", icon: Shield },

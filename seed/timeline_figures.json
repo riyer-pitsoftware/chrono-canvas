@@ -1,0 +1,302 @@
+[
+  {
+    "name": "Siddhartha Gautama",
+    "birth_year": -563,
+    "death_year": -483,
+    "nationality": "Indian (Shakya clan)",
+    "occupation": "Spiritual teacher, founder of Buddhism",
+    "description": "Born a prince in Lumbini (modern Nepal), he renounced luxury to seek enlightenment under the Bodhi tree, founding one of the world's great religions.",
+    "physical_description": "Depicted with 32 auspicious marks, elongated earlobes from heavy jewelry, serene expression, dark hair in a topknot or shaved. Lean from ascetic years.",
+    "clothing_notes": "Saffron or ochre monk's robe (kasaya), draped over one shoulder. Simple sandalwood beads."
+  },
+  {
+    "name": "Mahavira",
+    "birth_year": -599,
+    "death_year": -527,
+    "nationality": "Indian (Vaishali, Bihar)",
+    "occupation": "Spiritual teacher, 24th Tirthankara of Jainism",
+    "description": "Born into a warrior clan in what is now Bihar, he renounced worldly life at 30 and spent 12 years in deep meditation before attaining liberation. His teachings on non-violence (ahimsa) shaped Indian philosophy profoundly.",
+    "physical_description": "Tall, athletic build. Depicted naked or in minimal white cloth (Digambara tradition). Calm, meditative expression. Long earlobes.",
+    "clothing_notes": "Jain ascetics are depicted either naked (sky-clad, Digambara) or in simple white cloth (Shvetambara)."
+  },
+  {
+    "name": "Chandragupta Maurya",
+    "birth_year": -340,
+    "death_year": -297,
+    "nationality": "Indian (Pataliputra, Magadha)",
+    "occupation": "Emperor, founder of the Maurya Empire",
+    "description": "Guided by the brilliant strategist Kautilya, he overthrew the Nanda dynasty and unified the Indian subcontinent, founding the largest empire yet seen in South Asia.",
+    "physical_description": "Muscular warrior-king build. Dark complexion. Short beard, sharp eyes. Depicted in regal bearing.",
+    "clothing_notes": "Dhoti of fine muslin, gem-encrusted torque, elaborate gold armlets. Crown adorned with peacock motifs. Uttariya (upper shawl) of silk."
+  },
+  {
+    "name": "Kautilya (Chanakya)",
+    "birth_year": -375,
+    "death_year": -283,
+    "nationality": "Indian (Taxila/Pataliputra)",
+    "occupation": "Philosopher, economist, minister, author of the Arthashastra",
+    "description": "The greatest political thinker of ancient India — strategist, economist, and kingmaker who authored the Arthashastra, a treatise on statecraft that rivals Machiavelli's Prince by two millennia.",
+    "physical_description": "Slender, dark-skinned Brahmin. Sharp angular features, prominent nose. Described as unconventionally-looking in ancient texts. Intense, calculating eyes.",
+    "clothing_notes": "Simple Brahmin attire — white dhoti, sacred thread (yajnopavita), no ornaments. Occasionally a simple shawl."
+  },
+  {
+    "name": "Ashoka",
+    "birth_year": -304,
+    "death_year": -232,
+    "nationality": "Indian (Pataliputra, Magadha)",
+    "occupation": "Emperor of the Maurya Empire",
+    "description": "The third Maurya emperor, who after witnessing the carnage of the Kalinga War converted to Buddhism and renounced violence, spreading dharma across Asia through rock edicts and emissaries.",
+    "physical_description": "Heavyset, broad-shouldered. Mature face with kind, sorrowful eyes after Kalinga. Medium complexion. Full beard.",
+    "clothing_notes": "Royal muslin dhoti with silk uttariya. Gold crown with lion capitals. After conversion: simpler robes, Buddhist prayer beads."
+  },
+  {
+    "name": "Patanjali",
+    "birth_year": -200,
+    "death_year": -150,
+    "nationality": "Indian",
+    "occupation": "Grammarian, philosopher, author of the Yoga Sutras",
+    "description": "The sage who systematized yoga philosophy into the 196 Yoga Sutras, and who also compiled the Mahabhashya commentary on Sanskrit grammar. One of the foundational thinkers of Indian philosophy.",
+    "physical_description": "Depicted in Hindu iconography with serene, meditative expression.",
+    "clothing_notes": "Upper body in simple Brahmin attire with sacred thread."
+  },
+  {
+    "name": "Kanishka I",
+    "birth_year": 127,
+    "death_year": 150,
+    "nationality": "Kushan (Central Asian, ruling northern India)",
+    "occupation": "Emperor of the Kushan Empire",
+    "description": "The great Kushan emperor who convened the Fourth Buddhist Council and spread Buddhism across Central Asia to China. His empire straddled the Silk Road, making him a pivotal figure in world history.",
+    "physical_description": "Central Asian features — broader face, possibly lighter complexion. Depicted in Kushan art wearing long tunic and trousers, unlike Indian dhoti. Stocky, powerful build.",
+    "clothing_notes": "Nomadic Kushan royal dress: heavy felt coat with embroidered patterns, trousers, and felt boots. Gold torque. Tall crown."
+  },
+  {
+    "name": "Samudragupta",
+    "birth_year": 335,
+    "death_year": 375,
+    "nationality": "Indian (Pataliputra, Gupta Empire)",
+    "occupation": "Emperor of the Gupta Empire, poet, musician",
+    "description": "The warrior-poet emperor of the Gupta golden age, who campaigned across the subcontinent and is depicted on coins playing the veena. He was simultaneously a fearsome general and accomplished artist.",
+    "physical_description": "Athletic, tall warrior physique. Fine Aryan features. Clean-shaven or thin mustache. Depicted on gold coins in elaborate regalia.",
+    "clothing_notes": "Gupta royal dress: silk dhoti with jeweled girdle, uttariya draped elegantly, elaborate kiritamukuta (tall gold crown). Jeweled armlets, necklaces, earrings."
+  },
+  {
+    "name": "Kalidasa",
+    "birth_year": 375,
+    "death_year": 450,
+    "nationality": "Indian (possibly Ujjain, Gupta period)",
+    "occupation": "Poet, playwright — classical Sanskrit literature",
+    "description": "India's greatest classical poet and playwright, whose works Shakuntala, Meghaduta, and Raghuvamsha represent the pinnacle of Sanskrit literature. His florid imagery, lyrical descriptions of nature, and romantic sensibility remain unmatched.",
+    "physical_description": "Gentle, refined court poet features. Medium build. Thoughtful, poetic eyes. Depicted in Gupta court attire.",
+    "clothing_notes": "Gupta court dress for a scholar: fine silk dhoti, simple gold ornaments, flower garland."
+  },
+  {
+    "name": "Aryabhata",
+    "birth_year": 476,
+    "death_year": 550,
+    "nationality": "Indian (Kusumapura/Pataliputra)",
+    "occupation": "Mathematician, astronomer",
+    "description": "At 23, he wrote the Aryabhatiya — calculating pi to four decimal places, explaining eclipses scientifically, asserting Earth rotates on its axis, and computing the length of the solar year with stunning accuracy. A millennium ahead of European astronomy.",
+    "physical_description": "Scholarly Brahmin features. Slight build of an astronomer. Thoughtful expression, eyes accustomed to watching stars. Fine dark complexion.",
+    "clothing_notes": "Simple Brahmin scholar's dhoti, sacred thread, minimal jewelry."
+  },
+  {
+    "name": "Brahmagupta",
+    "birth_year": 598,
+    "death_year": 668,
+    "nationality": "Indian (Bhillamala, Rajasthan)",
+    "occupation": "Mathematician, astronomer",
+    "description": "The first to treat zero as a number and define rules for arithmetic with zero and negative numbers. His Brahmasphutasiddhanta introduced algebra and established the mathematical framework that would later reach Europe via the Islamic Golden Age.",
+    "physical_description": "Scholarly, slightly portly build. Dark-complexioned Rajasthani Brahmin. Thoughtful expression.",
+    "clothing_notes": "Brahmin scholar's attire: white cotton dhoti, sacred thread, simple cotton upper cloth. Minimal ornaments befitting a scholar."
+  },
+  {
+    "name": "Harsha",
+    "birth_year": 606,
+    "death_year": 647,
+    "nationality": "Indian (Thanesar, northern India)",
+    "occupation": "Emperor of Harsha's Empire, poet, playwright",
+    "description": "The last great Hindu emperor of northern India before the Islamic incursions. Chinese pilgrim Xuanzang visited his court and marveled at his generosity. He wrote three Sanskrit plays and patronized learning extensively.",
+    "physical_description": "Noble, regal bearing. Relatively fair complexion for northern Indian royalty. Full beard, distinguished features.",
+    "clothing_notes": "Post-Gupta Hindu royal dress: elaborate silk robes, tall crown (makuta), multiple gem necklaces, large ear ornaments."
+  },
+  {
+    "name": "Shankaracharya",
+    "birth_year": 788,
+    "death_year": 820,
+    "nationality": "Indian (Kalady, Kerala)",
+    "occupation": "Philosopher, theologian — Advaita Vedanta",
+    "description": "In just 32 years of life, he traversed India on foot, debated every school of thought, wrote commentaries on the Upanishads, Bhagavad Gita, and Brahma Sutras, established four monastic orders, and consolidated Advaita Vedanta as Hinduism's dominant philosophical tradition.",
+    "physical_description": "Young, lean, intense. Dark-complexioned south Indian Brahmin. Piercing, spiritually intense eyes. Ascetic build.",
+    "clothing_notes": "Saffron monk's robe (kavi vasthram). Rudraksha beads. Wooden staff (danda). Shaved head with small tuft (shikha)."
+  },
+  {
+    "name": "Rajaraja Chola I",
+    "birth_year": 947,
+    "death_year": 1014,
+    "nationality": "Indian (Thanjavur, Tamil Nadu)",
+    "occupation": "Emperor of the Chola Dynasty",
+    "description": "The great Chola emperor who built the magnificent Brihadeeshwara temple at Thanjavur (a UNESCO World Heritage site), conquered Sri Lanka, and built a navy that projected power across Southeast Asia. He ushered in the golden age of Tamil culture.",
+    "physical_description": "Regal, commanding presence. Dark-complexioned Tamil warrior-king. Strong, muscular build from a lifetime of campaigns. Distinguished beard.",
+    "clothing_notes": "Chola royal dress: rich silk dhoti with gold border, gem-encrusted kireetam (crown), multiple gold necklaces. Distinctive Chola-style ear ornaments."
+  },
+  {
+    "name": "Al-Biruni",
+    "birth_year": 973,
+    "death_year": 1048,
+    "nationality": "Persian/Central Asian (Khwarezm), worked in India",
+    "occupation": "Scholar, polymath, Indologist",
+    "description": "Accompanying Mahmud of Ghazni into India, al-Biruni spent years learning Sanskrit and writing Kitab al-Hind — the most comprehensive account of Indian science, religion, philosophy, and culture ever written by an outsider.",
+    "physical_description": "Persian features: medium complexion, full beard, sharp scholar's eyes. Turbaned. Medium build, bookish posture.",
+    "clothing_notes": "Central Asian/Persian scholarly dress: long robe (qaba), turban, leather sandals."
+  },
+  {
+    "name": "Ramanujacharya",
+    "birth_year": 1017,
+    "death_year": 1137,
+    "nationality": "Indian (Sriperumbudur, Tamil Nadu)",
+    "occupation": "Philosopher, theologian — Vishishtadvaita Vedanta",
+    "description": "The great Vaishnava philosopher who challenged Shankara's impersonalist Advaita with Vishishtadvaita — qualified non-dualism — and made Sanskrit theology accessible to devotional communities.",
+    "physical_description": "Elderly, dignified Brahmin. Long lived (119 years per tradition). Gentle, compassionate eyes. Fair-complexioned south Indian.",
+    "clothing_notes": "Vaishnava Brahmin attire: white dhoti, white uttariya, namam (vertical Vaishnava mark) on forehead."
+  },
+  {
+    "name": "Prithviraj Chauhan",
+    "birth_year": 1166,
+    "death_year": 1192,
+    "nationality": "Indian (Delhi/Ajmer, Rajput)",
+    "occupation": "Rajput king, warrior",
+    "description": "The last Hindu emperor of Delhi, whose defeat at the Second Battle of Tarain (1192) against Muhammad of Ghor ended Hindu political dominance in northern India. A legendary archer and poet, celebrated in the epic ballad Prithviraj Raso.",
+    "physical_description": "Tall, heroic Rajput warrior. Fair complexion. Long mustaches, warrior's build. Depicted in full battle armor.",
+    "clothing_notes": "Rajput royal war dress: iron or bronze chainmail, plumed helmet, sword and shield. In court: silk dhoti with gold border, Rajput-style safa (turban) with jeweled pin."
+  },
+  {
+    "name": "Amir Khusrau",
+    "birth_year": 1253,
+    "death_year": 1325,
+    "nationality": "Indian (Delhi Sultanate, Central Asian origin)",
+    "occupation": "Poet, musician, mystic, courtier",
+    "description": "The father of Urdu literature and Qawwali music. He served eight Delhi sultans, composed in Persian, Hindi, and Braj Bhasha, invented the sitar and tabla (per tradition), and was the devoted disciple of Sufi saint Nizamuddin Auliya.",
+    "physical_description": "Central Asian features softened by Indian upbringing. Medium complexion. Bright, playful eyes of a poet. Well-groomed beard.",
+    "clothing_notes": "Delhi Sultanate court dress: fine muslin kurta, churidar pajama, embroidered cap."
+  },
+  {
+    "name": "Alauddin Khalji",
+    "birth_year": 1266,
+    "death_year": 1316,
+    "nationality": "Indian (Delhi Sultanate, Afghan origin)",
+    "occupation": "Sultan of Delhi",
+    "description": "The most powerful of the Delhi Sultans, who repelled three Mongol invasions, implemented price-control reforms, and expanded the empire to its greatest extent. His campaigns reached deep into South India for the first time.",
+    "physical_description": "Strong, broad-shouldered Afghan-Indian physique. Dark beard. Commanding, fierce expression. Stocky and powerful.",
+    "clothing_notes": "Delhi Sultanate royal dress: elaborately embroidered silk robe, tall turban (dastar), sword at belt."
+  },
+  {
+    "name": "Harihara I",
+    "birth_year": 1316,
+    "death_year": 1356,
+    "nationality": "Indian (Karnataka)",
+    "occupation": "King, co-founder of the Vijayanagara Empire",
+    "description": "Along with his brother Bukka, he founded the Vijayanagara Empire in 1336 as a bulwark against Delhi Sultanate expansion into the Deccan. The empire would go on to be the last great Hindu kingdom of medieval India.",
+    "physical_description": "South Indian warrior features. Dark complexion. Muscular build of a warrior-founder. Dignified bearing.",
+    "clothing_notes": "Kannada warrior-king dress: dhoti with sword, crown blending Hoysala and emerging Vijayanagara styles."
+  },
+  {
+    "name": "Kabir",
+    "birth_year": 1440,
+    "death_year": 1518,
+    "nationality": "Indian (Varanasi, Uttar Pradesh)",
+    "occupation": "Mystic poet, weaver, social reformer",
+    "description": "A Muslim weaver in Varanasi who became one of India's greatest poets and mystics. His dohas (couplets) cut through the pretensions of both Hindu and Muslim orthodoxy with earthy wisdom. Claimed by both Hindus and Muslims after his death.",
+    "physical_description": "Working-class weaver's build — lean but strong from loom work. Serene face with the calm of a realized mystic.",
+    "clothing_notes": "Poor weaver's simple cotton clothes — basic dhoti, simple turban. No ornaments."
+  },
+  {
+    "name": "Guru Nanak",
+    "birth_year": 1469,
+    "death_year": 1539,
+    "nationality": "Indian (Talwandi, Punjab — now Pakistan)",
+    "occupation": "Spiritual teacher, founder of Sikhism",
+    "description": "After a divine revelation at age 30, he traveled 28,000 kilometers across India, Arabia, and Central Asia proclaiming 'There is no Hindu, there is no Muslim.' His teachings founded Sikhism.",
+    "physical_description": "Long white beard and flowing white hair. Serene, luminous face of a holy man. Tall, dignified.",
+    "clothing_notes": "Simple white muslin robes, white turban, Sufi-style cap, rudraksha mala."
+  },
+  {
+    "name": "Krishnadevaraya",
+    "birth_year": 1471,
+    "death_year": 1529,
+    "nationality": "Indian (Vijayanagara Empire, Karnataka/Andhra)",
+    "occupation": "Emperor of the Vijayanagara Empire, poet",
+    "description": "The greatest emperor of Vijayanagara — warrior, poet, administrator, and patron of the arts. He wrote Amuktamalyada in Telugu and made Hampi the most wealthy city in the world according to contemporary Portuguese accounts.",
+    "physical_description": "Majestic, warrior-king bearing. Dark-complexioned Deccani emperor. Tall, athletic build. Commanding presence.",
+    "clothing_notes": "Vijayanagara imperial dress: richly embroidered silk dhoti with gold borders, elaborate Deccani-style crown, massive gold necklaces, gemstone armlets."
+  },
+  {
+    "name": "Babur",
+    "birth_year": 1483,
+    "death_year": 1530,
+    "nationality": "Timurid/Mughal (Fergana, Central Asia — founded empire in India)",
+    "occupation": "Founder of the Mughal Empire, poet, memoirist",
+    "description": "Descendant of Timur and Genghis Khan, he lost his kingdom in Central Asia and then won India at Panipat in 1526 with artillery. His memoir Baburnama is one of the greatest autobiographies ever written.",
+    "physical_description": "Central Asian Timurid features: medium complexion, strong cheekbones, thin beard. Athletic, compact warrior's build. Quick, intelligent eyes.",
+    "clothing_notes": "Timurid Central Asian royal dress: fine silk chapan (robe), tall fur-trimmed hat, embroidered belt."
+  },
+  {
+    "name": "Mirabai",
+    "birth_year": 1498,
+    "death_year": 1547,
+    "nationality": "Indian (Merta, Rajasthan — Rajput princess)",
+    "occupation": "Poet-saint, devotee of Krishna",
+    "description": "The Rajput princess who rejected her royal marriage to devote herself entirely to the god Krishna. Her bhajans (devotional songs) in Braj Bhasha and Rajasthani are still sung across India — passionate, defiant expressions of divine love.",
+    "physical_description": "Depicted as beautiful Rajput woman, large expressive eyes. Often shown in ecstatic devotional expression. Slender, graceful build.",
+    "clothing_notes": "Rajput women's dress: saffron or white ghagra-choli with odhna (head covering)."
+  },
+  {
+    "name": "Tansen",
+    "birth_year": 1506,
+    "death_year": 1589,
+    "nationality": "Indian (Gwalior, Madhya Pradesh)",
+    "occupation": "Classical musician, composer",
+    "description": "The greatest classical musician of India, one of the Navaratnas (Nine Gems) of Akbar's court. Credited with composing dozens of ragas. He systematized Hindustani classical music into its recognizable modern form.",
+    "physical_description": "Mature, dignified court musician. Medium build. Often depicted with eyes closed in musical rapture, or playing veena.",
+    "clothing_notes": "Mughal court attire: fine silk jama, simple turban."
+  },
+  {
+    "name": "Akbar",
+    "birth_year": 1542,
+    "death_year": 1605,
+    "nationality": "Indian (Mughal Empire)",
+    "occupation": "Emperor of the Mughal Empire",
+    "description": "The greatest Mughal emperor — illiterate yet intellectually curious, he created a syncretic religious movement (Din-i-Ilahi), abolished the jizya tax on non-Muslims, and built an empire of extraordinary administrative sophistication.",
+    "physical_description": "Medium height, broad chest, warrior's physique. Distinctive high forehead, piercing eyes. Full beard. Complex, thoughtful expression.",
+    "clothing_notes": "Mughal imperial dress at its height: jama (long robe) of finest muslin or brocade, sarpech (jeweled turban ornament), rich jewelry including emeralds and rubies."
+  },
+  {
+    "name": "Shah Jahan",
+    "birth_year": 1592,
+    "death_year": 1666,
+    "nationality": "Indian (Mughal Empire)",
+    "occupation": "Emperor of the Mughal Empire, builder of the Taj Mahal",
+    "description": "The Mughal emperor who commissioned the Taj Mahal as an eternal monument to his beloved wife Mumtaz Mahal. His reign was the height of Mughal artistic achievement. Overthrown by his son Aurangzeb.",
+    "physical_description": "Refined, aristocratic features. Full beard, fair Mughal complexion. Melancholic expression in later portraits. Dignified bearing.",
+    "clothing_notes": "Height of Mughal court dress: finest Dacca muslin jama, jeweled turban with heron feather and sarpech, spectacular emerald and pearl necklaces."
+  },
+  {
+    "name": "Aurangzeb",
+    "birth_year": 1618,
+    "death_year": 1707,
+    "nationality": "Indian (Mughal Empire)",
+    "occupation": "Emperor of the Mughal Empire",
+    "description": "The last of the great Mughals — brilliant administrator, austere, personally incorruptible, but whose reimposition of the jizya tax alienated Hindu subjects and accelerated the empire's fragmentation. He outlived all his sons and died regretting his conquests.",
+    "physical_description": "Austere, ascetic features. Thin build from simple lifestyle — he sewed prayer caps to earn his own living. Long beard. Serious, penetrating eyes.",
+    "clothing_notes": "Deliberately simple Mughal dress: plain white or grey jama, simple turban. No jewels. Austerity was his ideology."
+  },
+  {
+    "name": "Shivaji Bhonsale",
+    "birth_year": 1630,
+    "death_year": 1680,
+    "nationality": "Indian (Maharashtra)",
+    "occupation": "Founder of the Maratha Empire",
+    "description": "The warrior-king who built an empire from the rocky Deccan hills through guerrilla warfare, naval power, and brilliant strategy. He challenged the might of both the Mughals and the Adil Shahi sultanate and forged a Maratha identity.",
+    "physical_description": "Compact, athletic build — built for the Deccan hills. Sharp features, alert dark eyes. Known for physical agility and courage.",
+    "clothing_notes": "Maratha warrior dress: fine cotton or silk dhoti, angarkha (tunic), distinctive Maratha-style turban (pheta). Sword always at side."
+  }
+]

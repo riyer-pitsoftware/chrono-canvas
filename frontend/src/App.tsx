@@ -9,6 +9,7 @@ import { Guide } from "@/pages/Guide";
 import { Admin } from "@/pages/Admin";
 import { AuditDetail } from "@/pages/AuditDetail";
 import { AuditList } from "@/pages/AuditList";
+import { Timeline } from "@/pages/Timeline";
 
 function getPage(path: string) {
   if (path.startsWith("/audit/")) {
@@ -22,6 +23,8 @@ function getPage(path: string) {
   }
 
   switch (path) {
+    case "/timeline":
+      return <Timeline />;
     case "/figures":
       return <FigureLibrary />;
     case "/generate":

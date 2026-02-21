@@ -131,6 +131,13 @@ export interface StateSnapshot {
   snapshot: Record<string, unknown>;
 }
 
+export interface TimelineFigureListResponse {
+  items: Figure[];
+  total: number;
+  year_min: number;
+  year_max: number;
+}
+
 export interface AuditDetail {
   id: string;
   input_text: string;

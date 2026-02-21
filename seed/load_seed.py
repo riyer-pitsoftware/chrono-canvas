@@ -51,6 +51,11 @@ async def main():
         figure_count = await load_figures_from_json(session, figures_path)
         print(f"  Loaded {figure_count} figures")
 
+        # Load timeline figures (Indian subcontinent emphasis, 500 BCE–1700 CE)
+        timeline_path = SEED_DIR / "timeline_figures.json"
+        timeline_count = await load_figures_from_json(session, timeline_path)
+        print(f"  Loaded {timeline_count} timeline figures")
+
         await session.commit()
 
     print("Seed data loaded successfully!")
