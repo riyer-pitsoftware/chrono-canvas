@@ -6,6 +6,7 @@ import type { ImageProgress } from "@/api/hooks/useGenerationWS";
 const PIPELINE_STAGES = [
   { key: "extraction", label: "Extraction" },
   { key: "research", label: "Research" },
+  { key: "face_search", label: "Face Search" },
   { key: "prompt_generation", label: "Prompt Generation" },
   { key: "image_generation", label: "Image Generation" },
   { key: "validation", label: "Validation" },
@@ -53,9 +54,27 @@ export function PipelineStepper({ currentAgent, status, agentTrace, llmCalls = [
 
         const traceEntry = agentTrace.find((t) => t.agent === stage.key);
         let summary = "";
+        let summaryHref: string | undefined;
         if (stage.key === "extraction" && traceEntry?.extracted) {
           const extracted = traceEntry.extracted as Record<string, unknown>;
           summary = String(extracted.figure_name || "");
+        } else if (stage.key === "face_search" && traceEntry) {
+          if (traceEntry.skipped) {
+            const reason = String(traceEntry.reason ?? "skipped");
+            const labels: Record<string, string> = {
+              no_api_key: "no API key",
+              no_results: "no results found",
+              download_failed: "download failed",
+              already_set: "face already provided",
+              no_figure_name: "no figure name",
+              search_api_error: "search error",
+            };
+            summary = `Skipped — ${labels[reason] ?? reason}`;
+          } else {
+            const url = String(traceEntry.source_url ?? "");
+            summary = url ? new URL(url).hostname : "image found";
+            summaryHref = url || undefined;
+          }
         } else if (stage.key === "validation" && traceEntry) {
           summary = `Score: ${traceEntry.score ?? "—"} ${traceEntry.passed ? "(passed)" : "(failed)"}`;
         }
@@ -98,7 +117,13 @@ export function PipelineStepper({ currentAgent, status, agentTrace, llmCalls = [
                 </div>
               )}
               {summary && (
-                <p className="text-xs text-[var(--muted-foreground)] truncate">{summary}</p>
+                <p className="text-xs text-[var(--muted-foreground)] truncate">
+                  {summaryHref ? (
+                    <a href={summaryHref} target="_blank" rel="noopener noreferrer" className="underline hover:text-[var(--foreground)]">
+                      {summary}
+                    </a>
+                  ) : summary}
+                </p>
               )}
             </div>
           </div>

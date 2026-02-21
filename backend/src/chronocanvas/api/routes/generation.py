@@ -180,6 +180,7 @@ async def get_generation_audit(
         validation_categories=validation_categories,
         images=[ImageResponse.model_validate(img) for img in images],
         state_snapshots=state_snapshots,
+        agent_trace=request.agent_trace or [],
     )
 
 

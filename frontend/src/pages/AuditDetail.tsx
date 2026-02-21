@@ -14,6 +14,7 @@ const PIPELINE_STEPS = [
   { value: "orchestrator", label: "Orchestrator" },
   { value: "extraction", label: "Extraction" },
   { value: "research", label: "Research" },
+  { value: "face_search", label: "Face Search" },
   { value: "prompt_generation", label: "Prompt Generation" },
   { value: "image_generation", label: "Image Generation" },
   { value: "validation", label: "Validation" },
@@ -85,7 +86,7 @@ export function AuditDetail({ requestId }: { requestId: string }) {
           <PipelineStepper
             currentAgent={null}
             status={data.status}
-            agentTrace={data.llm_calls.map((c) => ({ agent: c.agent, timestamp: c.timestamp }))}
+            agentTrace={data.agent_trace ?? data.llm_calls.map((c) => ({ agent: c.agent, timestamp: c.timestamp }))}
             llmCalls={data.llm_calls}
           />
         </CardContent>
@@ -177,6 +178,9 @@ export function AuditDetail({ requestId }: { requestId: string }) {
           </CardContent>
         </Card>
       )}
+
+      {/* Agent Steps (non-LLM nodes: face_search, face_swap) */}
+      <AgentStepsCard agentTrace={data.agent_trace ?? []} requestId={requestId} />
 
       {/* Agent State Inspector */}
       <Card>
@@ -295,6 +299,135 @@ export function AuditDetail({ requestId }: { requestId: string }) {
         </Card>
       )}
     </div>
+  );
+}
+
+// Agents that produce trace entries but no LLM calls
+const NON_LLM_AGENTS = ["face_search", "face_swap"];
+
+function AgentStepsCard({ agentTrace, requestId }: { agentTrace: Array<Record<string, unknown>>; requestId: string }) {
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const toggle = (key: string) => setExpanded((prev) => ({ ...prev, [key]: !prev[key] }));
+
+  const steps = agentTrace.filter((t) => NON_LLM_AGENTS.includes(String(t.agent)));
+  if (steps.length === 0) return null;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-lg">Agent Steps ({steps.length})</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {steps.map((entry, i) => {
+          const key = `step-${i}`;
+          const isExpanded = expanded[key] ?? false;
+          const agent = String(entry.agent);
+          const skipped = Boolean(entry.skipped);
+
+          return (
+            <div key={key} className="border rounded-md">
+              <button
+                onClick={() => toggle(key)}
+                className="w-full flex items-center gap-3 p-3 text-left hover:bg-[var(--accent)] transition-colors"
+              >
+                {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                <span className="font-medium text-sm">{agent}</span>
+                {skipped ? (
+                  <Badge variant="secondary" className="text-xs">skipped</Badge>
+                ) : (
+                  <Badge variant="outline" className="text-xs text-green-700 border-green-300">completed</Badge>
+                )}
+                {entry.reason && (
+                  <span className="text-xs text-[var(--muted-foreground)]">{String(entry.reason)}</span>
+                )}
+                {agent === "face_search" && !skipped && entry.source_url && (
+                  <a
+                    href={String(entry.source_url)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-blue-600 underline truncate max-w-xs ml-auto"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {(() => { try { return new URL(String(entry.source_url)).hostname; } catch { return "source"; } })()}
+                  </a>
+                )}
+              </button>
+
+              {isExpanded && (
+                <div className="px-3 pb-3 border-t space-y-3 mt-3">
+                  {/* face_search details */}
+                  {agent === "face_search" && (
+                    <>
+                      {entry.face_search_query || entry.query ? (
+                        <div>
+                          <p className="text-xs font-medium text-[var(--muted-foreground)] mb-1">Search Query</p>
+                          <p className="text-xs bg-[var(--muted)] p-2 rounded">{String(entry.face_search_query ?? entry.query ?? "")}</p>
+                        </div>
+                      ) : null}
+                      {!skipped && entry.source_url && (
+                        <>
+                          <div>
+                            <p className="text-xs font-medium text-[var(--muted-foreground)] mb-1">Source URL</p>
+                            <a
+                              href={String(entry.source_url)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-xs text-blue-600 underline break-all"
+                            >
+                              {String(entry.source_url)}
+                            </a>
+                          </div>
+                          <div>
+                            <p className="text-xs font-medium text-[var(--muted-foreground)] mb-1">Downloaded Face</p>
+                            <img
+                              src={`/output/${requestId}/${String(entry.local_path ?? "").split("/").pop()}`}
+                              alt="sourced face"
+                              className="h-32 w-32 object-cover rounded border"
+                              onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                            />
+                          </div>
+                        </>
+                      )}
+                      {entry.candidates_tried != null && (
+                        <p className="text-xs text-[var(--muted-foreground)]">
+                          Tried {String(entry.candidates_tried)} candidate{Number(entry.candidates_tried) !== 1 ? "s" : ""}
+                        </p>
+                      )}
+                    </>
+                  )}
+
+                  {/* face_swap details */}
+                  {agent === "face_swap" && !skipped && (
+                    <>
+                      {entry.source_face && (
+                        <div>
+                          <p className="text-xs font-medium text-[var(--muted-foreground)] mb-1">Source Face</p>
+                          <p className="text-xs text-[var(--muted-foreground)] break-all">{String(entry.source_face)}</p>
+                        </div>
+                      )}
+                      {entry.swapped_path && (
+                        <div>
+                          <p className="text-xs font-medium text-[var(--muted-foreground)] mb-1">Output</p>
+                          <p className="text-xs text-[var(--muted-foreground)] break-all">{String(entry.swapped_path)}</p>
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {/* Raw trace JSON fallback */}
+                  <details className="text-xs">
+                    <summary className="cursor-pointer text-[var(--muted-foreground)] hover:text-[var(--foreground)]">Raw trace entry</summary>
+                    <pre className="mt-2 bg-[var(--muted)] p-2 rounded overflow-auto max-h-48 whitespace-pre-wrap">
+                      {JSON.stringify(entry, null, 2)}
+                    </pre>
+                  </details>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </CardContent>
+    </Card>
   );
 }
 

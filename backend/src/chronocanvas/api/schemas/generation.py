@@ -111,3 +111,4 @@ class AuditDetailResponse(BaseModel):
     validation_categories: list[ValidationCategoryDetail] = []
     images: list[ImageResponse] = []
     state_snapshots: list[StateSnapshot] = []
+    agent_trace: list[dict[str, Any]] = []

@@ -152,4 +152,5 @@ export interface AuditDetail {
   validation_categories: ValidationCategoryDetail[];
   images: GeneratedImage[];
   state_snapshots: StateSnapshot[];
+  agent_trace: Array<Record<string, unknown>>;
 }
