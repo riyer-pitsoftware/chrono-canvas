@@ -32,6 +32,7 @@ class Settings(BaseSettings):
     comfyui_sdxl_checkpoint: str = "juggernautXL_v9.safetensors"
     facefusion_api_url: str = "http://localhost:7861"
     facefusion_source_path: str = ""
+    facefusion_enabled: bool = False
 
     # API
     api_host: str = "0.0.0.0"

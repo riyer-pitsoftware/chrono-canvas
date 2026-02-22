@@ -11,7 +11,7 @@
 
 ### FaceFusion (optional)
 
-Face-swap compositing is handled by a locally cloned copy of [FaceFusion](https://github.com/facefusion/facefusion). It is only required when `IMAGE_PROVIDER=facefusion`.
+Face compositing is handled by a locally cloned copy of [FaceFusion](https://github.com/facefusion/facefusion). It is independent of the `IMAGE_PROVIDER` setting — you can use ComfyUI for portrait generation and FaceFusion for face compositing simultaneously.
 
 1. Clone FaceFusion somewhere on your machine:
    ```bash
@@ -21,9 +21,14 @@ Face-swap compositing is handled by a locally cloned copy of [FaceFusion](https:
    ```
    FACEFUSION_SOURCE_PATH=/home/yourname/code/facefusion
    ```
-3. Set `IMAGE_PROVIDER=facefusion` in `.env`.
+3. Set `FACEFUSION_ENABLED=true` in `.env`.
 
-The directory is bind-mounted into the `facefusion` Docker service at `/facefusion`. ONNX models are downloaded on first use into the `ff_models` Docker volume and persisted across restarts. Leave `IMAGE_PROVIDER=mock` (the default) to skip this entirely.
+The directory is bind-mounted into the `facefusion` Docker service at `/facefusion`. ONNX models are downloaded on first use into the `ff_models` Docker volume and persisted across restarts. Leave `FACEFUSION_ENABLED=false` (the default) to use a mock overlay instead.
+
+The FaceFusion Docker service uses a compose profile and does not start by default. To include it:
+```bash
+docker compose -f docker-compose.dev.yml --profile facefusion up -d
+```
 
 ---
 

@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 def _get_compositing_client():
-    if settings.image_provider == "facefusion":
+    if settings.facefusion_enabled:
         return FaceFusionClient()
     return MockFaceSwapClient()
 
@@ -64,7 +64,7 @@ async def facial_compositing_node(state: AgentState) -> AgentState:
         original_copy = original_path.parent / f"original_{original_path.name}"
         shutil.copy2(image_path, original_copy)
 
-        # Run facial compositing (mock when IMAGE_PROVIDER != "facefusion")
+        # Run facial compositing (mock when FACEFUSION_ENABLED is false)
         client = _get_compositing_client()
         output_dir = Path(settings.output_dir) / request_id
 

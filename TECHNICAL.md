@@ -67,11 +67,12 @@ All configuration is via environment variables. Copy `.env.example` to `.env` to
 
 | Variable | Description | Default |
 |---|---|---|
-| `IMAGE_PROVIDER` | `mock`, `comfyui`, or `facefusion` | `mock` |
+| `IMAGE_PROVIDER` | `mock`, `comfyui`, or `stable_diffusion` | `mock` |
 | `SD_API_URL` | Stable Diffusion API endpoint | `http://localhost:7860` |
 | `COMFYUI_API_URL` | ComfyUI API endpoint | `http://localhost:8188` |
 | `COMFYUI_MODEL` | `sdxl` or `flux` | `sdxl` |
 | `COMFYUI_SDXL_CHECKPOINT` | SDXL checkpoint filename | `juggernautXL_v9.safetensors` |
+| `FACEFUSION_ENABLED` | Enable FaceFusion for facial compositing (independent of `IMAGE_PROVIDER`) | `false` |
 | `FACEFUSION_API_URL` | FaceFusion API endpoint | `http://localhost:7861` |
 
 ### Database and cache

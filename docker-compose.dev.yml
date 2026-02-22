@@ -30,6 +30,7 @@ services:
       - no-new-privileges:true
 
   facefusion:
+    profiles: ["facefusion"]
     build:
       context: .
       dockerfile: docker/Dockerfile.facefusion
@@ -37,7 +38,7 @@ services:
       - "7861:7861"
     volumes:
       # FaceFusion source code — set FACEFUSION_SOURCE_PATH in .env
-      - ${FACEFUSION_SOURCE_PATH}:/facefusion
+      - ${FACEFUSION_SOURCE_PATH:-.}:/facefusion
       # Persist downloaded ONNX models between restarts
       - ff_models:/facefusion/.assets
       # Shared image directories with the api service
