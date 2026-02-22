@@ -8,7 +8,7 @@ import { PipelineStepper } from "@/components/generation/PipelineStepper";
 import { StateInspector } from "@/components/generation/StateInspector";
 import { CostTimeline } from "@/components/generation/CostTimeline";
 import { DAGVisualizer } from "@/components/generation/DAGVisualizer";
-import { BookOpen, ChevronDown, ChevronLeft, ChevronRight, Download, ExternalLink, RotateCcw, Trash2, X } from "lucide-react";
+import { BookOpen, ChevronDown, ChevronLeft, ChevronRight, Copy, Download, ExternalLink, RotateCcw, ShieldCheck, Trash2, X } from "lucide-react";
 import type { GeneratedImage } from "@/api/types";
 
 const PIPELINE_STEPS = [
@@ -27,6 +27,7 @@ export function AuditDetail({ requestId }: { requestId: string }) {
   const { data, isLoading, error } = useAuditDetail(requestId);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [retryStep, setRetryStep] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
   const deleteGeneration = useDeleteGeneration();
   const retryGeneration = useRetryGeneration();
   const { navigate } = useNavigation();
@@ -36,6 +37,12 @@ export function AuditDetail({ requestId }: { requestId: string }) {
   const toggle = (key: string) =>
     setExpanded((prev) => ({ ...prev, [key]: !prev[key] }));
 
+  useEffect(() => {
+    if (!copied) return;
+    const timer = window.setTimeout(() => setCopied(false), 1500);
+    return () => window.clearTimeout(timer);
+  }, [copied]);
+
   if (isLoading) return <div>Loading audit details...</div>;
   if (error) return <div className="text-[var(--destructive)]">Error: {error.message}</div>;
   if (!data) return <div>No audit data found.</div>;
@@ -44,27 +51,70 @@ export function AuditDetail({ requestId }: { requestId: string }) {
     : data.status === "failed" ? "destructive" as const
     : "secondary" as const;
 
+  const handleCopyId = async () => {
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(data.id);
+      } else {
+        const textarea = document.createElement("textarea");
+        textarea.value = data.id;
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textarea);
+      }
+      setCopied(true);
+    } catch {
+      setCopied(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <div className="flex items-center gap-3 mb-2">
+        <div className="flex flex-wrap items-center gap-3 mb-2">
           <h2 className="text-3xl font-bold">Audit Detail</h2>
           <Badge variant={statusColor}>{data.status}</Badge>
+          <div className="flex items-center gap-2 ml-auto">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate(`/validate?request_id=${data.id}`)}
+            >
+              <ShieldCheck className="h-4 w-4 mr-1" />
+              Validate
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => {
+                if (window.confirm("Delete this generation? This cannot be undone.")) {
+                  deleteGeneration.mutate(requestId, {
+                    onSuccess: () => navigate("/audit"),
+                  });
+                }
+              }}
+            >
+              <Trash2 className="h-4 w-4 mr-1" />
+              Delete
+            </Button>
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--muted-foreground)] mb-2">
+          <span className="uppercase tracking-wide">Request ID</span>
+          <code className="rounded bg-[var(--muted)] px-2 py-1 text-[var(--foreground)] text-xs">{data.id}</code>
           <Button
-            variant="destructive"
+            variant="ghost"
             size="sm"
-            className="ml-auto"
-            onClick={() => {
-              if (window.confirm("Delete this generation? This cannot be undone.")) {
-                deleteGeneration.mutate(requestId, {
-                  onSuccess: () => navigate("/audit"),
-                });
-              }
-            }}
+            className="h-7 px-2"
+            onClick={handleCopyId}
           >
-            <Trash2 className="h-4 w-4 mr-1" />
-            Delete
+            <Copy className="h-3.5 w-3.5 mr-1" />
+            {copied ? "Copied" : "Copy"}
           </Button>
         </div>
         <div className="text-sm text-[var(--muted-foreground)] space-y-1">

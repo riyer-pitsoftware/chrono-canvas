@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,23 +6,33 @@ import { Badge } from "@/components/ui/badge";
 import { api } from "@/api/client";
 import type { ValidationSummary } from "@/api/types";
 
-export function Validate() {
-  const [requestId, setRequestId] = useState("");
+interface ValidateProps {
+  initialRequestId?: string;
+}
+
+export function Validate({ initialRequestId }: ValidateProps) {
+  const [requestId, setRequestId] = useState(initialRequestId ?? "");
   const [results, setResults] = useState<ValidationSummary | null>(null);
   const [loading, setLoading] = useState(false);
-
-  const handleValidate = async () => {
-    if (!requestId.trim()) return;
+  const handleValidate = useCallback(async (overrideId?: string) => {
+    const idToValidate = (overrideId ?? requestId).trim();
+    if (!idToValidate) return;
     setLoading(true);
     try {
-      const data = await api.get<ValidationSummary>(`/validation/${requestId}`);
+      const data = await api.get<ValidationSummary>(`/validation/${idToValidate}`);
       setResults(data);
     } catch {
       setResults(null);
     } finally {
       setLoading(false);
     }
-  };
+  }, [requestId]);
+
+  useEffect(() => {
+    if (!initialRequestId) return;
+    setRequestId(initialRequestId);
+    handleValidate(initialRequestId);
+  }, [initialRequestId, handleValidate]);
 
   return (
     <div>
@@ -40,7 +50,7 @@ export function Validate() {
               onChange={(e) => setRequestId(e.target.value)}
               className="flex-1"
             />
-            <Button onClick={handleValidate} disabled={loading}>
+            <Button onClick={() => handleValidate()} disabled={loading}>
               {loading ? "Checking..." : "Check"}
             </Button>
           </div>

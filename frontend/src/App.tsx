@@ -37,8 +37,11 @@ function getPage(path: string) {
       const figureId = params.get("figure_id") ?? undefined;
       return <Generate figureId={figureId} />;
     }
-    case "/validate":
-      return <Validate />;
+    case "/validate": {
+      const params = new URLSearchParams(search);
+      const requestId = params.get("request_id") ?? undefined;
+      return <Validate initialRequestId={requestId} />;
+    }
     case "/export":
       return <Export />;
     case "/guide":
