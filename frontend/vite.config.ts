@@ -16,6 +16,8 @@ export default defineConfig({
     port: 3000,
     proxy: {
       "/api": apiTarget,
+      "/output": apiTarget,
+      "/uploads": apiTarget,
       "/ws": {
         target: apiTarget.replace(/^http/, "ws"),
         ws: true,
