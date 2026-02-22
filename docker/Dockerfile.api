@@ -16,7 +16,7 @@ COPY seed/ /app/seed/
 
 # Create non-root user and set up writable dirs
 RUN groupadd --gid 1000 appuser \
-    && useradd --uid 1000 --gid appuser --shell /bin/false appuser \
+    && useradd --uid 1000 --gid appuser --create-home --shell /bin/false appuser \
     && mkdir -p /app/output /app/uploads \
     && chown -R appuser:appuser /app
 
