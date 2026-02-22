@@ -16,7 +16,12 @@ export function Validate({ initialRequestId }: ValidateProps) {
   const [requestId, setRequestId] = useState(initialRequestId ?? "");
   const [results, setResults] = useState<ValidationSummary | null>(null);
   const [loading, setLoading] = useState(false);
-  const { data: recentGenerations, isLoading: loadingGenerations, error: recentError } = useGenerations(0, 10);
+  const [recentPage, setRecentPage] = useState(0);
+  const [statusFilter, setStatusFilter] = useState("all");
+  const RECENT_LIMIT = 10;
+  const recentOffset = recentPage * RECENT_LIMIT;
+  const statusParam = statusFilter === "all" ? undefined : statusFilter;
+  const { data: recentGenerations, isLoading: loadingGenerations, error: recentError } = useGenerations(recentOffset, RECENT_LIMIT, statusParam);
   const { navigate } = useNavigation();
   const handleValidate = useCallback(async (overrideId?: string) => {
     const idToValidate = (overrideId ?? requestId).trim();
@@ -38,7 +43,30 @@ export function Validate({ initialRequestId }: ValidateProps) {
     handleValidate(initialRequestId);
   }, [initialRequestId, handleValidate]);
 
+  useEffect(() => {
+    setRecentPage(0);
+  }, [statusFilter]);
+
+  useEffect(() => {
+    if (!recentGenerations) return;
+    const total = recentGenerations.total;
+    if (total === 0 && recentPage !== 0) {
+      setRecentPage(0);
+      return;
+    }
+    if (total > 0 && recentOffset >= total) {
+      const lastPage = Math.max(0, Math.ceil(total / RECENT_LIMIT) - 1);
+      if (recentPage !== lastPage) {
+        setRecentPage(lastPage);
+      }
+    }
+  }, [recentGenerations, recentOffset, recentPage]);
+
   const recentItems = recentGenerations?.items ?? [];
+  const recentTotal = recentGenerations?.total ?? 0;
+  const recentTotalPages = recentTotal === 0 ? 1 : Math.ceil(recentTotal / RECENT_LIMIT);
+  const showingFrom = recentTotal === 0 ? 0 : recentOffset + 1;
+  const showingTo = recentTotal === 0 ? 0 : recentOffset + recentItems.length;
 
   const getStatusVariant = (status: string) => {
     switch (status) {
@@ -104,7 +132,29 @@ export function Validate({ initialRequestId }: ValidateProps) {
 
       <Card>
         <CardHeader>
-          <CardTitle>Recent Generations</CardTitle>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <CardTitle>Recent Generations</CardTitle>
+            <div className="flex items-center gap-2 text-xs text-[var(--muted-foreground)]">
+              <label htmlFor="statusFilter" className="font-medium text-[var(--foreground)]">Status</label>
+              <select
+                id="statusFilter"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="rounded border border-[var(--border)] bg-[var(--background)] px-2 py-1 text-xs"
+              >
+                <option value="all">All</option>
+                <option value="pending">Pending</option>
+                <option value="extracting">Extracting</option>
+                <option value="researching">Researching</option>
+                <option value="generating_prompt">Generating Prompt</option>
+                <option value="generating_image">Generating Image</option>
+                <option value="validating">Validating</option>
+                <option value="swapping_face">Swapping Face</option>
+                <option value="completed">Completed</option>
+                <option value="failed">Failed</option>
+              </select>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           {loadingGenerations ? (
@@ -114,45 +164,73 @@ export function Validate({ initialRequestId }: ValidateProps) {
           ) : recentItems.length === 0 ? (
             <p className="text-sm text-[var(--muted-foreground)]">No generations yet.</p>
           ) : (
-            <div className="space-y-3">
-              {recentItems.map((item) => (
-                <div key={item.id} className="border rounded-md p-3 flex flex-wrap items-center gap-3">
-                  <div className="flex-1 min-w-[200px]">
-                    <p className="text-sm font-medium text-[var(--foreground)]">
-                      {item.figure_id ? item.figure_id : "Custom request"}
-                    </p>
-                    <p className="text-xs text-[var(--muted-foreground)] break-all">
-                      {item.input_text.length > 120 ? `${item.input_text.slice(0, 120)}…` : item.input_text}
-                    </p>
-                    <p className="text-xs text-[var(--muted-foreground)] mt-1">
-                      {new Date(item.created_at).toLocaleString()}
-                    </p>
+            <>
+              <div className="space-y-3">
+                {recentItems.map((item) => (
+                  <div key={item.id} className="border rounded-md p-3 flex flex-wrap items-center gap-3">
+                    <div className="flex-1 min-w-[200px]">
+                      <p className="text-sm font-medium text-[var(--foreground)]">
+                        {item.figure_id ? item.figure_id : "Custom request"}
+                      </p>
+                      <p className="text-xs text-[var(--muted-foreground)] break-all">
+                        {item.input_text.length > 120 ? `${item.input_text.slice(0, 120)}…` : item.input_text}
+                      </p>
+                      <p className="text-xs text-[var(--muted-foreground)] mt-1">
+                        {new Date(item.created_at).toLocaleString()}
+                      </p>
+                    </div>
+                    <Badge variant={getStatusVariant(item.status)}>
+                      {item.status}
+                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setRequestId(item.id);
+                          handleValidate(item.id);
+                        }}
+                      >
+                        Validate
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => navigate(`/audit/${item.id}`)}
+                      >
+                        View Audit
+                      </Button>
+                    </div>
                   </div>
-                  <Badge variant={getStatusVariant(item.status)}>
-                    {item.status}
-                  </Badge>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setRequestId(item.id);
-                        handleValidate(item.id);
-                      }}
-                    >
-                      Validate
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => navigate(`/audit/${item.id}`)}
-                    >
-                      View Audit
-                    </Button>
-                  </div>
+                ))}
+              </div>
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-xs text-[var(--muted-foreground)]">
+                <span>
+                  Showing {recentTotal === 0 ? 0 : `${showingFrom}–${showingTo}`} of {recentTotal} generations
+                </span>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={recentPage === 0}
+                    onClick={() => setRecentPage((p) => Math.max(0, p - 1))}
+                  >
+                    Previous
+                  </Button>
+                  <span>
+                    Page {recentTotal === 0 ? 0 : recentPage + 1} / {recentTotalPages}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={recentTotal === 0 || recentPage >= recentTotalPages - 1}
+                    onClick={() => setRecentPage((p) => Math.min(recentTotalPages - 1, p + 1))}
+                  >
+                    Next
+                  </Button>
                 </div>
-              ))}
-            </div>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>

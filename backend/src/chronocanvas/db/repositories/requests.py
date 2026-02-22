@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from chronocanvas.db.models.request import GenerationRequest, RequestStatus
@@ -42,3 +42,10 @@ class RequestRepository(BaseRepository[GenerationRequest]):
         )
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
+
+    async def count(self, status: RequestStatus | None = None) -> int:
+        stmt = select(func.count()).select_from(GenerationRequest)
+        if status:
+            stmt = stmt.where(GenerationRequest.status == status)
+        result = await self.session.execute(stmt)
+        return result.scalar_one()

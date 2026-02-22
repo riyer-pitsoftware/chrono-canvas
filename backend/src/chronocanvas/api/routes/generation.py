@@ -100,11 +100,13 @@ async def list_generations(
     session: AsyncSession = Depends(get_session),
 ):
     repo = RequestRepository(session)
-    if status:
-        items = await repo.list_by_status(status, offset=offset, limit=limit)
+    status_filter = status if status else None
+    if status_filter:
+        items = await repo.list_by_status(status_filter, offset=offset, limit=limit)
+        total = await repo.count(status_filter)
     else:
         items = await repo.list(offset=offset, limit=limit)
-    total = await repo.count()
+        total = await repo.count()
     return GenerationListResponse(
         items=[GenerationResponse.model_validate(r) for r in items],
         total=total,

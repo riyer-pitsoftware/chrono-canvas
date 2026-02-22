@@ -2,10 +2,19 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../client";
 import type { GenerationRequest, GenerationListResponse, GeneratedImage, AuditDetail, FaceUploadResponse } from "../types";
 
-export function useGenerations(offset = 0, limit = 20) {
+export function useGenerations(offset = 0, limit = 20, status?: string) {
   return useQuery({
-    queryKey: ["generations", offset, limit],
-    queryFn: () => api.get<GenerationListResponse>(`/generate?offset=${offset}&limit=${limit}`),
+    queryKey: ["generations", offset, limit, status],
+    queryFn: () => {
+      const params = new URLSearchParams({
+        offset: String(offset),
+        limit: String(limit),
+      });
+      if (status && status !== "all") {
+        params.set("status", status);
+      }
+      return api.get<GenerationListResponse>(`/generate?${params.toString()}`);
+    },
   });
 }
 
