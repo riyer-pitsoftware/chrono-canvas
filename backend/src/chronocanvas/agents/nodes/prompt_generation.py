@@ -16,6 +16,7 @@ Figure: {figure_name}
 Historical Context: {historical_context}
 Clothing: {clothing_details}
 Physical Description: {physical_description}
+Known Physical Traits: {notable_features}
 Art Style: {art_style_reference}
 
 Requirements:
@@ -54,6 +55,7 @@ async def prompt_generation_node(state: AgentState) -> AgentState:
             historical_context=state.get("historical_context", ""),
             clothing_details=state.get("clothing_details", ""),
             physical_description=state.get("physical_description", ""),
+            notable_features=state.get("notable_features", "") or "none recorded",
             art_style_reference=state.get("art_style_reference", ""),
         ),
         task_type=TaskType.PROMPT_GENERATION,

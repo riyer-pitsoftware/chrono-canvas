@@ -1,3 +1,4 @@
+# ruff: noqa: E501 — LLM prompt template contains long natural-language lines
 import json
 import logging
 import time
@@ -18,11 +19,14 @@ Figure: {figure_name}
 Time Period: {time_period}
 Region: {region}
 Occupation: {occupation}
+Life Dates: {birth_year} – {death_year}
+Known Physical Traits: {notable_features}
+Cultural Context: {cultural_context}
 
 Provide detailed information as JSON with these fields:
 - historical_context: string (2-3 sentences about their life and significance)
 - clothing_details: string (accurate period clothing they would wear, fabrics, colors)
-- physical_description: string (known physical features, build, hair, complexion)
+- physical_description: string (known physical features, build, hair, complexion — incorporate and expand on any known traits listed above)
 - art_style_reference: string (art style of their era, e.g., "Renaissance oil painting")
 - sources: list of strings (reference descriptions)
 
@@ -57,6 +61,10 @@ async def research_node(state: AgentState) -> AgentState:
                 time_period=time_period,
                 region=region,
                 occupation=state.get("occupation", ""),
+                birth_year=state.get("birth_year", "") or "unknown",
+                death_year=state.get("death_year", "") or "unknown",
+                notable_features=state.get("notable_features", "") or "none recorded",
+                cultural_context=state.get("cultural_context", "") or "not specified",
             ),
             task_type=TaskType.RESEARCH,
             request_id=state.get("request_id", ""),

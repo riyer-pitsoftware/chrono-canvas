@@ -12,6 +12,13 @@ class AgentState(TypedDict, total=False):
     region: str
     occupation: str
     extracted_attributes: dict[str, Any]
+    alternative_names: list[str]
+    birth_year: str
+    death_year: str
+    notable_features: str
+    cultural_context: str
+    historical_significance: str
+    associated_locations: list[str]
 
     # Research
     historical_context: str

@@ -1,3 +1,4 @@
+# ruff: noqa: E501 — LLM prompt template contains long natural-language lines
 import json
 import logging
 import time
@@ -8,13 +9,20 @@ from chronocanvas.llm.router import get_llm_router
 
 logger = logging.getLogger(__name__)
 
-EXTRACTION_PROMPT = """Extract historical figure information from the following text.
+EXTRACTION_PROMPT = """Extract comprehensive historical figure information from the following text.
 Return a JSON object with these fields:
-- figure_name: string (full name of the historical figure)
-- time_period: string (era or century)
+- figure_name: string (full canonical name of the historical figure)
+- time_period: string (era or century, e.g. "15th century" or "Renaissance era")
 - region: string (geographic region/country)
 - occupation: string (primary role or title)
-- attributes: object (any additional attributes mentioned)
+- alternative_names: list of strings (aliases, nicknames, titles, transliterations, e.g. ["Cleopatra VII Philopator", "Queen of the Nile"])
+- birth_year: string (specific or approximate, e.g. "69 BC" or "c. 1450")
+- death_year: string (specific or approximate, e.g. "30 BC" or "c. 1519")
+- notable_features: string (known physical characteristics — scars, height, complexion, distinctive traits)
+- cultural_context: string (religion, social class, dynasty, movement, or cultural milieu)
+- historical_significance: string (1-2 sentences on why this figure matters historically)
+- associated_locations: list of strings (cities, courts, battlefields, kingdoms associated with them)
+- attributes: object (any additional attributes not covered above)
 
 Text: {input_text}
 
@@ -41,6 +49,13 @@ async def extraction_node(state: AgentState) -> AgentState:
             "time_period": "Unknown",
             "region": "Unknown",
             "occupation": "Historical figure",
+            "alternative_names": [],
+            "birth_year": "",
+            "death_year": "",
+            "notable_features": "",
+            "cultural_context": "",
+            "historical_significance": "",
+            "associated_locations": [],
             "attributes": {},
         }
 
@@ -76,6 +91,13 @@ async def extraction_node(state: AgentState) -> AgentState:
         "region": data.get("region", "Unknown"),
         "occupation": data.get("occupation", "Historical figure"),
         "extracted_attributes": data.get("attributes", {}),
+        "alternative_names": data.get("alternative_names", []),
+        "birth_year": data.get("birth_year", ""),
+        "death_year": data.get("death_year", ""),
+        "notable_features": data.get("notable_features", ""),
+        "cultural_context": data.get("cultural_context", ""),
+        "historical_significance": data.get("historical_significance", ""),
+        "associated_locations": data.get("associated_locations", []),
         "agent_trace": trace,
         "llm_calls": llm_calls,
     }

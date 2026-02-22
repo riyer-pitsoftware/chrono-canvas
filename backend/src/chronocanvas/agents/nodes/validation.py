@@ -15,8 +15,11 @@ prompt for historical accuracy.
 Figure: {figure_name}
 Time Period: {time_period}
 Region: {region}
+Life Dates: {birth_year} – {death_year}
+Cultural Context: {cultural_context}
 Image Prompt: {image_prompt}
 
+Use the life dates and cultural context above to ground your accuracy assessment.
 Score each category 0-100 and provide details:
 1. clothing_accuracy: Are the clothes period-appropriate?
 2. cultural_accuracy: Are cultural elements correct?
@@ -41,6 +44,9 @@ async def validation_node(state: AgentState) -> AgentState:
             figure_name=state.get("figure_name", ""),
             time_period=state.get("time_period", ""),
             region=state.get("region", ""),
+            birth_year=state.get("birth_year", "") or "unknown",
+            death_year=state.get("death_year", "") or "unknown",
+            cultural_context=state.get("cultural_context", "") or "not specified",
             image_prompt=state.get("image_prompt", ""),
         ),
         task_type=TaskType.VALIDATION,

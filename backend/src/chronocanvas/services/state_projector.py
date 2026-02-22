@@ -42,6 +42,13 @@ class RequestStateProjector:
                 "time_period": node_state.get("time_period"),
                 "region": node_state.get("region"),
                 "occupation": node_state.get("occupation"),
+                "alternative_names": node_state.get("alternative_names", []),
+                "birth_year": node_state.get("birth_year", ""),
+                "death_year": node_state.get("death_year", ""),
+                "notable_features": node_state.get("notable_features", ""),
+                "cultural_context": node_state.get("cultural_context", ""),
+                "historical_significance": node_state.get("historical_significance", ""),
+                "associated_locations": node_state.get("associated_locations", []),
             }
         if node_state.get("historical_context"):
             kwargs["research_data"] = {

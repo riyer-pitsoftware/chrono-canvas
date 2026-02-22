@@ -110,32 +110,38 @@ async def face_search_node(state: AgentState) -> AgentState:
         })
         return {**state, "current_agent": "face_search", "agent_trace": trace}
 
-    query = SEARCH_QUERY_TEMPLATE.format(figure_name=figure_name)
-    logger.info("Face search: querying SerpAPI for %r [request_id=%s]", query, request_id)
+    # Build query list: primary name first, then alternative names as fallbacks
+    queries = [SEARCH_QUERY_TEMPLATE.format(figure_name=figure_name)]
+    for alt_name in state.get("alternative_names", []):
+        alt_query = SEARCH_QUERY_TEMPLATE.format(figure_name=alt_name)
+        if alt_query not in queries:
+            queries.append(alt_query)
 
-    try:
-        results = await _search_serpapi(query)
-    except Exception as e:
-        logger.warning("Face search: SerpAPI error [request_id=%s]: %s", request_id, e)
-        trace.append({
-            "agent": "face_search",
-            "timestamp": time.time(),
-            "skipped": True,
-            "reason": "search_api_error",
-            "error": str(e),
-        })
-        return {**state, "current_agent": "face_search", "agent_trace": trace}
+    results = []
+    used_query = queries[0]
+    for query in queries:
+        logger.info("Face search: querying SerpAPI for %r [request_id=%s]", query, request_id)
+        try:
+            results = await _search_serpapi(query)
+        except Exception as e:
+            logger.warning("Face search: SerpAPI error [request_id=%s]: %s", request_id, e)
+            continue
+        if results:
+            used_query = query
+            break
 
     if not results:
-        logger.info("Face search: no results returned [request_id=%s]", request_id)
+        logger.info("Face search: no results for any query [request_id=%s]", request_id)
         trace.append({
             "agent": "face_search",
             "timestamp": time.time(),
             "skipped": True,
             "reason": "no_results",
-            "query": query,
+            "queries_tried": queries,
         })
         return {**state, "current_agent": "face_search", "agent_trace": trace}
+
+    query = used_query
 
     output_dir = Path(settings.output_dir) / request_id
 
