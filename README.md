@@ -2,7 +2,16 @@
 
 **An auditable multimodal agent pipeline — applied to historical portrait generation.**
 
-ChronoCanvas is a case study in building traceable, evaluable AI systems. It orchestrates LLM research, image generation, and heuristic validation into a 9-node pipeline with full cost/latency observability, provider routing, and automated retry loops. The domain — generating historically informed portraits from text descriptions — provides a constrained, visually compelling problem space. Everything runs on your own hardware.
+> **Commercial identity:** I design and harden auditable AI workflows in complex domains.  
+> **Artifact job:** ChronoCanvas proves I can architect and evaluate a non-trivial multimodal agent system with auditability end-to-end.
+
+ChronoCanvas is a focused case study in building traceable, evaluable AI systems. It orchestrates LLM research, image generation, and heuristic validation into a 9-node pipeline with full cost/latency observability, provider routing, and automated retry loops. The historical portrait domain is simply the testbed; the reusable patterns are inspection-friendly AI pipelines that you can trust in higher-stakes environments. Everything runs on your own hardware.
+
+### Who this is for
+
+- Engineering leaders evaluating whether auditable agent workflows are feasible on current tooling
+- Staff-plus ICs who need a concrete reference implementation for LangGraph-based pipelines with validation and retries
+- Recruiters or hiring managers who need one glance proof of system-level thinking (skip directly to [Learn from this repo](#learn-from-this-repo))
 
 > A serious prototype and engineering sandbox, not a historical source-of-truth engine. The majority of this codebase was built with [Claude Code](https://claude.ai/claude-code).
 
@@ -159,6 +168,7 @@ ChronoCanvas is designed to be readable as a systems case study. Here are good s
 | [docs/api.md](docs/api.md) | REST API and WebSocket reference |
 | [docs/development.md](docs/development.md) | Development setup, project structure, contribution guide |
 | [docs/architecture-invariants.md](docs/architecture-invariants.md) | Non-negotiable architectural rules |
+| [notes/artifact-positioning-template.md](notes/artifact-positioning-template.md) | Messaging template to keep artifacts focused on one job |
 
 ---
 
