@@ -15,6 +15,9 @@ build:
 
 # Database
 migrate:
+	docker exec chrono-canvas-api-1 alembic upgrade head
+
+migrate-local:
 	cd backend && alembic upgrade head
 
 migration:
@@ -22,6 +25,14 @@ migration:
 
 # Seed data
 seed:
+	docker cp seed/. chrono-canvas-api-1:/app/seed/
+	docker exec \
+		-e DATABASE_URL="postgresql+asyncpg://chronocanvas:chronocanvas@db:5432/chronocanvas" \
+		-e REDIS_URL="redis://redis:6379/0" \
+		-e PYTHONPATH=/app/src \
+		chrono-canvas-api-1 python /app/seed/load_seed.py
+
+seed-local:
 	cd backend && python -m chronocanvas.seed.load_seed
 
 # Testing

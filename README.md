@@ -70,10 +70,13 @@ cp .env.example .env
 # 3. Start all services
 make dev
 
-# 4. Load the seed figures
+# 4. Run database migrations
+make migrate
+
+# 5. Load the seed figures (first run, or after volume wipe)
 make seed
 
-# 5. Open the UI
+# 6. Open the UI
 open http://localhost:3000
 ```
 
@@ -102,6 +105,55 @@ The first run downloads model weights and Docker images — allow a few minutes.
 ChronoCanvas uses a LangGraph state machine. Seven agents run in sequence; each has a well-defined input contract, a structured output, and an independently configurable LLM provider. The validation agent can loop the pipeline back to prompt generation if the portrait fails its accuracy threshold.
 
 The system supports Claude, OpenAI, and Ollama, with per-task routing and an automatic fallback chain.
+
+---
+
+## Manual service management
+
+If you're not using Claude Code skills or `make` targets, here are the raw Docker commands:
+
+### Start / restart
+
+```bash
+# Stop everything
+docker compose -f docker-compose.dev.yml down
+
+# Rebuild and start all services
+docker compose -f docker-compose.dev.yml up --build -d
+
+# Wait for DB to be healthy, then run migrations
+sleep 10
+docker exec chrono-canvas-api-1 alembic upgrade head
+```
+
+### Seed data (first run, or after `docker compose down -v`)
+
+```bash
+docker cp seed/. chrono-canvas-api-1:/app/seed/
+docker exec -e DATABASE_URL="postgresql+asyncpg://chronocanvas:chronocanvas@db:5432/chronocanvas" \
+  -e REDIS_URL="redis://redis:6379/0" \
+  -e PYTHONPATH=/app/src \
+  chrono-canvas-api-1 python /app/seed/load_seed.py
+```
+
+Seeding is idempotent — safe to re-run. It loads 12 periods, 102 figures, and 29 timeline entries.
+
+### Verify
+
+```bash
+docker compose -f docker-compose.dev.yml ps
+curl -s http://localhost:8000/docs -o /dev/null -w "API: %{http_code}\n"
+curl -s http://localhost:3000 -o /dev/null -w "Frontend: %{http_code}\n"
+```
+
+### Troubleshooting
+
+| Problem | Fix |
+|---|---|
+| Port already taken | `lsof -i :5432 -i :6379 -i :8000 -i :3000` to find the conflicting process |
+| Migration fails | Check DB is healthy: `docker compose -f docker-compose.dev.yml ps` |
+| Figures library empty | Re-run the seed commands above |
+| `FACEFUSION_SOURCE_PATH` error | Add `FACEFUSION_SOURCE_PATH=/path/to/facefusion` to `.env` (only needed if using FaceFusion) |
 
 ---
 
