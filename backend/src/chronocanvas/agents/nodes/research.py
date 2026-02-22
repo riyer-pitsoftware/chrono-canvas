@@ -48,7 +48,7 @@ async def research_node(state: AgentState) -> AgentState:
         data = json.loads(response.content)
     except json.JSONDecodeError:
         data = {
-            "historical_context": f"Historical figure from {state.get('time_period', 'unknown era')}.",
+            "historical_context": f"Historical figure from {state.get('time_period', 'unknown era')}.",  # noqa: E501
             "clothing_details": "Period-appropriate attire.",
             "physical_description": "No specific physical description available.",
             "art_style_reference": "Classical portrait style.",

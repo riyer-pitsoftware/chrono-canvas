@@ -25,7 +25,7 @@ async def upload_face(file: UploadFile):
         raise HTTPException(status_code=400, detail="File exceeds 10MB limit")
 
     if not validate_image_magic(data):
-        raise HTTPException(status_code=400, detail="File content does not match a supported image format")
+        raise HTTPException(status_code=400, detail="File content does not match a supported image format")  # noqa: E501
 
     ext_map = {"image/jpeg": "jpg", "image/png": "png", "image/webp": "webp"}
     ext = ext_map[file.content_type]

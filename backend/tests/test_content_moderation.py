@@ -4,15 +4,15 @@ Run with:
     cd backend
     PYTHONPATH=src pytest tests/test_content_moderation.py -v
 """
-import pytest
-
 # Patch settings before import so pydantic-settings doesn't need a real .env
 import os
+
+import pytest
+
 os.environ.setdefault("DATABASE_URL", "postgresql+asyncpg://x:x@localhost/x")
 os.environ.setdefault("REDIS_URL", "redis://localhost/0")
 
 from chronocanvas.content_moderation import check_input  # noqa: E402
-
 
 # ---------------------------------------------------------------------------
 # Inputs that must pass (legitimate historical / educational queries)

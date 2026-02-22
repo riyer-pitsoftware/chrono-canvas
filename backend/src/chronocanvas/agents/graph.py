@@ -6,8 +6,8 @@ from chronocanvas.agents.decisions import (
     should_continue_after_orchestrator,
     should_continue_after_validation,
 )
-from chronocanvas.agents.nodes.extraction import extraction_node
 from chronocanvas.agents.nodes.export import export_node
+from chronocanvas.agents.nodes.extraction import extraction_node
 from chronocanvas.agents.nodes.face_search import face_search_node
 from chronocanvas.agents.nodes.facial_compositing import facial_compositing_node
 from chronocanvas.agents.nodes.image_generation import image_generation_node

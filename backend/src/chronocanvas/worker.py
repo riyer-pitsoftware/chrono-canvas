@@ -1,7 +1,7 @@
 from arq.connections import RedisSettings
 
 from chronocanvas.config import settings
-from chronocanvas.services.generation import run_generation_pipeline, retry_generation_pipeline
+from chronocanvas.services.generation import retry_generation_pipeline, run_generation_pipeline
 
 
 async def run_generation_pipeline_task(

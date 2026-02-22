@@ -42,7 +42,10 @@ async def facial_compositing_node(state: AgentState) -> AgentState:
     image_path = state.get("image_path", "")
 
     if not image_path or not Path(image_path).exists():
-        logger.warning("Facial compositing: no generated image found, skipping [request_id=%s]", request_id)
+        logger.warning(
+            "Facial compositing: no generated image found, skipping [request_id=%s]",
+            request_id,
+        )
         trace.append({
             "agent": "facial_compositing",
             "timestamp": time.time(),
@@ -90,7 +93,10 @@ async def facial_compositing_node(state: AgentState) -> AgentState:
         }
 
     except Exception as e:
-        logger.exception("Facial compositing failed, continuing with original image [request_id=%s]: %s", request_id, e)
+        logger.exception(
+            "Facial compositing failed, continuing with original image [request_id=%s]: %s",
+            request_id, e,
+        )
         trace.append({
             "agent": "facial_compositing",
             "timestamp": time.time(),

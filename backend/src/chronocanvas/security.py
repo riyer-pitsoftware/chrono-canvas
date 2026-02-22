@@ -4,7 +4,6 @@ Centralises SSRF prevention, file magic-byte validation, and URL checks.
 """
 
 import ipaddress
-import re
 from urllib.parse import urlparse
 
 # ── SSRF prevention ────────────────────────────────────────────────────────────
@@ -23,6 +22,11 @@ _BLOCKED_NETWORKS = [
 ]
 
 _ALLOWED_SCHEMES = {"http", "https"}
+
+_BLOCKED_HOSTNAMES = {
+    "localhost", "ip6-localhost", "ip6-loopback",
+    "broadcasthost", "0.0.0.0",
+}
 
 
 def is_safe_url(url: str) -> bool:
@@ -51,10 +55,6 @@ def is_safe_url(url: str) -> bool:
         return False
 
     # Block by name — catch common localhost variants
-    _BLOCKED_HOSTNAMES = {
-        "localhost", "ip6-localhost", "ip6-loopback",
-        "broadcasthost", "0.0.0.0",
-    }
     if hostname.lower() in _BLOCKED_HOSTNAMES:
         return False
 

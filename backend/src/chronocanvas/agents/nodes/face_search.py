@@ -84,18 +84,30 @@ async def face_search_node(state: AgentState) -> AgentState:
     trace = list(state.get("agent_trace", []))
 
     if not figure_name:
-        trace.append({"agent": "face_search", "timestamp": time.time(), "skipped": True, "reason": "no_figure_name"})
+        trace.append({
+            "agent": "face_search", "timestamp": time.time(),
+            "skipped": True, "reason": "no_figure_name",
+        })
         return {**state, "current_agent": "face_search", "agent_trace": trace}
 
     if not settings.serpapi_key:
         logger.info("Face search: SERPAPI_KEY not set, skipping [request_id=%s]", request_id)
-        trace.append({"agent": "face_search", "timestamp": time.time(), "skipped": True, "reason": "no_api_key"})
+        trace.append({
+            "agent": "face_search", "timestamp": time.time(),
+            "skipped": True, "reason": "no_api_key",
+        })
         return {**state, "current_agent": "face_search", "agent_trace": trace}
 
     # Don't overwrite a manually uploaded face
     if state.get("source_face_path"):
-        logger.info("Face search: source_face_path already set, skipping web search [request_id=%s]", request_id)
-        trace.append({"agent": "face_search", "timestamp": time.time(), "skipped": True, "reason": "already_set"})
+        logger.info(
+            "Face search: source_face_path already set, skipping web search [request_id=%s]",
+            request_id,
+        )
+        trace.append({
+            "agent": "face_search", "timestamp": time.time(),
+            "skipped": True, "reason": "already_set",
+        })
         return {**state, "current_agent": "face_search", "agent_trace": trace}
 
     query = SEARCH_QUERY_TEMPLATE.format(figure_name=figure_name)
@@ -151,7 +163,10 @@ async def face_search_node(state: AgentState) -> AgentState:
         })
         return {**state, "current_agent": "face_search", "agent_trace": trace}
 
-    logger.info("Face search: downloaded face image %s -> %s [request_id=%s]", used_url, downloaded_path, request_id)
+    logger.info(
+        "Face search: downloaded face image %s -> %s [request_id=%s]",
+        used_url, downloaded_path, request_id,
+    )
     trace.append({
         "agent": "face_search",
         "timestamp": time.time(),

@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Depends
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from chronocanvas.api.schemas.figures import FigureResponse
 from chronocanvas.db.engine import get_session
 from chronocanvas.db.models.figure import Figure
-from pydantic import BaseModel
 
 router = APIRouter(prefix="/timeline", tags=["timeline"])
 

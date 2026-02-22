@@ -1,3 +1,4 @@
+# ruff: noqa: E501 — LLM prompt template contains long natural-language lines
 import json
 import logging
 import time
