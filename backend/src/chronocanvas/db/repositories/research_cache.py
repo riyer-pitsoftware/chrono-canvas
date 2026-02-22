@@ -42,11 +42,15 @@ class ResearchCacheRepository(BaseRepository[ResearchCache]):
             entry.cost_saved_usd += cost_saved
             await self.session.flush()
 
-    async def stats(self) -> dict:
-        """Return cache statistics."""
+    async def list_all(self) -> list[ResearchCache]:
+        """Get all cache entries."""
         stmt = select(ResearchCache)
         result = await self.session.execute(stmt)
-        entries = list(result.scalars().all())
+        return list(result.scalars().all())
+
+    async def stats(self) -> dict:
+        """Return cache statistics."""
+        entries = await self.list_all()
         total_hits = sum(e.hit_count for e in entries)
         total_cost_saved = sum(e.cost_saved_usd for e in entries)
         return {

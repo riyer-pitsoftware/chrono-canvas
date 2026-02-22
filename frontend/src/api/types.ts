@@ -203,3 +203,26 @@ export interface AuditDetail {
   state_snapshots: StateSnapshot[];
   agent_trace: Array<Record<string, unknown>>;
 }
+
+// ── Memory Cache ──────────────────────────────────────────────────────────
+
+export interface CacheEntry {
+  id: string;
+  figure_name: string;
+  time_period: string;
+  region: string;
+  hit_count: number;
+  cost_saved_usd: number;
+  original_cost_usd: number;
+}
+
+export interface CacheStats {
+  total_entries: number;
+  total_hits: number;
+  estimated_cost_saved_usd: number;
+}
+
+export interface CacheListResponse {
+  entries: CacheEntry[];
+  stats: CacheStats;
+}

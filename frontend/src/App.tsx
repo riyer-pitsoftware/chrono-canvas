@@ -9,6 +9,7 @@ import { Guide } from "@/pages/Guide";
 import { Admin } from "@/pages/Admin";
 import { AuditDetail } from "@/pages/AuditDetail";
 import { AuditList } from "@/pages/AuditList";
+import { Memory } from "@/pages/Memory";
 import { Timeline } from "@/pages/Timeline";
 
 function getPage(path: string) {
@@ -46,6 +47,8 @@ function getPage(path: string) {
       return <Admin />;
     case "/audit":
       return <AuditList />;
+    case "/memory":
+      return <Memory />;
     default:
       return <Dashboard />;
   }

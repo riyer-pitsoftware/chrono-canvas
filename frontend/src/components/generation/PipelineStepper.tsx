@@ -55,6 +55,7 @@ export function PipelineStepper({ currentAgent, status, agentTrace, llmCalls = [
         const traceEntry = agentTrace.find((t) => t.agent === stage.key);
         let summary = "";
         let summaryHref: string | undefined;
+        const cacheHit = stage.key === "research" && traceEntry?.cache_hit === true;
         if (stage.key === "extraction" && traceEntry?.extracted) {
           const extracted = traceEntry.extracted as Record<string, unknown>;
           summary = String(extracted.figure_name || "");
@@ -90,6 +91,11 @@ export function PipelineStepper({ currentAgent, status, agentTrace, llmCalls = [
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium">{stage.label}</span>
+                {cacheHit && (
+                  <Badge variant="secondary" className="text-xs">
+                    from memory
+                  </Badge>
+                )}
                 {stageStatus === "completed" && totalDuration > 0 && (
                   <span className="text-xs text-[var(--muted-foreground)]">
                     {totalDuration < 1000

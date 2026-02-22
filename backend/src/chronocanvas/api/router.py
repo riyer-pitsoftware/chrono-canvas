@@ -8,6 +8,7 @@ from chronocanvas.api.routes import (
     figures,
     generation,
     health,
+    memory,
     timeline,
     validation,
 )
@@ -23,3 +24,4 @@ api_router.include_router(validation.router)
 api_router.include_router(export.router)
 api_router.include_router(agents.router)
 api_router.include_router(admin.router)
+api_router.include_router(memory.router)

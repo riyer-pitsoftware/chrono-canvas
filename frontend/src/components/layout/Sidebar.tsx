@@ -1,4 +1,4 @@
-import { BookOpen, Download, FileSearch, Image, LayoutDashboard, Settings, Shield, Users, Cpu, Scroll } from "lucide-react";
+import { BookOpen, Download, FileSearch, Image, LayoutDashboard, Settings, Shield, Users, Cpu, Scroll, Database } from "lucide-react";
 
 const navItems = [
   { label: "Dashboard", href: "/", icon: LayoutDashboard },
@@ -7,6 +7,7 @@ const navItems = [
   { label: "Generate", href: "/generate", icon: Image },
   { label: "Validate", href: "/validate", icon: Shield },
   { label: "Audit", href: "/audit", icon: FileSearch },
+  { label: "Memory", href: "/memory", icon: Database },
   { label: "Export", href: "/export", icon: Download },
   { label: "Admin", href: "/admin", icon: Settings },
 ];
