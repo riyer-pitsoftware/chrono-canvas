@@ -63,6 +63,13 @@ dump.rdb
 # Security scan reports
 zap-reports/
 
+# Blog drafts
+blog/
+
+# Personal notes, reviews, planning docs
+notes/
+
 # macOS
 **/.DS_Store
+.!*!.DS_Store
 .aider*

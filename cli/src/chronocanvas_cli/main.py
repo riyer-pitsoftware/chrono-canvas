@@ -4,7 +4,7 @@ from chronocanvas_cli.commands import add, agents, batch, download, generate, li
 
 app = typer.Typer(
     name="chronocanvas",
-    help="ChronoCanvas CLI - Generate historically accurate portraits",
+    help="ChronoCanvas CLI - Generate historically informed portraits",
     no_args_is_help=True,
 )
 

@@ -33,7 +33,7 @@ const pipelineSteps = [
   { name: "Extraction", provider: "Ollama", description: "Parses text into structured figure data" },
   { name: "Research", provider: "Claude", description: "Enriches data with historical context and facts" },
   { name: "Face Search", provider: "SerpAPI", description: "Fetches reference portrait images from the web" },
-  { name: "Prompt Gen", provider: "Claude", description: "Creates period-accurate image generation prompts" },
+  { name: "Prompt Gen", provider: "Claude", description: "Creates period-informed image generation prompts" },
   { name: "Image Gen", provider: "—", description: "Produces portrait via Stable Diffusion or ComfyUI" },
   { name: "Validation", provider: "Ollama", description: "Scores historical accuracy (0–100) and flags issues" },
   { name: "Facial Compositing", provider: "FaceFusion", description: "Blends uploaded face into the generated portrait" },
@@ -227,7 +227,7 @@ Requirements:
 1. Use comma-separated tag style (SDXL responds best to this format)
 2. Start with: "photorealistic portrait, (masterpiece:1.2), (best quality:1.2), (ultra detailed face:1.3)"
 3. Describe facial features precisely: skin texture, facial bone structure, eye color and shape
-4. Include period-accurate clothing, hairstyle, and accessories with specific detail
+4. Include period-appropriate clothing, hairstyle, and accessories with specific detail
 5. Add lighting tags: Rembrandt lighting, soft key light, (catchlights in eyes:1.1)
 6. Add camera tags: 85mm lens, shallow depth of field, sharp focus on eyes, bokeh background
 7. Add quality tags: RAW photo, 8K, DSLR, (detailed skin texture:1.2), film grain
@@ -437,8 +437,8 @@ export function Guide({ section }: GuideProps) {
                 What is ChronoCanvas?
               </CardTitle>
               <CardDescription>
-                ChronoCanvas is an open-source toolkit that generates historically-accurate portraits using a 9-agent AI pipeline.
-                It's built for educators, historians, and content creators who need period-accurate character depictions.
+                ChronoCanvas is an open-source toolkit that generates historically informed portraits using a 9-node AI pipeline.
+                It's built for educators, historians, and content creators who need period-plausible character depictions.
               </CardDescription>
             </CardHeader>
             <CardContent>

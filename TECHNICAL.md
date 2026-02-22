@@ -29,7 +29,7 @@ The pipeline is a LangGraph state machine. Each agent node receives the full `Ag
 | 2 | **Extraction** | Ollama | Parses free-text input into a structured figure JSON (name, era, region, role) |
 | 3 | **Research** | Claude | Enriches the figure with historical context; streams tokens to the UI in real time |
 | 4 | **Face Search** | — | Searches for a reference face image via SerpAPI; skipped if a face is uploaded manually |
-| 5 | **Prompt Generation** | Claude | Constructs a period-accurate SDXL/FLUX prompt from the research data; streams tokens |
+| 5 | **Prompt Generation** | Claude | Constructs a period-informed SDXL/FLUX prompt from the research data; streams tokens |
 | 6 | **Image Generation** | — | Calls the configured image backend (ComfyUI or FaceFusion) to produce the portrait |
 | 7 | **Validation** | Ollama | Scores the portrait 0–100 for historical accuracy; triggers retry if score < 70 (max 2 retries) |
 | 8 | **Facial Compositing** | — | Composites the source face onto the generated portrait using FaceFusion, if a face is available |

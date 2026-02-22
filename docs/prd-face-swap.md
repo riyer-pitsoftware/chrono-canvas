@@ -2,11 +2,11 @@
 
 ## Problem
 
-The app generates historically accurate portraits of figures like Abraham Lincoln — period clothing, lighting, and setting are excellent with SDXL + Juggernaut XL. But the faces are generic. A teacher can't say "here's what Lincoln would look like if he were played by Daniel Day-Lewis." The educational value comes from bridging the gap between historical context and recognizable contemporary faces.
+The app generates historically informed portraits of figures like Abraham Lincoln — period clothing, lighting, and setting are plausible with SDXL + Juggernaut XL. But the faces are generic. A teacher can't say "here's what Lincoln would look like if he were played by Daniel Day-Lewis." The educational value comes from bridging the gap between historical context and recognizable contemporary faces.
 
 ## Vision
 
-Teachers upload a reference photo (an actor, a student, themselves) and pick a historical figure. The system generates a period-accurate portrait and swaps in the reference face. The result: a photorealistic image of a familiar face in historically accurate clothing, setting, and context.
+Teachers upload a reference photo (an actor, a student, themselves) and pick a historical figure. The system generates a period-plausible portrait and swaps in the reference face. The result: a photorealistic image of a familiar face in historically informed clothing, setting, and context.
 
 **Example use cases:**
 - "Show me Keanu Reeves as Genghis Khan" — period Mongol armor, yurt backdrop, Keanu's face
