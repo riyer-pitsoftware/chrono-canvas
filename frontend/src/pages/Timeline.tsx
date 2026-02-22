@@ -298,7 +298,7 @@ export function Timeline() {
   const [year, setYear] = useState(0);
   const { data, isLoading } = useTimelineFigures(YEAR_MIN, YEAR_MAX);
 
-  const figures = data?.items ?? [];
+  const figures = useMemo(() => data?.items ?? [], [data]);
 
   const active = useMemo(() => nearestFigure(figures, year), [figures, year]);
 
@@ -308,7 +308,7 @@ export function Timeline() {
       const f = nearestFigure(figures, 0);
       if (f?.birth_year != null) setYear(f.birth_year);
     }
-  }, [figures]);
+  }, [figures, year]);
 
   function handleGenerate() {
     if (!active) return;

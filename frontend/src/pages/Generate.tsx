@@ -24,7 +24,7 @@ export function Generate({ figureId }: { figureId?: string }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const autoTriggered = useRef(false);
   const { navigate } = useNavigation();
-  const createGeneration = useCreateGeneration();
+  const { mutate: startGeneration, isPending: isCreating } = useCreateGeneration();
   const uploadFace = useUploadFace();
   const { data: figure } = useFigure(figureId ?? "");
   const activeRequest = useGeneration(activeRequestId ?? "");
@@ -40,15 +40,15 @@ export function Generate({ figureId }: { figureId?: string }) {
     autoTriggered.current = true;
     const text = figure.name;
     setInputText(text);
-    createGeneration.mutate(
+    startGeneration(
       { input_text: text, figure_id: figure.id },
       { onSuccess: (data) => setActiveRequestId(data.id) },
     );
-  }, [figure]);
+  }, [figure, activeRequestId, startGeneration]);
 
   const handleGenerate = () => {
     if (!inputText.trim()) return;
-    createGeneration.mutate(
+    startGeneration(
       { input_text: inputText, ...(figureId ? { figure_id: figureId } : {}), ...(faceId ? { face_id: faceId } : {}) },
       {
         onSuccess: (data) => {
@@ -103,8 +103,8 @@ export function Generate({ figureId }: { figureId?: string }) {
               onKeyDown={(e) => e.key === "Enter" && handleGenerate()}
               className="flex-1"
             />
-            <Button onClick={handleGenerate} disabled={createGeneration.isPending || !inputText.trim()}>
-              {createGeneration.isPending ? "Starting..." : "Generate"}
+            <Button onClick={handleGenerate} disabled={isCreating || !inputText.trim()}>
+              {isCreating ? "Starting..." : "Generate"}
             </Button>
           </div>
 
