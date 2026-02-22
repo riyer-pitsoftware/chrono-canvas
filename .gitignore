@@ -65,3 +65,4 @@ zap-reports/
 
 # macOS
 **/.DS_Store
+.aider*

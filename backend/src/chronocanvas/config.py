@@ -31,6 +31,7 @@ class Settings(BaseSettings):
     comfyui_model: str = "sdxl"  # "sdxl" or "flux"
     comfyui_sdxl_checkpoint: str = "juggernautXL_v9.safetensors"
     facefusion_api_url: str = "http://localhost:7861"
+    facefusion_source_path: str = ""
 
     # API
     api_host: str = "0.0.0.0"
@@ -52,6 +53,11 @@ class Settings(BaseSettings):
     # Rate Limiting
     rate_limit_rpm: int = 60
     llm_max_concurrent: int = 5
+
+    # Research Cache (pgvector + sentence-transformers)
+    research_cache_enabled: bool = True
+    research_cache_threshold: float = 0.85   # cosine similarity threshold for a cache hit
+    research_cache_model: str = "all-MiniLM-L6-v2"
 
     # Logging
     log_level: str = "INFO"

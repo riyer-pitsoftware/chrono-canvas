@@ -19,6 +19,7 @@ class AgentState(TypedDict, total=False):
     physical_description: str
     art_style_reference: str
     research_sources: list[str]
+    research_cache_hit: bool
 
     # Prompt Generation
     image_prompt: str

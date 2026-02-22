@@ -8,6 +8,7 @@ Create Date: 2026-02-21
 from typing import Sequence, Union
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision: str = "003"
@@ -61,7 +62,8 @@ def upgrade() -> None:
     for category, display_name, weight, description in _DEFAULT_RULES:
         conn.execute(
             sa.text(
-                "INSERT INTO validation_rules (id, category, display_name, weight, description, enabled) "
+                "INSERT INTO validation_rules "
+                "(id, category, display_name, weight, description, enabled) "
                 "VALUES (:id, :category, :display_name, :weight, :description, true)"
             ),
             {
