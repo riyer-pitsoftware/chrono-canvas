@@ -2,6 +2,7 @@ import { useMemo, useState, useEffect } from "react";
 import { useNavigation } from "@/stores/navigation";
 import { useTimelineFigures } from "@/api/hooks/useTimeline";
 import type { Figure } from "@/api/types";
+import { QuillIcon } from "@/components/icons/QuillIcon";
 
 // ── Year formatting ────────────────────────────────────────────────────────────
 
@@ -220,10 +221,12 @@ function FigureCard({ figure, onGenerate }: { figure: Figure; onGenerate: () => 
           <div className="mt-4 flex gap-3">
             <button
               onClick={onGenerate}
-              className="px-4 py-1.5 rounded-full text-xs font-semibold text-white shadow transition-all hover:opacity-90 active:scale-95"
+              className="px-3 py-1.5 rounded-full text-xs font-semibold text-white shadow transition-all hover:opacity-90 active:scale-95 flex items-center justify-center"
               style={{ background: "linear-gradient(135deg, #C2410C, #9A3412)" }}
+              title="Generate portrait"
+              aria-label="Generate portrait"
             >
-              Generate Portrait
+              <QuillIcon className="h-5 w-5 text-white" />
             </button>
           </div>
         </div>

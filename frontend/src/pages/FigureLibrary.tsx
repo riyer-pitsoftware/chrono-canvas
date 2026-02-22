@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useFigures } from "@/api/hooks/useFigures";
 import { useNavigation } from "@/stores/navigation";
 import { cn } from "@/lib/utils";
+import { QuillIcon } from "@/components/icons/QuillIcon";
 
 export function FigureLibrary() {
   const [search, setSearch] = useState("");
@@ -78,8 +79,11 @@ export function FigureLibrary() {
             size="sm"
             disabled={!selectedFigure}
             onClick={handleGenerate}
+            className="flex items-center justify-center gap-2 px-3"
+            title="Generate portrait"
+            aria-label="Generate portrait"
           >
-            Generate portrait
+            <QuillIcon className="h-4 w-4" />
           </Button>
         </div>
       </div>
