@@ -1,10 +1,10 @@
 # ChronoCanvas
 
-**Historically informed portrait generation with a traceable AI pipeline.**
+**An auditable multimodal agent pipeline — applied to historical portrait generation.**
 
-ChronoCanvas is an exploratory system for generating period-plausible portraits of historical figures from text descriptions. It combines LLM-driven research, image generation, and heuristic validation into an auditable pipeline — running entirely on your own hardware.
+ChronoCanvas is a case study in building traceable, evaluable AI systems. It orchestrates LLM research, image generation, and heuristic validation into a 9-node pipeline with full cost/latency observability, provider routing, and automated retry loops. The domain — generating historically informed portraits from text descriptions — provides a constrained, visually compelling problem space. Everything runs on your own hardware.
 
-> This is a serious prototype and engineering sandbox, not a historical source-of-truth engine. The majority of this codebase was built with [Claude Code](https://claude.ai/claude-code).
+> A serious prototype and engineering sandbox, not a historical source-of-truth engine. The majority of this codebase was built with [Claude Code](https://claude.ai/claude-code).
 
 ---
 
@@ -33,9 +33,9 @@ ChronoCanvas is an exploratory system for generating period-plausible portraits 
 
 ## Why it exists
 
-History is text-heavy. Textbooks and Wikipedia describe historical figures in detail but rarely show them. ChronoCanvas was built to explore whether an agentic AI pipeline can bridge that gap — researching a figure, constructing a historically informed visual prompt, generating a portrait, and validating the result for plausibility.
+Most AI demos hide what happened between input and output. ChronoCanvas was built to explore the opposite: what does it look like when every LLM call, every routing decision, every validation score, and every retry is logged and browsable? The historical portrait domain provides a natural test case — it requires multi-step reasoning (research → prompt crafting → generation → validation), spans multiple modalities (text → image), and has an inherent quality bar (does the output look plausible for the era?).
 
-The real value is in the infrastructure: traceable agent workflows, evaluation harnesses, provider routing, and cost observability. The historical domain provides a compelling and constrained problem space.
+The transferable patterns — agent orchestration with LangGraph, per-task LLM provider routing, cost/latency tracing, automated evaluation with retry loops, real-time progress streaming — apply to any domain where AI pipelines need to be inspectable rather than magical.
 
 ---
 
