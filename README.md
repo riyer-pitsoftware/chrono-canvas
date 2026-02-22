@@ -110,6 +110,47 @@ The first run downloads model weights and Docker images — allow a few minutes.
 
 ---
 
+## Deployment modes
+
+| Mode | LLM provider | Image generation | Internet required | Notes |
+|---|---|---|---|---|
+| **Full cloud** | Claude + OpenAI | ComfyUI (local) | Yes (LLM APIs) | Best output quality; requires API keys |
+| **Hybrid** | Ollama (local) + Claude (research only) | ComfyUI (local) | Yes (Anthropic API) | Reduces cost; only research node uses cloud |
+| **Fully offline** | Ollama | ComfyUI (local) | No | All processing on your hardware; quality depends on local model |
+| **Development** | Ollama or cloud | Mock (no GPU) | Optional | Fast iteration; generates placeholder images |
+
+Face search (SerpAPI) requires internet regardless of mode. Facial compositing (FaceFusion) always runs locally.
+
+---
+
+## Learn from this repo
+
+ChronoCanvas is designed to be readable as a systems case study. Here are good starting points depending on your interest:
+
+**Agent orchestration and LangGraph:**
+- [`backend/src/chronocanvas/agents/graph.py`](backend/src/chronocanvas/agents/graph.py) — graph definition, node wiring, conditional edges
+- [`backend/src/chronocanvas/agents/state.py`](backend/src/chronocanvas/agents/state.py) — the shared state schema flowing between nodes
+- [`backend/src/chronocanvas/agents/decisions.py`](backend/src/chronocanvas/agents/decisions.py) — conditional routing logic (validation retry loop)
+
+**LLM provider routing and cost tracking:**
+- [`backend/src/chronocanvas/llm/router.py`](backend/src/chronocanvas/llm/router.py) — per-task provider assignment with fallback chain
+- [`backend/src/chronocanvas/llm/providers/`](backend/src/chronocanvas/llm/providers/) — pluggable provider implementations (Ollama, Claude, OpenAI)
+
+**Audit trail and observability:**
+- [`backend/src/chronocanvas/services/runner.py`](backend/src/chronocanvas/services/runner.py) — pipeline execution with LLM call logging
+- [`backend/src/chronocanvas/api/routes/admin.py`](backend/src/chronocanvas/api/routes/admin.py) — validation rules, review queue
+
+**Real-time streaming:**
+- [`backend/src/chronocanvas/services/progress.py`](backend/src/chronocanvas/services/progress.py) — Redis pub/sub progress publisher
+- [`frontend/src/api/hooks/`](frontend/src/api/hooks/) — WebSocket subscription and React Query integration
+
+**Local deployment and Docker:**
+- [`docker-compose.dev.yml`](docker-compose.dev.yml) — full dev stack definition
+- [`docker/`](docker/) — service-specific Dockerfiles and configs
+- [`docs/architecture-invariants.md`](docs/architecture-invariants.md) — rules that keep the system coherent
+
+---
+
 ## Documentation
 
 | Document | Contents |
