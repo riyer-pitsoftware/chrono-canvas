@@ -40,8 +40,19 @@ export function Validate({ initialRequestId }: ValidateProps) {
   useEffect(() => {
     if (!initialRequestId) return;
     setRequestId(initialRequestId);
-    handleValidate(initialRequestId);
-  }, [initialRequestId, handleValidate]);
+    const fetchInitial = async () => {
+      setLoading(true);
+      try {
+        const data = await api.get<ValidationSummary>(`/validation/${initialRequestId}`);
+        setResults(data);
+      } catch {
+        setResults(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchInitial();
+  }, [initialRequestId]);
 
   useEffect(() => {
     setRecentPage(0);

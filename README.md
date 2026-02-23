@@ -7,6 +7,32 @@
 
 ChronoCanvas is a focused case study in building traceable, evaluable AI systems. It orchestrates LLM research, image generation, and heuristic validation into a 9-node pipeline with full cost/latency observability, provider routing, and automated retry loops. The historical portrait domain is simply the testbed; the reusable patterns are inspection-friendly AI pipelines that you can trust in higher-stakes environments. Everything runs on your own hardware.
 
+### See it working
+
+<p align="center">
+  <img src="docs/images/generated-portrait.png" alt="Generated portrait with historical context" width="720" />
+</p>
+
+<p align="center">
+  <em>A generated portrait of Aryabhata — with researched Gupta-era clothing, validated against 4 historical criteria, and a full audit trail of every LLM call.</em>
+</p>
+
+<details>
+<summary>Audit trail and pipeline view</summary>
+
+![Audit trail showing LLM calls, token costs, and validation scores](docs/images/audit-trail.png)
+
+</details>
+
+<!-- Optional: uncomment when a GIF is available
+<details>
+<summary>Pipeline run (GIF)</summary>
+
+![Pipeline run showing real-time streaming](docs/images/pipeline-run.gif)
+
+</details>
+-->
+
 ### Who this is for
 
 - Engineering leaders evaluating whether auditable agent workflows are feasible on current tooling

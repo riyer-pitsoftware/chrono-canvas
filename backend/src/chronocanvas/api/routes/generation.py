@@ -1,4 +1,5 @@
 import glob
+import logging
 import shutil
 import uuid
 from pathlib import Path
@@ -23,6 +24,8 @@ from chronocanvas.db.repositories.requests import RequestRepository
 from chronocanvas.security import confine_path
 from chronocanvas.services.audit import AuditProjector
 from chronocanvas.services.generation import VALID_RETRY_STEPS
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/generate", tags=["generation"])
 
@@ -84,10 +87,12 @@ async def create_batch_generation(
             status="pending",
         )
         request_ids.append(gen_request.id)
-        await request.app.state.arq_pool.enqueue_job(
-            "run_generation_pipeline_task", str(gen_request.id), item.input_text
-        )
     await session.commit()
+
+    for i, item in enumerate(data.items):
+        await request.app.state.arq_pool.enqueue_job(
+            "run_generation_pipeline_task", str(request_ids[i]), item.input_text
+        )
 
     return BatchGenerationResponse(request_ids=request_ids, total=len(request_ids))
 
@@ -146,13 +151,16 @@ async def delete_generation(
     if not request:
         raise HTTPException(status_code=404, detail="Generation request not found")
 
-    # Remove output files from disk
-    output_path = Path(settings.output_dir) / str(request_id)
-    if output_path.exists():
-        shutil.rmtree(output_path)
-
     await session.delete(request)
     await session.commit()
+
+    # Best-effort filesystem cleanup after DB delete succeeds
+    output_path = Path(settings.output_dir) / str(request_id)
+    if output_path.exists():
+        try:
+            shutil.rmtree(output_path)
+        except OSError:
+            logger.warning("Failed to clean up output files for %s", request_id, exc_info=True)
 
 
 @router.get("/{request_id}/images", response_model=list[ImageResponse])
