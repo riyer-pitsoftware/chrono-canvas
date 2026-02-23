@@ -1,0 +1,43 @@
+# ChronoCanvas EvalSet v1 - Case Definitions
+# Start with 10-case pilot, expand to 30 for full eval.
+# See eval_dump.md §6 for schema reference.
+
+evalset_version: "v1.0-pilot"
+
+cases: []
+# Pilot cases will be added in history-faces-758.
+# Each case follows this schema:
+#
+# - id: CCV1-001
+#   title: "Case title"
+#   subject_type: named_figure | archetype | role
+#   region: "Region"
+#   time_period_label: "Era label"
+#   time_period_start: 600
+#   time_period_end: 800
+#   setting_context: "Context"
+#   evidence_level: high | medium | low
+#   intended_output_type: portrait | half-body | scene-portrait
+#   prompt_brief: >
+#     Description of what to generate...
+#   must_include:
+#     - "item 1"
+#   must_not_include:
+#     - "item 1"
+#   style_guidance:
+#     - "guidance 1"
+#   anachronism_watchlist:
+#     - "item 1"
+#   uncertainty_notes: >
+#     Notes on evidence limitations...
+#   reference_notes:
+#     - "note 1"
+#   scorable_dimensions:
+#     - prompt_adherence
+#     - visual_coherence
+#     - face_usability
+#     - period_plausibility
+#     - anachronism_avoidance
+#     - narrative_image_consistency
+#     - uncertainty_signaling_quality
+#     - audit_trace_completeness

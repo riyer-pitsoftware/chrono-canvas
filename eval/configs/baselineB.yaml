@@ -1,0 +1,31 @@
+# Baseline B - One-shot T2I (manually improved prompt)
+# Single image generation call with human-refined prompt.
+
+condition: baselineB_oneshot_improved
+description: >
+  Fairer baseline versus naive one-shot. Human-refined prompt with style and
+  era cues manually added. No retries, no face pipeline, no validation loop.
+
+pipeline:
+  orchestration_enabled: false
+  research_enabled: false
+  prompt_decomposition_enabled: false
+  validation_retry_enabled: false
+  face_pipeline_enabled: false
+  audit_trail_enabled: false
+  max_retries: 0
+
+prompt_strategy: human_refined
+# Use a manually crafted prompt per case that includes:
+# - Subject identity and role
+# - Era and region specifics
+# - Style guidance (e.g., "oil painting style", "period-plausible palette")
+# - Key clothing/setting cues
+# Prompts stored alongside case definitions or in a separate prompt override file.
+
+image_generation:
+  provider: comfyui
+  model: realvisxlV50
+  seed: null
+  aspect_ratio: "3:4"
+  min_resolution: "768x1024"

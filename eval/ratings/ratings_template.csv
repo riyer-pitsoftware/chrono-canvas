@@ -1,0 +1,1 @@
+run_id,case_id,rater_id,condition,prompt_adherence,visual_coherence,face_usability,period_plausibility,anachronism_avoidance,narrative_image_consistency,uncertainty_signaling_quality,audit_trace_completeness,freeform_notes,failure_tags

@@ -1,0 +1,27 @@
+# Baseline A - One-shot T2I (minimal)
+# Single image generation call, minimal prompt, no pipeline features.
+
+condition: baselineA_oneshot_minimal
+description: >
+  Lowest-effort baseline. Single image generation call with minimal prompt
+  formatting. No retries, no face pipeline, no validation loop.
+
+pipeline:
+  orchestration_enabled: false
+  research_enabled: false
+  prompt_decomposition_enabled: false
+  validation_retry_enabled: false
+  face_pipeline_enabled: false
+  audit_trail_enabled: false
+  max_retries: 0
+
+prompt_strategy: minimal
+# Use subject name + basic era label only.
+# Example: "Portrait of Rani Lakshmibai, 19th century India"
+
+image_generation:
+  provider: comfyui
+  model: realvisxlV50
+  seed: null  # Set per-run or use case seed_recommendation
+  aspect_ratio: "3:4"
+  min_resolution: "768x1024"

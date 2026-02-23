@@ -1,0 +1,28 @@
+# Baseline C - ChronoCanvas Pipeline (reduced)
+# Full orchestration and prompt pipeline, but no validation retries or face post-processing.
+
+condition: baselineC_pipeline_reduced
+description: >
+  Isolates the value of orchestration and prompt decomposition. ChronoCanvas
+  text/prompt pipeline enabled, image generation enabled, but validation
+  retries and face post-processing disabled.
+
+pipeline:
+  orchestration_enabled: true
+  research_enabled: true
+  prompt_decomposition_enabled: true
+  validation_retry_enabled: false
+  face_pipeline_enabled: false
+  audit_trail_enabled: true
+  max_retries: 0
+
+llm:
+  provider: openai
+  model: null  # Use default configured model
+
+image_generation:
+  provider: comfyui
+  model: realvisxlV50
+  seed: null
+  aspect_ratio: "3:4"
+  min_resolution: "768x1024"

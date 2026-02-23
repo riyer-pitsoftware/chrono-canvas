@@ -1,0 +1,27 @@
+# Baseline D - ChronoCanvas Full Pipeline
+# Full agent pipeline with all features enabled.
+
+condition: baselineD_full_pipeline
+description: >
+  Primary evaluation condition. Full agent pipeline with validation retries,
+  face pipeline, and audit trail enabled. This is the system as intended.
+
+pipeline:
+  orchestration_enabled: true
+  research_enabled: true
+  prompt_decomposition_enabled: true
+  validation_retry_enabled: true
+  face_pipeline_enabled: true
+  audit_trail_enabled: true
+  max_retries: 2
+
+llm:
+  provider: openai
+  model: null  # Use default configured model
+
+image_generation:
+  provider: comfyui
+  model: realvisxlV50
+  seed: null
+  aspect_ratio: "3:4"
+  min_resolution: "768x1024"
