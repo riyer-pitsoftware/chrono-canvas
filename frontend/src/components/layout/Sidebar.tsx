@@ -1,4 +1,5 @@
-import { BookOpen, Download, FileSearch, Image, LayoutDashboard, Settings, Shield, Users, Cpu, Scroll, Database } from "lucide-react";
+import { BookOpen, Download, FileSearch, Image, LayoutDashboard, Settings, Shield, Users, Cpu, Scroll, Database, ChevronLeft, ChevronRight } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const navItems = [
   { label: "Dashboard", href: "/", icon: LayoutDashboard },
@@ -12,28 +13,55 @@ const navItems = [
   { label: "Admin", href: "/admin", icon: Settings },
 ];
 
-export function Sidebar({ currentPath, onNavigate }: { currentPath: string; onNavigate: (path: string) => void }) {
+export function Sidebar({
+  currentPath,
+  onNavigate,
+  collapsed,
+  onToggle,
+}: {
+  currentPath: string;
+  onNavigate: (path: string) => void;
+  collapsed: boolean;
+  onToggle: () => void;
+}) {
   const guideActive = currentPath === "/guide";
   return (
-    <aside className="w-64 border-r border-[var(--border)] bg-[var(--card)] h-screen flex flex-col">
-      <div className="p-6 pb-4">
-        <h1 className="text-xl font-bold flex items-center gap-2">
+    <aside
+      className={cn(
+        "border-r border-[var(--border)] bg-[var(--card)] h-screen flex flex-col transition-[width] duration-200",
+        collapsed ? "w-16" : "w-64",
+      )}
+    >
+      <div className={cn("pb-4 flex items-center gap-2", collapsed ? "p-3 justify-center" : "p-6")}>
+        <div className="flex items-center gap-2">
           <Cpu className="w-6 h-6" />
-          ChronoCanvas
-        </h1>
+          {!collapsed && <span className="text-xl font-bold">ChronoCanvas</span>}
+        </div>
         <button
-          onClick={() => onNavigate("/guide")}
-          className={`mt-3 w-full flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-colors border ${
-            guideActive
-              ? "bg-[var(--accent)] border-[var(--border)] text-[var(--accent-foreground)]"
-              : "border-[var(--border)] text-[var(--muted-foreground)] hover:bg-[var(--accent)] hover:text-[var(--accent-foreground)]"
-          }`}
+          onClick={onToggle}
+          className="ml-auto flex items-center justify-center rounded-md border border-[var(--border)] text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--accent)] transition-colors w-8 h-8"
+          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
-          <BookOpen className="w-3.5 h-3.5" />
-          Guide
+          {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
         </button>
       </div>
-      <nav className="flex-1 px-3">
+      <div className={cn("px-3", collapsed ? "flex flex-col items-center" : "px-6")}>
+        <button
+          onClick={() => onNavigate("/guide")}
+          className={cn(
+            "mt-3 w-full flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-colors border",
+            guideActive
+              ? "bg-[var(--accent)] border-[var(--border)] text-[var(--accent-foreground)]"
+              : "border-[var(--border)] text-[var(--muted-foreground)] hover:bg-[var(--accent)] hover:text-[var(--accent-foreground)]",
+            collapsed && "justify-center px-0",
+          )}
+          title="Guide"
+        >
+          <BookOpen className="w-3.5 h-3.5" />
+          {!collapsed && "Guide"}
+        </button>
+      </div>
+      <nav className={cn("flex-1 px-3", collapsed && "px-0 flex flex-col items-center")}>
         {navItems.map((item) => {
           const Icon = item.icon;
           const active = currentPath === item.href;
@@ -41,14 +69,17 @@ export function Sidebar({ currentPath, onNavigate }: { currentPath: string; onNa
             <button
               key={item.href}
               onClick={() => onNavigate(item.href)}
-              className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm mb-1 transition-colors ${
+              className={cn(
+                "w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm mb-1 transition-colors",
                 active
                   ? "bg-[var(--accent)] text-[var(--accent-foreground)] font-medium"
-                  : "text-[var(--muted-foreground)] hover:bg-[var(--accent)]"
-              }`}
+                  : "text-[var(--muted-foreground)] hover:bg-[var(--accent)]",
+                collapsed && "justify-center px-0",
+              )}
+              title={item.label}
             >
               <Icon className="w-4 h-4" />
-              {item.label}
+              {!collapsed && item.label}
             </button>
           );
         })}
