@@ -35,7 +35,7 @@ const pipelineSteps = [
   { name: "Face Search", provider: "SerpAPI", description: "Fetches reference portrait images from the web" },
   { name: "Prompt Gen", provider: "Claude", description: "Creates period-informed image generation prompts" },
   { name: "Image Gen", provider: "—", description: "Produces portrait via Stable Diffusion or ComfyUI" },
-  { name: "Validation", provider: "Ollama", description: "Scores historical accuracy (0–100) and flags issues" },
+  { name: "Validation", provider: "Ollama", description: "Scores historical plausibility (0–100, LLM-judged) and flags issues" },
   { name: "Facial Compositing", provider: "FaceFusion", description: "Blends uploaded face into the generated portrait" },
   { name: "Export", provider: "—", description: "Packages portrait as PNG with JSON metadata" },
 ];
@@ -72,7 +72,7 @@ const uiPages = [
     name: "Validate",
     icon: Shield,
     items: [
-      "Review historical accuracy scores (0–100)",
+      "Review heuristic plausibility scores (0–100, LLM-judged)",
       "See flagged anachronisms and validation notes",
       "Figures scoring 70+ pass automatically",
     ],
@@ -269,8 +269,8 @@ Return ONLY the prompt text, no explanations.`,
     label: "Validation",
     provider: "Ollama",
     why: "Image generation is non-deterministic—the model might produce something anachronistic or wrong. Validation catches this before the user sees it. Scores below 70 trigger automatic regeneration (up to 2 retries) with a corrected prompt. Ollama is used here because scoring doesn't need frontier reasoning—it needs consistency and cost efficiency.",
-    promptTemplate: `You are a historical accuracy validator. Evaluate the following image generation
-prompt for historical accuracy.
+    promptTemplate: `You are a historical plausibility evaluator. Assess the following image generation
+prompt for historical plausibility. Note: these are heuristic, LLM-judged scores — not ground-truth accuracy.
 
 Figure: {figure_name}
 Time Period: {time_period}
@@ -293,7 +293,7 @@ Respond with valid JSON only.`,
     tips: [
       {
         title: "Adjust the pass threshold",
-        detail: "The 70-point threshold is set in `validation_node`. Lower it to 50 for more lenient acceptance, or raise it to 85 if historical accuracy is critical for your use case.",
+        detail: "The 70-point threshold is set in `validation_node`. Lower it to 50 for more lenient acceptance, or raise it to 85 for stricter plausibility filtering. Remember: these are LLM-judged heuristic scores, not objective accuracy measures.",
       },
       {
         title: "Add a costume_era_match rule",

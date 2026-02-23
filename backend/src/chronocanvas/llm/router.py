@@ -58,11 +58,14 @@ class LLMRouter:
             provider = self.get_provider(task_type)
 
         # Fallback chain: preferred -> ollama -> any available
+        requested_provider = provider.name
+        fell_back = False
         if not await provider.is_available():
             for name, p in self.providers.items():
                 if name != provider.name and await p.is_available():
                     logger.warning(f"Falling back from {provider.name} to {name}")
                     provider = p
+                    fell_back = True
                     break
 
         start = time.perf_counter()
@@ -79,6 +82,8 @@ class LLMRouter:
         response.system_prompt = system_prompt
         response.user_prompt = prompt
         response.duration_ms = elapsed_ms
+        response.requested_provider = requested_provider
+        response.fallback = fell_back
 
         self.cost_tracker.record(
             provider=response.provider,
@@ -108,11 +113,14 @@ class LLMRouter:
         else:
             provider = self.get_provider(task_type)
 
+        requested_provider = provider.name
+        fell_back = False
         if not await provider.is_available():
             for name, p in self.providers.items():
                 if name != provider.name and await p.is_available():
                     logger.warning(f"Falling back from {provider.name} to {name}")
                     provider = p
+                    fell_back = True
                     break
 
         channel = f"generation:{request_id}" if request_id else None
@@ -140,6 +148,8 @@ class LLMRouter:
         response.system_prompt = system_prompt
         response.user_prompt = prompt
         response.duration_ms = elapsed_ms
+        response.requested_provider = requested_provider
+        response.fallback = fell_back
 
         if channel:
             await publish_progress(channel, {

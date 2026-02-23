@@ -160,6 +160,22 @@ Migration files live in `backend/src/chronocanvas/db/migrations/versions/`.
 
 ---
 
+## Not production-ready
+
+ChronoCanvas is a prototype and research system. The following are explicitly out of scope:
+
+- **Authentication / authorization** — no user accounts, no auth middleware, no RBAC. Designed for trusted local networks only.
+- **Multi-tenant isolation** — single-user, single-instance. No data partitioning between users.
+- **Secrets management** — API keys are stored in `.env` files. No vault integration, no rotation.
+- **Queue durability** — ARQ jobs are enqueued to Redis with no persistence guarantees. A Redis restart loses pending jobs.
+- **High availability / SLOs** — single-instance services, no health-based failover, no redundancy.
+- **Storage** — local filesystem only. No object storage (S3, GCS), no CDN.
+- **Audit log retention** — `llm_calls` and `agent_trace` JSON columns grow unbounded. No archival or pruning.
+
+If you are evaluating ChronoCanvas as an architecture reference, these are the areas you would harden for production use.
+
+---
+
 ## Code style
 
 - Backend: Python 3.11+, `ruff` for linting and formatting, `mypy` for type checking

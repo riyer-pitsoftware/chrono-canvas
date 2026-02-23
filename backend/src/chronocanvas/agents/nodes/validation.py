@@ -9,8 +9,8 @@ from chronocanvas.llm.router import get_llm_router
 
 logger = logging.getLogger(__name__)
 
-VALIDATION_PROMPT = """You are a historical accuracy validator. Evaluate the following image generation
-prompt for historical accuracy.
+VALIDATION_PROMPT = """You are a historical plausibility evaluator. Assess the following image generation
+prompt for historical plausibility. Your scores are heuristic judgments, not ground-truth accuracy measures.
 
 Figure: {figure_name}
 Time Period: {time_period}
@@ -19,7 +19,7 @@ Life Dates: {birth_year} – {death_year}
 Cultural Context: {cultural_context}
 Image Prompt: {image_prompt}
 
-Use the life dates and cultural context above to ground your accuracy assessment.
+Use the life dates and cultural context above to ground your plausibility assessment.
 Score each category 0-100 and provide details:
 1. clothing_accuracy: Are the clothes period-appropriate?
 2. cultural_accuracy: Are cultural elements correct?

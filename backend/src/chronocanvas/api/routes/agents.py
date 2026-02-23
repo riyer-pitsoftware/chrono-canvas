@@ -16,7 +16,7 @@ AGENT_DESCRIPTIONS = {
     "research": "Researches historical context, clothing, and appearance",
     "prompt_generation": "Creates detailed image generation prompts",
     "image_generation": "Generates portrait images using configured provider",
-    "validation": "Validates historical accuracy of generated output",
+    "validation": "Scores historical plausibility of generated output (LLM-judged heuristic)",
     "export": "Packages final results for download",
 }
 

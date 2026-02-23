@@ -31,7 +31,7 @@ The pipeline is a LangGraph state machine. Each agent node receives the full `Ag
 | 4 | **Face Search** | — | Searches for a reference face image via SerpAPI; skipped if a face is uploaded manually |
 | 5 | **Prompt Generation** | Claude | Constructs a period-informed SDXL/FLUX prompt from the research data; streams tokens |
 | 6 | **Image Generation** | — | Calls the configured image backend (ComfyUI or FaceFusion) to produce the portrait |
-| 7 | **Validation** | Ollama | Scores the portrait 0–100 for historical accuracy; triggers retry if score < 70 (max 2 retries) |
+| 7 | **Validation** | Ollama | Scores the portrait 0–100 for historical plausibility (LLM-judged heuristic); triggers retry if score < 70 (max 2 retries) |
 | 8 | **Facial Compositing** | — | Composites the source face onto the generated portrait using FaceFusion, if a face is available |
 | 9 | **Export** | — | Packages the final PNG and a JSON metadata file for download |
 

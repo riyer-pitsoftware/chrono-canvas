@@ -26,6 +26,8 @@ class LLMResponse(BaseModel):
     system_prompt: str | None = None
     user_prompt: str | None = None
     duration_ms: float = 0.0
+    requested_provider: str | None = None
+    fallback: bool = False
 
 
 class LLMProvider(ABC):
