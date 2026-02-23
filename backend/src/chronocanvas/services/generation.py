@@ -1,9 +1,9 @@
 import logging
 import uuid
 
-from chronocanvas.agents.graph import agent_graph
+from chronocanvas.agents.graph import agent_graph as _default_graph
 from chronocanvas.agents.state import AgentState
-from chronocanvas.db.engine import async_session
+from chronocanvas.db.engine import async_session as _default_session_factory
 from chronocanvas.db.models.request import RequestStatus
 from chronocanvas.db.repositories.images import ImageRepository
 from chronocanvas.db.repositories.requests import RequestRepository
@@ -57,11 +57,15 @@ async def run_generation_pipeline(
     input_text: str,
     *,
     source_face_path: str | None = None,
+    session_factory=None,
+    graph=None,
 ) -> None:
+    _sf = session_factory if session_factory is not None else _default_session_factory
+    _graph = graph if graph is not None else _default_graph
     channel = f"generation:{request_id}"
     publisher = ProgressPublisher()
 
-    async with async_session() as session:
+    async with _sf() as session:
         repo = RequestRepository(session)
         try:
             await repo.update(request_id, status=RequestStatus.EXTRACTING)
@@ -92,7 +96,7 @@ async def run_generation_pipeline(
                 initial_state["source_face_path"] = source_face_path
 
             config = {"configurable": {"thread_id": request_id}}
-            runner = _make_runner(repo, session, agent_graph)
+            runner = _make_runner(repo, session, _graph)
             await runner.run(request_id, initial_state, config, channel)
 
         except Exception as e:
@@ -102,13 +106,21 @@ async def run_generation_pipeline(
             await publisher.publish(channel, {"status": "failed", "message": str(e)})
 
 
-async def retry_generation_pipeline(request_id: str, from_step: str) -> None:
+async def retry_generation_pipeline(
+    request_id: str,
+    from_step: str,
+    *,
+    session_factory=None,
+    graph=None,
+) -> None:
+    _sf = session_factory if session_factory is not None else _default_session_factory
+    _graph = graph if graph is not None else _default_graph
     channel = f"generation:{request_id}"
     config = {"configurable": {"thread_id": request_id}}
     publisher = ProgressPublisher()
     coordinator = RetryCoordinator()
 
-    async with async_session() as session:
+    async with _sf() as session:
         repo = RequestRepository(session)
         try:
             request = await repo.get(uuid.UUID(request_id))
@@ -135,7 +147,7 @@ async def retry_generation_pipeline(request_id: str, from_step: str) -> None:
                 "message": f"Retrying from {from_step}...",
             })
 
-            runner = _make_runner(repo, session, agent_graph)
+            runner = _make_runner(repo, session, _graph)
 
             if from_step == "orchestrator":
                 initial_state: AgentState = {
@@ -150,7 +162,7 @@ async def retry_generation_pipeline(request_id: str, from_step: str) -> None:
                 await runner.run(request_id, initial_state, config, channel)
             else:
                 predecessor = coordinator.predecessor_for(from_step)
-                current_snapshot = await agent_graph.aget_state(config)
+                current_snapshot = await _graph.aget_state(config)
                 if current_snapshot.values:
                     update_values: AgentState = {
                         "error": None,
@@ -165,7 +177,7 @@ async def retry_generation_pipeline(request_id: str, from_step: str) -> None:
                     )
                     update_values = coordinator.rebuild_state_from_db(request, from_step)
 
-                await agent_graph.aupdate_state(config, update_values, as_node=predecessor)
+                await _graph.aupdate_state(config, update_values, as_node=predecessor)
                 await runner.run(request_id, None, config, channel)
 
         except Exception as e:
