@@ -31,6 +31,8 @@ class ValidationQueueProjector:
         val_rows: list[ValidationResult],
         threshold: float,
         img: GeneratedImage | None,
+        *,
+        enforce_threshold: bool = True,
     ) -> ValidationQueueItem | None:
         """Return None if the request passes the threshold (not in review queue)."""
         if not val_rows:
@@ -38,7 +40,7 @@ class ValidationQueueProjector:
 
         scores = [r.score for r in val_rows]
         overall = sum(scores) / len(scores)
-        if overall >= threshold:
+        if enforce_threshold and overall >= threshold:
             return None
 
         figure_name: str | None = None

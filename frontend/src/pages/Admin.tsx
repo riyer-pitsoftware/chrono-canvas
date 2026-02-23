@@ -12,6 +12,7 @@ import {
   useRejectValidation,
 } from "@/api/hooks/useValidationAdmin";
 import type { ValidationRule, ValidationQueueItem } from "@/api/types";
+import { useNavigation } from "@/stores/navigation";
 
 // ── Speed Gauge ──────────────────────────────────────────────────────────────
 
@@ -149,10 +150,12 @@ function QueueCard({
   item,
   onAccept,
   onReject,
+  onReview,
 }: {
   item: ValidationQueueItem;
   onAccept: (id: string) => void;
   onReject: (id: string) => void;
+  onReview: (id: string) => void;
 }) {
   const scoreColor =
     item.overall_score >= 70 ? "text-green-500" : item.overall_score >= 50 ? "text-amber-500" : "text-red-500";
@@ -196,7 +199,7 @@ function QueueCard({
                   {item.human_review_status}
                 </Badge>
               ) : (
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap">
                   <Button
                     size="sm"
                     variant="outline"
@@ -211,6 +214,13 @@ function QueueCard({
                     className="bg-green-600 hover:bg-green-700 text-white"
                   >
                     Accept
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => onReview(item.request_id)}
+                  >
+                    Review
                   </Button>
                 </div>
               )}
@@ -231,6 +241,7 @@ type Tab = "overview" | "rules" | "queue";
 export function Admin() {
   const [activeTab, setActiveTab] = useState<Tab>("overview");
   const [pendingThreshold, setPendingThreshold] = useState<number | null>(null);
+  const { navigate } = useNavigation();
 
   const agents = useAgents();
   const llmStatus = useLLMStatus();
@@ -267,6 +278,10 @@ export function Admin() {
   const handleReject = useCallback(
     (requestId: string) => rejectMutation.mutate({ requestId }),
     [rejectMutation],
+  );
+  const handleReview = useCallback(
+    (requestId: string) => navigate(`/review/${requestId}`),
+    [navigate],
   );
 
   const tabs: { id: Tab; label: string }[] = [
@@ -426,6 +441,7 @@ export function Admin() {
                 item={item}
                 onAccept={handleAccept}
                 onReject={handleReject}
+                onReview={handleReview}
               />
             ))}
           </div>

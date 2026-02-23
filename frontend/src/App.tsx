@@ -11,6 +11,7 @@ import { AuditDetail } from "@/pages/AuditDetail";
 import { AuditList } from "@/pages/AuditList";
 import { Memory } from "@/pages/Memory";
 import { Timeline } from "@/pages/Timeline";
+import { Review } from "@/pages/Review";
 
 function getPage(path: string) {
   const qIdx = path.indexOf("?");
@@ -20,6 +21,11 @@ function getPage(path: string) {
   if (pathname.startsWith("/audit/")) {
     const requestId = pathname.slice("/audit/".length);
     return <AuditDetail requestId={requestId} />;
+  }
+
+  if (pathname.startsWith("/review/")) {
+    const requestId = pathname.slice("/review/".length);
+    return <Review requestId={requestId} />;
   }
 
   if (pathname.startsWith("/guide/")) {

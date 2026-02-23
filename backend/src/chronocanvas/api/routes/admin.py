@@ -9,6 +9,7 @@ from chronocanvas.api.schemas.admin import (
     HumanReviewRequest,
     HumanReviewResponse,
     UpdateValidationRuleRequest,
+    ValidationQueueItem,
     ValidationQueueResponse,
     ValidationRuleResponse,
     ValidationRulesConfig,
@@ -114,6 +115,38 @@ async def get_validation_queue(
     return projector.build_response(items)
 
 
+@router.get("/validation/{request_id}", response_model=ValidationQueueItem)
+async def get_validation_item(
+    request_id: uuid.UUID,
+    session: AsyncSession = Depends(get_session),
+):
+    req_repo = RequestRepository(session)
+    request = await req_repo.get(request_id)
+    if request is None:
+        raise HTTPException(status_code=404, detail="Request not found")
+
+    val_stmt = select(ValidationResult).where(ValidationResult.request_id == request_id)
+    val_result = await session.execute(val_stmt)
+    val_rows = list(val_result.scalars().all())
+
+    img_stmt = select(GeneratedImage).where(GeneratedImage.request_id == request_id).limit(1)
+    img_result = await session.execute(img_stmt)
+    img = img_result.scalars().first()
+
+    threshold = await AdminSettingRepository(session).get_pass_threshold()
+    projector = ValidationQueueProjector()
+    item = projector.build_item(
+        request,
+        val_rows,
+        threshold,
+        img,
+        enforce_threshold=False,
+    )
+    if item is None:
+        raise HTTPException(status_code=404, detail="Validation details not found")
+    return item
+
+
 @router.post("/validation/{request_id}/accept", response_model=HumanReviewResponse)
 async def accept_validation(
     request_id: uuid.UUID,
@@ -158,5 +191,29 @@ async def reject_validation(
     return HumanReviewResponse(
         request_id=request_id,
         status="rejected",
+        notes=body.notes,
+    )
+
+
+@router.post("/validation/{request_id}/flag", response_model=HumanReviewResponse)
+async def flag_validation(
+    request_id: uuid.UUID,
+    body: HumanReviewRequest,
+    session: AsyncSession = Depends(get_session),
+):
+    repo = RequestRepository(session)
+    request = await repo.get(request_id)
+    if request is None:
+        raise HTTPException(status_code=404, detail="Request not found")
+    await repo.update(
+        request_id,
+        human_review_status="flagged",
+        human_review_notes=body.notes,
+        human_reviewed_at=datetime.now(timezone.utc),
+    )
+    await session.commit()
+    return HumanReviewResponse(
+        request_id=request_id,
+        status="flagged",
         notes=body.notes,
     )

@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../client";
 import type {
+  ValidationQueueItem,
   ValidationQueueResponse,
   ValidationRule,
   ValidationRulesConfig,
@@ -43,6 +44,14 @@ export function useValidationQueue(skip = 0, limit = 50) {
   });
 }
 
+export function useValidationReviewItem(requestId: string | undefined) {
+  return useQuery({
+    queryKey: ["admin", "validation-item", requestId],
+    enabled: Boolean(requestId),
+    queryFn: () => api.get<ValidationQueueItem>(`/admin/validation/${requestId}`),
+  });
+}
+
 export function useAcceptValidation() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -59,6 +68,17 @@ export function useRejectValidation() {
   return useMutation({
     mutationFn: ({ requestId, notes }: { requestId: string; notes?: string }) =>
       api.post(`/admin/validation/${requestId}/reject`, { notes: notes ?? null }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["admin", "validation-queue"] });
+    },
+  });
+}
+
+export function useFlagValidation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ requestId, notes }: { requestId: string; notes?: string }) =>
+      api.post(`/admin/validation/${requestId}/flag`, { notes: notes ?? null }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["admin", "validation-queue"] });
     },
