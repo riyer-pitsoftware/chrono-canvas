@@ -75,6 +75,13 @@ All configuration is via environment variables. Copy `.env.example` to `.env` to
 | `FACEFUSION_ENABLED` | Enable FaceFusion for facial compositing (independent of `IMAGE_PROVIDER`) | `false` |
 | `FACEFUSION_API_URL` | FaceFusion API endpoint | `http://localhost:7861` |
 
+### Pipeline toggles
+
+| Variable | Description | Default |
+|---|---|---|
+| `VALIDATION_RETRY_ENABLED` | When `false`, validation scores but never triggers the regenerate loop | `true` |
+| `FACE_SEARCH_ENABLED` | When `false`, face_search node is skipped entirely | `true` |
+
 ### Database and cache
 
 | Variable | Description | Default |

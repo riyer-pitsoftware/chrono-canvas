@@ -1,27 +1,45 @@
-# Baseline D - ChronoCanvas Full Pipeline
-# Full agent pipeline with all features enabled.
+# Baseline D — ChronoCanvas full pipeline
+#
+# Full agent pipeline with all features enabled: orchestration, research,
+# prompt decomposition, validation with retry loop, face search, facial
+# compositing, and audit trail.
+#
+# Executed by: eval/scripts/run_eval.py --condition D
+# Requires the ChronoCanvas API to be running.
 
 condition: baselineD_full_pipeline
 description: >
   Primary evaluation condition. Full agent pipeline with validation retries,
   face pipeline, and audit trail enabled. This is the system as intended.
 
+mode: pipeline
+
+env_overrides:
+  VALIDATION_RETRY_ENABLED: "true"
+  FACE_SEARCH_ENABLED: "true"
+  FACEFUSION_ENABLED: "true"
+  IMAGE_PROVIDER: comfyui
+  COMFYUI_MODEL: sdxl
+  COMFYUI_SDXL_CHECKPOINT: juggernautXL_v9.safetensors
+
+image_generation:
+  provider: comfyui
+  model: sdxl
+  checkpoint: juggernautXL_v9.safetensors
+  width: 768
+  height: 1024
+  seed: null
+
 pipeline:
   orchestration_enabled: true
   research_enabled: true
   prompt_decomposition_enabled: true
   validation_retry_enabled: true
-  face_pipeline_enabled: true
+  face_search_enabled: true
+  facefusion_enabled: true
   audit_trail_enabled: true
   max_retries: 2
 
 llm:
-  provider: openai
-  model: null  # Use default configured model
-
-image_generation:
-  provider: comfyui
-  model: realvisxlV50
-  seed: null
-  aspect_ratio: "3:4"
-  min_resolution: "768x1024"
+  provider: null
+  model: null

@@ -1,43 +1,535 @@
 # ChronoCanvas EvalSet v1 - Case Definitions
-# Start with 10-case pilot, expand to 30 for full eval.
-# See eval_dump.md §6 for schema reference.
+# 10-case pilot dataset. Expand to 30 for full eval.
+# See notes/eval_dump.md §6 for schema reference.
 
 evalset_version: "v1.0-pilot"
 
-cases: []
-# Pilot cases will be added in history-faces-758.
-# Each case follows this schema:
-#
-# - id: CCV1-001
-#   title: "Case title"
-#   subject_type: named_figure | archetype | role
-#   region: "Region"
-#   time_period_label: "Era label"
-#   time_period_start: 600
-#   time_period_end: 800
-#   setting_context: "Context"
-#   evidence_level: high | medium | low
-#   intended_output_type: portrait | half-body | scene-portrait
-#   prompt_brief: >
-#     Description of what to generate...
-#   must_include:
-#     - "item 1"
-#   must_not_include:
-#     - "item 1"
-#   style_guidance:
-#     - "guidance 1"
-#   anachronism_watchlist:
-#     - "item 1"
-#   uncertainty_notes: >
-#     Notes on evidence limitations...
-#   reference_notes:
-#     - "note 1"
-#   scorable_dimensions:
-#     - prompt_adherence
-#     - visual_coherence
-#     - face_usability
-#     - period_plausibility
-#     - anachronism_avoidance
-#     - narrative_image_consistency
-#     - uncertainty_signaling_quality
-#     - audit_trace_completeness
+cases:
+  # ── Named Figures (3) ──────────────────────────────────────────────────────
+
+  - id: CCV1-001
+    title: "Cleopatra VII, Last Pharaoh of Ptolemaic Egypt"
+    subject_type: named_figure
+    region: "Egypt, Eastern Mediterranean"
+    time_period_label: "Late Ptolemaic Period"
+    time_period_start: -69
+    time_period_end: -30
+    setting_context: "Royal court, Alexandria"
+    evidence_level: medium
+    intended_output_type: portrait
+    prompt_brief: >
+      A historically informed portrait of Cleopatra VII as a Ptolemaic-era ruler.
+      She should be depicted with Hellenistic-Egyptian fusion elements — diadem or
+      royal headdress, draped chiton or Egyptian-influenced garments, and jewelry
+      consistent with Ptolemaic royal iconography.
+    must_include:
+      - "royal headdress or diadem"
+      - "draped garment (chiton, himation, or Egyptian-influenced)"
+      - "human face clearly visible"
+      - "jewelry consistent with Ptolemaic period"
+    must_not_include:
+      - "Hollywood-style heavy eye makeup (Elizabeth Taylor look)"
+      - "modern fabric textures"
+      - "European medieval elements"
+      - "sub-Saharan African or Northern European features forced"
+    style_guidance:
+      - "illustrative realism"
+      - "warm Mediterranean color palette"
+      - "Hellenistic-Egyptian art fusion"
+    anachronism_watchlist:
+      - "crown that looks medieval European"
+      - "asp/snake as primary prop (myth, not portrait element)"
+      - "modern eyeliner styles"
+      - "Renaissance-era clothing"
+    uncertainty_notes: >
+      No verified contemporary portrait survives. Coin profiles and Roman-era busts
+      exist but are idealized. Cleopatra was of Macedonian-Greek descent (Ptolemaic
+      dynasty). Evaluate plausibility of period and cultural context, not exact likeness.
+    reference_notes:
+      - "Ptolemaic coin profiles show aquiline features"
+      - "Berlin bust (disputed attribution) shows Hellenistic style"
+    scorable_dimensions:
+      - prompt_adherence
+      - visual_coherence
+      - face_usability
+      - period_plausibility
+      - anachronism_avoidance
+      - narrative_image_consistency
+      - uncertainty_signaling_quality
+      - audit_trace_completeness
+
+  - id: CCV1-002
+    title: "Akbar the Great, Mughal Emperor"
+    subject_type: named_figure
+    region: "North India, Mughal Empire"
+    time_period_label: "16th Century Mughal India"
+    time_period_start: 1542
+    time_period_end: 1605
+    setting_context: "Imperial court, Fatehpur Sikri or Agra"
+    evidence_level: high
+    intended_output_type: portrait
+    prompt_brief: >
+      A historically informed portrait of Akbar the Great in Mughal court attire.
+      He should wear a jama (long coat), patka (waist sash), and turban with
+      ornamental aigrette (turban jewel). Setting should evoke Mughal architectural
+      elements — arched niches, geometric patterns, or garden setting.
+    must_include:
+      - "Mughal jama (long coat with overlap closure)"
+      - "turban with ornamental element"
+      - "human face clearly visible"
+      - "Mughal-era jewelry or accessories"
+    must_not_include:
+      - "British colonial era clothing"
+      - "modern military uniform"
+      - "European crown"
+      - "Sikh turban style (distinct from Mughal)"
+    style_guidance:
+      - "Mughal miniature painting influence"
+      - "rich jewel-tone palette"
+      - "illustrative realism with ornamental detail"
+    anachronism_watchlist:
+      - "wristwatch"
+      - "modern buttons or zippers"
+      - "19th-century British Indian elements"
+      - "glasses or spectacles"
+    uncertainty_notes: >
+      Akbar is well-documented in Mughal miniature paintings (Akbarnama) with
+      relatively consistent depictions. Evidence level is high for clothing and
+      court setting. Individual features still involve artistic interpretation.
+    reference_notes:
+      - "Akbarnama miniatures show consistent court attire"
+      - "Multiple period portraits exist in Mughal painting tradition"
+    scorable_dimensions:
+      - prompt_adherence
+      - visual_coherence
+      - face_usability
+      - period_plausibility
+      - anachronism_avoidance
+      - narrative_image_consistency
+      - uncertainty_signaling_quality
+      - audit_trace_completeness
+
+  - id: CCV1-003
+    title: "Joan of Arc, French Military Leader"
+    subject_type: named_figure
+    region: "France"
+    time_period_label: "Late Medieval France"
+    time_period_start: 1412
+    time_period_end: 1431
+    setting_context: "Military campaign or trial"
+    evidence_level: medium
+    intended_output_type: portrait
+    prompt_brief: >
+      A historically informed portrait of Joan of Arc as a young French military
+      leader during the Hundred Years' War. She should be depicted in period-
+      appropriate armor — late medieval plate armor or brigandine, possibly with a
+      surcoat bearing heraldic devices. Short hair as described in trial records.
+    must_include:
+      - "late medieval plate armor or military attire"
+      - "human face clearly visible"
+      - "short hair (documented in trial records)"
+      - "French heraldic elements or fleur-de-lis (optional)"
+    must_not_include:
+      - "flowing long hair in battle scenes"
+      - "classical Greek/Roman armor"
+      - "Victorian-era romantic interpretation"
+      - "halo or overt sainthood iconography"
+    style_guidance:
+      - "illustrative realism"
+      - "muted medieval color palette"
+      - "emphasis on practical military context"
+    anachronism_watchlist:
+      - "Renaissance-era full plate (too late)"
+      - "modern military insignia"
+      - "chainmail only (too early for period)"
+      - "clean white dress (romantic myth)"
+    uncertainty_notes: >
+      No contemporary portraits exist. Trial transcripts describe her appearance
+      (short hair, male clothing). Period armor style is well-documented for 1420s
+      France. Most popular images are 19th-century romantic inventions.
+    reference_notes:
+      - "Trial transcript descriptions of appearance"
+      - "15th century French plate armor references"
+    scorable_dimensions:
+      - prompt_adherence
+      - visual_coherence
+      - face_usability
+      - period_plausibility
+      - anachronism_avoidance
+      - narrative_image_consistency
+      - uncertainty_signaling_quality
+      - audit_trace_completeness
+
+  # ── Archetypes/Roles (4) ───────────────────────────────────────────────────
+
+  - id: CCV1-004
+    title: "Chalukya Court Investigator"
+    subject_type: archetype
+    region: "Deccan, India"
+    time_period_label: "Early Medieval India"
+    time_period_start: 600
+    time_period_end: 800
+    setting_context: "Courtly/administrative"
+    evidence_level: low
+    intended_output_type: portrait
+    prompt_brief: >
+      A historically informed portrait of a royal investigator in the court of a
+      Chalukya king. The figure should wear period-appropriate textiles — cotton
+      or silk dhoti and uttariya (upper drape), with minimal ornaments befitting
+      an administrative role rather than royalty. Setting should suggest a stone
+      court or pillared hall with Chalukyan architectural motifs.
+    must_include:
+      - "period-appropriate textiles (non-modern weave appearance)"
+      - "courtly but practical attire"
+      - "human face clearly visible"
+      - "Deccan-region cultural markers"
+    must_not_include:
+      - "modern buttons or zippers"
+      - "modern eyewear"
+      - "photographic studio lighting artifacts"
+      - "modern military insignia"
+      - "Mughal-era clothing (too late)"
+    style_guidance:
+      - "illustrative realism"
+      - "period-plausible color palette"
+      - "stone and textile textures"
+    anachronism_watchlist:
+      - "wristwatch"
+      - "necktie"
+      - "polyester sheen"
+      - "modern police badge"
+      - "Mughal jama or turban"
+    uncertainty_notes: >
+      There is no ground-truth portrait. Chalukyan sculpture and temple reliefs
+      provide some clothing/ornament references. Evaluate plausibility and
+      coherence, not exact likeness.
+    reference_notes:
+      - "Badami and Aihole cave temple reliefs for clothing cues"
+      - "General early medieval Deccan material culture"
+    scorable_dimensions:
+      - prompt_adherence
+      - visual_coherence
+      - face_usability
+      - period_plausibility
+      - anachronism_avoidance
+      - narrative_image_consistency
+      - uncertainty_signaling_quality
+      - audit_trace_completeness
+
+  - id: CCV1-005
+    title: "Song Dynasty Merchant"
+    subject_type: archetype
+    region: "Southern China"
+    time_period_label: "Song Dynasty China"
+    time_period_start: 960
+    time_period_end: 1279
+    setting_context: "Urban market or warehouse"
+    evidence_level: medium
+    intended_output_type: portrait
+    prompt_brief: >
+      A historically informed portrait of a prosperous merchant during the Song
+      dynasty. The figure should wear a round-collared robe (yuanlingshan) with
+      a soft cap (futou or similar). Setting should suggest an urban commercial
+      environment — perhaps a warehouse, counting house, or market stall with
+      ceramic goods or silk bales.
+    must_include:
+      - "Song dynasty round-collared robe or similar period garment"
+      - "appropriate headwear (futou cap or similar)"
+      - "human face clearly visible"
+      - "commercial or urban setting elements"
+    must_not_include:
+      - "Qing dynasty queue hairstyle"
+      - "Japanese kimono"
+      - "modern Chinese clothing (qipao, Mao suit)"
+      - "European medieval merchant clothing"
+    style_guidance:
+      - "illustrative realism"
+      - "Song dynasty painting palette (ink wash influence)"
+      - "attention to textile draping"
+    anachronism_watchlist:
+      - "Qing dynasty pigtail/queue"
+      - "Manchu collar"
+      - "printed paper money (existed but would be rare visual)"
+      - "modern spectacles"
+    uncertainty_notes: >
+      Song dynasty painting and ceramics provide good reference for clothing and
+      setting. Merchant social class is well-documented. Individual portraiture
+      is interpretive.
+    reference_notes:
+      - "Along the River During Qingming Festival for urban Song life"
+      - "Song dynasty genre painting for merchant attire"
+    scorable_dimensions:
+      - prompt_adherence
+      - visual_coherence
+      - face_usability
+      - period_plausibility
+      - anachronism_avoidance
+      - narrative_image_consistency
+      - uncertainty_signaling_quality
+      - audit_trace_completeness
+
+  - id: CCV1-006
+    title: "Viking Age Shieldmaiden"
+    subject_type: archetype
+    region: "Scandinavia"
+    time_period_label: "Viking Age"
+    time_period_start: 793
+    time_period_end: 1066
+    setting_context: "Coastal settlement or longship"
+    evidence_level: low
+    intended_output_type: portrait
+    prompt_brief: >
+      A historically informed portrait of a female Norse warrior during the Viking
+      Age. The figure should wear period-appropriate attire — layered wool or
+      linen garments, possibly with a leather or chainmail vest. Accessories might
+      include brooches (tortoise brooches), arm rings, and a simple weapon
+      (sword, axe, or shield visible).
+    must_include:
+      - "layered Norse garments (wool/linen layers)"
+      - "Viking-era accessories (brooches, arm rings)"
+      - "human face clearly visible"
+      - "period-appropriate weapon or shield"
+    must_not_include:
+      - "horned helmet (Victorian myth)"
+      - "full plate armor (too late)"
+      - "Hollywood fantasy leather bikini armor"
+      - "Celtic knotwork conflated with Norse"
+    style_guidance:
+      - "illustrative realism"
+      - "cold Nordic color palette"
+      - "emphasis on textiles and metalwork"
+    anachronism_watchlist:
+      - "horned helmet"
+      - "winged helmet"
+      - "plate armor"
+      - "modern braiding styles"
+      - "fantasy-style fur bikini"
+    uncertainty_notes: >
+      Female warriors (shieldmaidens) are attested in saga literature and possibly
+      in the Birka warrior grave (Bj 581), though interpretation is debated.
+      Clothing references from grave goods and textile fragments. Evaluate
+      plausibility, not historical certainty of female warriors.
+    reference_notes:
+      - "Birka grave goods for Viking-era clothing"
+      - "Textile fragments from Oseberg ship burial"
+    scorable_dimensions:
+      - prompt_adherence
+      - visual_coherence
+      - face_usability
+      - period_plausibility
+      - anachronism_avoidance
+      - narrative_image_consistency
+      - uncertainty_signaling_quality
+      - audit_trace_completeness
+
+  - id: CCV1-007
+    title: "Aztec Temple Scribe"
+    subject_type: archetype
+    region: "Central Mexico, Aztec Empire"
+    time_period_label: "Late Postclassic Mesoamerica"
+    time_period_start: 1400
+    time_period_end: 1521
+    setting_context: "Temple school (calmecac) or codex workshop"
+    evidence_level: medium
+    intended_output_type: portrait
+    prompt_brief: >
+      A historically informed portrait of an Aztec scribe (tlacuilo) at work in
+      a temple school or codex workshop. The figure should wear a cotton tilmatli
+      (cloak) with modest ornamentation befitting a priestly-intellectual role.
+      May be shown with writing implements — brushes, pigment pots, or an
+      unfolded codex (amatl paper).
+    must_include:
+      - "cotton tilmatli (cloak/mantle)"
+      - "Mesoamerican facial features"
+      - "human face clearly visible"
+      - "writing implements or codex"
+    must_not_include:
+      - "feathered headdress of a high priest or ruler (too high status)"
+      - "Inca or South American indigenous elements"
+      - "modern pen or bound book"
+      - "Maya glyphs (distinct writing system)"
+    style_guidance:
+      - "illustrative realism"
+      - "earth-tone and pigment-rich palette"
+      - "Mesoamerican codex art influence"
+    anachronism_watchlist:
+      - "European quill pen"
+      - "bound codex (European style)"
+      - "steel tools"
+      - "Inca textile patterns"
+    uncertainty_notes: >
+      Aztec codices and Spanish colonial-era sources (Codex Mendoza, Florentine
+      Codex) provide reasonable references for scribe attire and tools. Individual
+      depictions are interpretive.
+    reference_notes:
+      - "Codex Mendoza for calmecac depictions"
+      - "Florentine Codex illustrations of scribes"
+    scorable_dimensions:
+      - prompt_adherence
+      - visual_coherence
+      - face_usability
+      - period_plausibility
+      - anachronism_avoidance
+      - narrative_image_consistency
+      - uncertainty_signaling_quality
+      - audit_trace_completeness
+
+  # ── Diversity/Stress Cases (3) ─────────────────────────────────────────────
+
+  - id: CCV1-008
+    title: "Aboriginal Australian Elder, Pre-Contact"
+    subject_type: role
+    region: "Northern Australia"
+    time_period_label: "Pre-European Contact Australia"
+    time_period_start: 1600
+    time_period_end: 1770
+    setting_context: "Ceremonial gathering or country landscape"
+    evidence_level: low
+    intended_output_type: portrait
+    prompt_brief: >
+      A historically informed portrait of an Aboriginal Australian elder in a
+      pre-European contact setting. The figure should show body paint patterns
+      (ochre-based), minimal clothing appropriate to tropical climate, and
+      cultural objects such as a coolamon, digging stick, or spear. The landscape
+      should suggest Australian bushland or coast.
+    must_include:
+      - "ochre body paint or ceremonial markings"
+      - "Aboriginal Australian features"
+      - "human face clearly visible"
+      - "Australian landscape elements"
+    must_not_include:
+      - "European colonial clothing"
+      - "stereotypical 'noble savage' posing"
+      - "boomerang as only prop (reductive)"
+      - "African or Polynesian cultural elements conflated"
+    style_guidance:
+      - "illustrative realism"
+      - "warm ochre and earth palette"
+      - "respectful, dignified portraiture"
+    anachronism_watchlist:
+      - "metal tools (pre-contact)"
+      - "European fabric"
+      - "modern didgeridoo decoration style"
+      - "any colonial-era elements"
+    uncertainty_notes: >
+      Pre-contact Aboriginal Australian material culture is reconstructed from
+      archaeological evidence, early colonial-era descriptions, and living cultural
+      traditions. This is a stress case testing cultural sensitivity and avoidance
+      of reductive stereotyping. Score plausibility and cultural respect.
+    reference_notes:
+      - "Rock art traditions for body paint references"
+      - "Early colonial-era sketches (use critically)"
+    scorable_dimensions:
+      - prompt_adherence
+      - visual_coherence
+      - face_usability
+      - period_plausibility
+      - anachronism_avoidance
+      - narrative_image_consistency
+      - uncertainty_signaling_quality
+      - audit_trace_completeness
+
+  - id: CCV1-009
+    title: "Benin Bronze Caster, Edo Kingdom"
+    subject_type: role
+    region: "West Africa, Edo Kingdom (modern Nigeria)"
+    time_period_label: "Late Medieval West Africa"
+    time_period_start: 1400
+    time_period_end: 1600
+    setting_context: "Royal foundry workshop"
+    evidence_level: medium
+    intended_output_type: portrait
+    prompt_brief: >
+      A historically informed portrait of a bronze caster in the royal workshops
+      of the Edo Kingdom (Benin). The figure should wear a wrapper garment and
+      possibly coral bead ornaments (indicating royal guild membership). The
+      setting should suggest a foundry — with crucibles, wax molds, or finished
+      bronze plaques visible. Emphasis on skilled artisan status.
+    must_include:
+      - "West African wrapper garment"
+      - "coral bead ornaments or guild markers"
+      - "human face clearly visible"
+      - "foundry or workshop elements"
+    must_not_include:
+      - "North African/Berber clothing"
+      - "East African Maasai elements"
+      - "European blacksmith apron"
+      - "modern industrial foundry equipment"
+    style_guidance:
+      - "illustrative realism"
+      - "warm palette with bronze/copper tones"
+      - "emphasis on artisan dignity and skill"
+    anachronism_watchlist:
+      - "modern tools (electric, pneumatic)"
+      - "European-style anvil"
+      - "colonial-era European clothing"
+      - "printed fabric (pre-dates period)"
+    uncertainty_notes: >
+      Benin bronzes themselves and Portuguese-era accounts provide good evidence
+      for royal guild artisan culture. Workshop specifics are partially
+      reconstructed. Stress case for avoiding generic 'African' flattening.
+    reference_notes:
+      - "Benin bronzes depict court dress and ornamentation"
+      - "Portuguese accounts of Benin City workshops"
+    scorable_dimensions:
+      - prompt_adherence
+      - visual_coherence
+      - face_usability
+      - period_plausibility
+      - anachronism_avoidance
+      - narrative_image_consistency
+      - uncertainty_signaling_quality
+      - audit_trace_completeness
+
+  - id: CCV1-010
+    title: "Polynesian Navigator, Pre-European Contact"
+    subject_type: role
+    region: "Central Polynesia (Tonga/Samoa region)"
+    time_period_label: "Pre-Contact Polynesia"
+    time_period_start: 1200
+    time_period_end: 1500
+    setting_context: "Double-hulled voyaging canoe on open ocean"
+    evidence_level: low
+    intended_output_type: half-body
+    prompt_brief: >
+      A historically informed portrait of a Polynesian navigator aboard a
+      double-hulled voyaging canoe. The figure should wear tapa cloth garments
+      and possibly tattoo markings. The setting should show ocean, sky (for star
+      navigation context), and the distinctive double-hull canoe structure.
+      Emphasis on wayfinding expertise and confidence.
+    must_include:
+      - "tapa cloth garment or similar bark-cloth"
+      - "Polynesian features"
+      - "human face clearly visible"
+      - "double-hulled canoe or ocean setting"
+    must_not_include:
+      - "Hawaiian lei (too region-specific and later period)"
+      - "Maori-style ta moko face tattoo (region-specific)"
+      - "European ship elements"
+      - "modern sailing equipment"
+    style_guidance:
+      - "illustrative realism"
+      - "ocean blue and tapa-brown palette"
+      - "sense of vast ocean and navigation skill"
+    anachronism_watchlist:
+      - "metal fittings on canoe"
+      - "European-style sails"
+      - "modern tattoo styles"
+      - "compass or sextant"
+    uncertainty_notes: >
+      Polynesian navigation techniques are reconstructed from oral traditions,
+      experimental archaeology (Hokule'a voyages), and European contact-era
+      accounts. Material culture for this specific period and sub-region is
+      partially speculative. Stress case for avoiding pan-Polynesian flattening.
+    reference_notes:
+      - "Hokule'a reconstruction for canoe design"
+      - "Early European contact-era descriptions of Tongan/Samoan culture"
+    scorable_dimensions:
+      - prompt_adherence
+      - visual_coherence
+      - face_usability
+      - period_plausibility
+      - anachronism_avoidance
+      - narrative_image_consistency
+      - uncertainty_signaling_quality
+      - audit_trace_completeness

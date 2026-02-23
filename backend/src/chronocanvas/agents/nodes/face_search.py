@@ -83,6 +83,14 @@ async def face_search_node(state: AgentState) -> AgentState:
     request_id = state.get("request_id", "unknown")
     trace = list(state.get("agent_trace", []))
 
+    if not settings.face_search_enabled:
+        logger.info("Face search: disabled via config, skipping [request_id=%s]", request_id)
+        trace.append({
+            "agent": "face_search", "timestamp": time.time(),
+            "skipped": True, "reason": "disabled",
+        })
+        return {**state, "current_agent": "face_search", "agent_trace": trace}
+
     if not figure_name:
         trace.append({
             "agent": "face_search", "timestamp": time.time(),

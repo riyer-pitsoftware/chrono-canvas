@@ -1,5 +1,11 @@
-# Baseline C - ChronoCanvas Pipeline (reduced)
-# Full orchestration and prompt pipeline, but no validation retries or face post-processing.
+# Baseline C — ChronoCanvas pipeline (reduced)
+#
+# Full orchestration + research + prompt decomposition, but validation retries
+# and face pipeline disabled. Isolates the value of the LLM-driven prompt
+# engineering pipeline.
+#
+# Executed by: eval/scripts/run_eval.py --condition C
+# Requires the ChronoCanvas API to be running.
 
 condition: baselineC_pipeline_reduced
 description: >
@@ -7,22 +13,35 @@ description: >
   text/prompt pipeline enabled, image generation enabled, but validation
   retries and face post-processing disabled.
 
+mode: pipeline  # Runs through ChronoCanvas API
+
+# Environment overrides applied before running the pipeline
+env_overrides:
+  VALIDATION_RETRY_ENABLED: "false"
+  FACE_SEARCH_ENABLED: "false"
+  FACEFUSION_ENABLED: "false"
+  IMAGE_PROVIDER: comfyui
+  COMFYUI_MODEL: sdxl
+  COMFYUI_SDXL_CHECKPOINT: juggernautXL_v9.safetensors
+
+image_generation:
+  provider: comfyui
+  model: sdxl
+  checkpoint: juggernautXL_v9.safetensors
+  width: 768
+  height: 1024
+  seed: null
+
 pipeline:
   orchestration_enabled: true
   research_enabled: true
   prompt_decomposition_enabled: true
   validation_retry_enabled: false
-  face_pipeline_enabled: false
+  face_search_enabled: false
+  facefusion_enabled: false
   audit_trail_enabled: true
   max_retries: 0
 
 llm:
-  provider: openai
-  model: null  # Use default configured model
-
-image_generation:
-  provider: comfyui
-  model: realvisxlV50
-  seed: null
-  aspect_ratio: "3:4"
-  min_resolution: "768x1024"
+  provider: null    # Use default configured provider
+  model: null       # Use default configured model
