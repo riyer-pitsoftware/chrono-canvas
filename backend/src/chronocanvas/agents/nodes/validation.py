@@ -4,13 +4,14 @@ import logging
 import time
 
 from chronocanvas.agents.state import AgentState
+from chronocanvas.config import settings
 from chronocanvas.llm.base import TaskType
 from chronocanvas.llm.router import get_llm_router
 
 logger = logging.getLogger(__name__)
 
 VALIDATION_PROMPT = """You are a historical plausibility evaluator. Assess the following image generation
-prompt for historical plausibility. Your scores are heuristic judgments, not ground-truth accuracy measures.
+prompt for historical plausibility. Your scores are heuristic judgments, not ground-truth fact-checking.
 
 Figure: {figure_name}
 Time Period: {time_period}
@@ -21,9 +22,9 @@ Image Prompt: {image_prompt}
 
 Use the life dates and cultural context above to ground your plausibility assessment.
 Score each category 0-100 and provide details:
-1. clothing_accuracy: Are the clothes period-appropriate?
-2. cultural_accuracy: Are cultural elements correct?
-3. temporal_accuracy: Are there anachronistic elements?
+1. clothing_plausibility: Are the clothes period-appropriate?
+2. cultural_plausibility: Are cultural elements plausible for the setting?
+3. temporal_plausibility: Are there anachronistic elements?
 4. artistic_style: Does the art style match the period?
 
 Return JSON with:
@@ -111,7 +112,11 @@ async def validation_node(state: AgentState) -> AgentState:
     })
 
     retry_count = state.get("retry_count", 0)
-    should_regenerate = not passed and retry_count < 2
+    should_regenerate = (
+        not passed
+        and retry_count < 2
+        and settings.validation_retry_enabled
+    )
 
     return {
         **state,

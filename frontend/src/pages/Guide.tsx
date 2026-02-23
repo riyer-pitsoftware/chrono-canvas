@@ -270,7 +270,7 @@ Return ONLY the prompt text, no explanations.`,
     provider: "Ollama",
     why: "Image generation is non-deterministic—the model might produce something anachronistic or wrong. Validation catches this before the user sees it. Scores below 70 trigger automatic regeneration (up to 2 retries) with a corrected prompt. Ollama is used here because scoring doesn't need frontier reasoning—it needs consistency and cost efficiency.",
     promptTemplate: `You are a historical plausibility evaluator. Assess the following image generation
-prompt for historical plausibility. Note: these are heuristic, LLM-judged scores — not ground-truth accuracy.
+prompt for historical plausibility. Note: these are heuristic, LLM-judged scores — not ground-truth fact-checking.
 
 Figure: {figure_name}
 Time Period: {time_period}
@@ -278,9 +278,9 @@ Region: {region}
 Image Prompt: {image_prompt}
 
 Score each category 0-100 and provide details:
-1. clothing_accuracy: Are the clothes period-appropriate?
-2. cultural_accuracy: Are cultural elements correct?
-3. temporal_accuracy: Are there anachronistic elements?
+1. clothing_plausibility: Are the clothes period-appropriate?
+2. cultural_plausibility: Are cultural elements plausible for the setting?
+3. temporal_plausibility: Are there anachronistic elements?
 4. artistic_style: Does the art style match the period?
 
 Return JSON with:
@@ -293,7 +293,7 @@ Respond with valid JSON only.`,
     tips: [
       {
         title: "Adjust the pass threshold",
-        detail: "The 70-point threshold is set in `validation_node`. Lower it to 50 for more lenient acceptance, or raise it to 85 for stricter plausibility filtering. Remember: these are LLM-judged heuristic scores, not objective accuracy measures.",
+        detail: "The 70-point threshold is set in `validation_node`. Lower it to 50 for more lenient acceptance, or raise it to 85 for stricter plausibility filtering. Remember: these are LLM-judged heuristic scores, not objective fact-checking.",
       },
       {
         title: "Add a costume_era_match rule",
@@ -311,7 +311,7 @@ Respond with valid JSON only.`,
     tips: [
       {
         title: "Use a front-facing reference photo",
-        detail: "Facial compositing accuracy drops significantly with profile or angled shots. Ask users to upload a well-lit, front-facing portrait for best results.",
+        detail: "Facial compositing quality drops significantly with profile or angled shots. Ask users to upload a well-lit, front-facing portrait for best results.",
       },
       {
         title: "Match pose in the generated portrait",

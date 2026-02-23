@@ -48,7 +48,7 @@ ChronoCanvas is a focused case study in building traceable, evaluable AI systems
 **Maturity: prototype / research system**
 
 - The end-to-end pipeline works: text input → researched context → generated portrait → validation → export
-- Validation uses LLM-based heuristic scoring — it catches obvious anachronisms but does not guarantee historical accuracy
+- Validation uses LLM-based heuristic scoring — it catches obvious anachronisms but does not guarantee historical fact-checking
 - Face compositing requires FaceFusion running separately (optional)
 - Image generation requires ComfyUI with SDXL/FLUX checkpoints, or runs in mock mode for development
 - Designed for local / trusted-network deployment — no authentication layer

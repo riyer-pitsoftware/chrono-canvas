@@ -34,6 +34,12 @@ class Settings(BaseSettings):
     facefusion_source_path: str = ""
     facefusion_enabled: bool = False
 
+    # Pipeline toggles (for eval conditions)
+    # When False, validation still runs but never triggers regenerate
+    validation_retry_enabled: bool = True
+    # When False, the face_search node is skipped entirely
+    face_search_enabled: bool = True
+
     # API
     api_host: str = "0.0.0.0"
     api_port: int = 8000

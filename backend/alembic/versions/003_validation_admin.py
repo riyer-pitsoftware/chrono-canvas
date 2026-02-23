@@ -17,9 +17,9 @@ branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 _DEFAULT_RULES = [
-    ("clothing_accuracy", "Clothing Accuracy", 0.25, "Are the clothes period-appropriate?"),
-    ("cultural_accuracy", "Cultural Accuracy", 0.25, "Are cultural elements correct?"),
-    ("temporal_accuracy", "Temporal Accuracy", 0.25, "Are there anachronistic elements?"),
+    ("clothing_plausibility", "Clothing Plausibility", 0.25, "Are the clothes period-appropriate?"),
+    ("cultural_plausibility", "Cultural Plausibility", 0.25, "Are cultural elements plausible for the setting?"),
+    ("temporal_plausibility", "Temporal Plausibility", 0.25, "Are there anachronistic elements?"),
     ("artistic_style", "Artistic Style", 0.25, "Does the art style match the period?"),
 ]
 
