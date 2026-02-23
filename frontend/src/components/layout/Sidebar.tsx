@@ -49,7 +49,7 @@ export function Sidebar({
         <button
           onClick={() => onNavigate("/guide")}
           className={cn(
-            "mt-3 w-full flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-colors border",
+            "mt-3 w-full flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-colors border relative overflow-hidden",
             guideActive
               ? "bg-[var(--accent)] border-[var(--border)] text-[var(--accent-foreground)]"
               : "border-[var(--border)] text-[var(--muted-foreground)] hover:bg-[var(--accent)] hover:text-[var(--accent-foreground)]",
@@ -57,6 +57,9 @@ export function Sidebar({
           )}
           title="Guide"
         >
+          {guideActive && (
+            <span className="absolute left-1 top-1 bottom-1 w-1 rounded-full bg-[var(--primary)]" />
+          )}
           <BookOpen className="w-3.5 h-3.5" />
           {!collapsed && "Guide"}
         </button>
@@ -70,16 +73,19 @@ export function Sidebar({
               key={item.href}
               onClick={() => onNavigate(item.href)}
               className={cn(
-                "w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm mb-1 transition-colors",
+                "relative w-full flex items-center gap-3 py-2 rounded-md text-sm mb-1 transition-colors overflow-hidden",
                 active
                   ? "bg-[var(--accent)] text-[var(--accent-foreground)] font-medium"
                   : "text-[var(--muted-foreground)] hover:bg-[var(--accent)]",
-                collapsed && "justify-center px-0",
+                collapsed ? "justify-center px-0" : "pl-6 pr-3",
               )}
               title={item.label}
             >
+              {active && (
+                <span className="absolute left-1 top-1 bottom-1 w-1 rounded-full bg-[var(--primary)]" />
+              )}
               <Icon className="w-4 h-4" />
-              {!collapsed && item.label}
+              {!collapsed && <span>{item.label}</span>}
             </button>
           );
         })}
