@@ -109,6 +109,8 @@ async def validation_node(state: AgentState) -> AgentState:
         "output_tokens": response.output_tokens,
         "cost": response.cost,
         "duration_ms": response.duration_ms,
+        "requested_provider": response.requested_provider,
+        "fallback": response.fallback,
     })
 
     retry_count = state.get("retry_count", 0)

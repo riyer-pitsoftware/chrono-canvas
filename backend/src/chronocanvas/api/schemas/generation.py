@@ -77,6 +77,8 @@ class LLMCallDetail(BaseModel):
     output_tokens: int = 0
     cost: float = 0.0
     duration_ms: float = 0.0
+    requested_provider: str | None = None
+    fallback: bool = False
 
 
 class ValidationCategoryDetail(BaseModel):

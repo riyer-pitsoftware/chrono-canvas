@@ -86,6 +86,8 @@ async def prompt_generation_node(state: AgentState) -> AgentState:
         "output_tokens": response.output_tokens,
         "cost": response.cost,
         "duration_ms": response.duration_ms,
+        "requested_provider": response.requested_provider,
+        "fallback": response.fallback,
     })
 
     return {
