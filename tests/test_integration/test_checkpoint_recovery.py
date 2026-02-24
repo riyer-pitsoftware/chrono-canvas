@@ -53,10 +53,10 @@ def test_rebuild_state_uses_extracted_data():
     )
     state = _rebuild_state_from_db(req, "image_generation")
 
-    assert state["figure_name"] == "Ashoka"
-    assert state["time_period"] == "3rd century BCE"
-    assert state["region"] == "India"
-    assert state["occupation"] == "Emperor"
+    assert state["extraction"]["figure_name"] == "Ashoka"
+    assert state["extraction"]["time_period"] == "3rd century BCE"
+    assert state["extraction"]["region"] == "India"
+    assert state["extraction"]["occupation"] == "Emperor"
 
 
 def test_rebuild_state_uses_research_data():
@@ -69,15 +69,15 @@ def test_rebuild_state_uses_research_data():
     )
     state = _rebuild_state_from_db(req, "image_generation")
 
-    assert state["historical_context"] == "Founded Maurya Empire"
-    assert state["clothing_details"] == "Royal dhoti"
+    assert state["research"]["historical_context"] == "Founded Maurya Empire"
+    assert state["research"]["clothing_details"] == "Royal dhoti"
 
 
 def test_rebuild_state_maps_generated_prompt_to_image_prompt():
     req = _make_request(generated_prompt="Portrait of Ashoka the Great")
     state = _rebuild_state_from_db(req, "image_generation")
 
-    assert state["image_prompt"] == "Portrait of Ashoka the Great"
+    assert state["prompt"]["image_prompt"] == "Portrait of Ashoka the Great"
 
 
 def test_rebuild_state_enriches_from_predecessor_snapshot():
@@ -87,9 +87,11 @@ def test_rebuild_state_enriches_from_predecessor_snapshot():
             {
                 "agent": "prompt_generation",
                 "state_snapshot": {
-                    "negative_prompt": "blurry, modern",
-                    "style_modifiers": ["ancient Indian", "scholarly"],
-                    "image_prompt": "Aryabhata portrait",  # should not override generated_prompt
+                    "prompt": {
+                        "negative_prompt": "blurry, modern",
+                        "style_modifiers": ["ancient Indian", "scholarly"],
+                        "image_prompt": "Aryabhata portrait",  # should not override generated_prompt
+                    },
                 },
             }
         ],
@@ -97,11 +99,8 @@ def test_rebuild_state_enriches_from_predecessor_snapshot():
     )
     state = _rebuild_state_from_db(req, "image_generation")
 
-    # Snapshot-only fields are merged in
-    assert state["negative_prompt"] == "blurry, modern"
-    assert state["style_modifiers"] == ["ancient Indian", "scholarly"]
-    # DB column takes precedence over snapshot
-    assert state["image_prompt"] == "Override prompt from DB column"
+    # DB column takes precedence — prompt namespace already populated from generated_prompt
+    assert state["prompt"]["image_prompt"] == "Override prompt from DB column"
 
 
 def test_rebuild_state_predecessor_mapping():
@@ -120,8 +119,8 @@ def test_rebuild_state_skips_none_extracted_values():
     )
     state = _rebuild_state_from_db(req, "image_generation")
 
-    assert state["figure_name"] == "Akbar"
-    assert "time_period" not in state
+    assert state["extraction"]["figure_name"] == "Akbar"
+    assert "time_period" not in state["extraction"]
 
 
 # ---------------------------------------------------------------------------
@@ -190,8 +189,8 @@ async def test_retry_falls_back_to_db_when_checkpoint_missing():
 
         injected_state = call_args[0][1]
         assert injected_state["input_text"] == "Rani Lakshmibai"
-        assert injected_state["figure_name"] == "Rani Lakshmibai"
-        assert injected_state["image_prompt"] == "A portrait of Rani Lakshmibai in battle armour"
+        assert injected_state["extraction"]["figure_name"] == "Rani Lakshmibai"
+        assert injected_state["prompt"]["image_prompt"] == "A portrait of Rani Lakshmibai in battle armour"
         assert injected_state["error"] is None
         assert injected_state["retry_count"] == 0
         # as_node must be the predecessor of image_generation

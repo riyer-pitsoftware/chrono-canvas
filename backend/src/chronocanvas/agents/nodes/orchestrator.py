@@ -31,7 +31,6 @@ async def orchestrator_node(state: AgentState) -> AgentState:
             reason,
         )
         return {
-            **state,
             "current_agent": "orchestrator",
             "agent_trace": trace,
             "retry_count": state.get("retry_count", 0),
@@ -40,7 +39,6 @@ async def orchestrator_node(state: AgentState) -> AgentState:
         }
 
     return {
-        **state,
         "current_agent": "orchestrator",
         "agent_trace": trace,
         "retry_count": state.get("retry_count", 0),

@@ -2,7 +2,7 @@
 import logging
 import time
 
-from chronocanvas.agents.state import AgentState
+from chronocanvas.agents.state import AgentState, PromptState
 from chronocanvas.llm.base import TaskType
 from chronocanvas.llm.router import get_llm_router
 
@@ -47,16 +47,19 @@ NEGATIVE_PROMPT = (
 
 
 async def prompt_generation_node(state: AgentState) -> AgentState:
-    logger.info(f"Prompt generation agent: creating prompt for {state.get('figure_name', '')}")
+    ext = state.get("extraction", {})
+    res = state.get("research", {})
+    figure_name = ext.get("figure_name", "")
+    logger.info(f"Prompt generation agent: creating prompt for {figure_name}")
 
     response = await get_llm_router().generate_stream(
         prompt=PROMPT_GEN_TEMPLATE.format(
-            figure_name=state.get("figure_name", ""),
-            historical_context=state.get("historical_context", ""),
-            clothing_details=state.get("clothing_details", ""),
-            physical_description=state.get("physical_description", ""),
-            notable_features=state.get("notable_features", "") or "none recorded",
-            art_style_reference=state.get("art_style_reference", ""),
+            figure_name=figure_name,
+            historical_context=res.get("historical_context", ""),
+            clothing_details=res.get("clothing_details", ""),
+            physical_description=res.get("physical_description", ""),
+            notable_features=ext.get("notable_features", "") or "none recorded",
+            art_style_reference=res.get("art_style_reference", ""),
         ),
         task_type=TaskType.PROMPT_GENERATION,
         request_id=state.get("request_id", ""),
@@ -91,11 +94,12 @@ async def prompt_generation_node(state: AgentState) -> AgentState:
     })
 
     return {
-        **state,
         "current_agent": "prompt_generation",
-        "image_prompt": response.content.strip(),
-        "negative_prompt": NEGATIVE_PROMPT,
-        "style_modifiers": [state.get("art_style_reference", "oil painting")],
+        "prompt": PromptState(
+            image_prompt=response.content.strip(),
+            negative_prompt=NEGATIVE_PROMPT,
+            style_modifiers=[res.get("art_style_reference", "oil painting")],
+        ),
         "agent_trace": trace,
         "llm_calls": llm_calls,
     }

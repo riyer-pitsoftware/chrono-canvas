@@ -1,6 +1,6 @@
 from typing import Any
 
-from chronocanvas.agents.state import AgentState
+from chronocanvas.agents.state import AgentState, ExtractionState, PromptState, ResearchState
 
 # Maps each retry step to the node that must have run just before it,
 # used as `as_node` in aupdate_state to set LangGraph's `next` pointer.
@@ -38,22 +38,35 @@ class RetryCoordinator:
             "error": None,
         }
 
-        for k, v in (request.extracted_data or {}).items():
-            if v is not None:
-                state[k] = v  # type: ignore[literal-required]
-        for k, v in (request.research_data or {}).items():
-            if v is not None:
-                state[k] = v  # type: ignore[literal-required]
+        extracted = request.extracted_data or {}
+        if extracted:
+            state["extraction"] = ExtractionState(
+                **{k: v for k, v in extracted.items() if v is not None}
+            )
+
+        researched = request.research_data or {}
+        if researched:
+            state["research"] = ResearchState(
+                **{k: v for k, v in researched.items() if v is not None}
+            )
+
         if request.generated_prompt:
-            state["image_prompt"] = request.generated_prompt  # type: ignore[typeddict-unknown-key]
+            state["prompt"] = PromptState(image_prompt=request.generated_prompt)
 
         predecessor = _PREDECESSOR_NODE.get(from_step)
         if predecessor:
             for entry in reversed(request.agent_trace or []):
                 if entry.get("agent") == predecessor and entry.get("state_snapshot"):
-                    for k, v in entry["state_snapshot"].items():
-                        if k not in state:
-                            state[k] = v  # type: ignore[literal-required]
+                    snapshot = entry["state_snapshot"]
+                    # Merge any namespaced sub-dicts from the snapshot
+                    for key in ("extraction", "research", "prompt", "image",
+                                "validation", "face", "compositing", "export"):
+                        if key in snapshot and key not in state:
+                            state[key] = snapshot[key]  # type: ignore[literal-required]
+                    # Merge flat control fields
+                    for key in ("current_agent", "input_text"):
+                        if key in snapshot and key not in state:
+                            state[key] = snapshot[key]  # type: ignore[literal-required]
                     break
 
         return state

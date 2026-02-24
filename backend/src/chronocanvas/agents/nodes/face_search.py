@@ -5,7 +5,7 @@ from pathlib import Path
 
 import httpx
 
-from chronocanvas.agents.state import AgentState
+from chronocanvas.agents.state import AgentState, FaceState
 from chronocanvas.config import settings
 from chronocanvas.security import is_safe_url, validate_image_magic
 
@@ -79,7 +79,9 @@ async def _download_image(url: str, output_dir: Path) -> str | None:
 
 
 async def face_search_node(state: AgentState) -> AgentState:
-    figure_name = state.get("figure_name", "")
+    ext = state.get("extraction", {})
+    face = state.get("face", {})
+    figure_name = ext.get("figure_name", "")
     request_id = state.get("request_id", "unknown")
     trace = list(state.get("agent_trace", []))
 
@@ -89,14 +91,14 @@ async def face_search_node(state: AgentState) -> AgentState:
             "agent": "face_search", "timestamp": time.time(),
             "skipped": True, "reason": "disabled",
         })
-        return {**state, "current_agent": "face_search", "agent_trace": trace}
+        return {"current_agent": "face_search", "agent_trace": trace}
 
     if not figure_name:
         trace.append({
             "agent": "face_search", "timestamp": time.time(),
             "skipped": True, "reason": "no_figure_name",
         })
-        return {**state, "current_agent": "face_search", "agent_trace": trace}
+        return {"current_agent": "face_search", "agent_trace": trace}
 
     if not settings.serpapi_key:
         logger.info("Face search: SERPAPI_KEY not set, skipping [request_id=%s]", request_id)
@@ -104,10 +106,10 @@ async def face_search_node(state: AgentState) -> AgentState:
             "agent": "face_search", "timestamp": time.time(),
             "skipped": True, "reason": "no_api_key",
         })
-        return {**state, "current_agent": "face_search", "agent_trace": trace}
+        return {"current_agent": "face_search", "agent_trace": trace}
 
     # Don't overwrite a manually uploaded face
-    if state.get("source_face_path"):
+    if face.get("source_face_path"):
         logger.info(
             "Face search: source_face_path already set, skipping web search [request_id=%s]",
             request_id,
@@ -116,11 +118,11 @@ async def face_search_node(state: AgentState) -> AgentState:
             "agent": "face_search", "timestamp": time.time(),
             "skipped": True, "reason": "already_set",
         })
-        return {**state, "current_agent": "face_search", "agent_trace": trace}
+        return {"current_agent": "face_search", "agent_trace": trace}
 
     # Build query list: primary name first, then alternative names as fallbacks
     queries = [SEARCH_QUERY_TEMPLATE.format(figure_name=figure_name)]
-    for alt_name in state.get("alternative_names", []):
+    for alt_name in ext.get("alternative_names", []):
         alt_query = SEARCH_QUERY_TEMPLATE.format(figure_name=alt_name)
         if alt_query not in queries:
             queries.append(alt_query)
@@ -147,7 +149,7 @@ async def face_search_node(state: AgentState) -> AgentState:
             "reason": "no_results",
             "queries_tried": queries,
         })
-        return {**state, "current_agent": "face_search", "agent_trace": trace}
+        return {"current_agent": "face_search", "agent_trace": trace}
 
     query = used_query
 
@@ -175,7 +177,7 @@ async def face_search_node(state: AgentState) -> AgentState:
             "query": query,
             "candidates": [r.get("url") for r in results],
         })
-        return {**state, "current_agent": "face_search", "agent_trace": trace}
+        return {"current_agent": "face_search", "agent_trace": trace}
 
     logger.info(
         "Face search: downloaded face image %s -> %s [request_id=%s]",
@@ -192,11 +194,12 @@ async def face_search_node(state: AgentState) -> AgentState:
     })
 
     return {
-        **state,
         "current_agent": "face_search",
-        "source_face_path": downloaded_path,
-        "face_search_url": used_url,
-        "face_search_query": query,
-        "face_search_provider": "serpapi",
+        "face": FaceState(
+            source_face_path=downloaded_path,
+            face_search_url=used_url,
+            face_search_query=query,
+            face_search_provider="serpapi",
+        ),
         "agent_trace": trace,
     }

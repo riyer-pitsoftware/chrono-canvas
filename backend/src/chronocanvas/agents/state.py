@@ -1,12 +1,7 @@
 from typing import Any, TypedDict
 
 
-class AgentState(TypedDict, total=False):
-    # Input
-    request_id: str
-    input_text: str
-
-    # Extraction
+class ExtractionState(TypedDict, total=False):
     figure_name: str
     time_period: str
     region: str
@@ -20,7 +15,8 @@ class AgentState(TypedDict, total=False):
     historical_significance: str
     associated_locations: list[str]
 
-    # Research
+
+class ResearchState(TypedDict, total=False):
     historical_context: str
     clothing_details: str
     physical_description: str
@@ -28,38 +24,58 @@ class AgentState(TypedDict, total=False):
     research_sources: list[str]
     research_cache_hit: bool
 
-    # Prompt Generation
+
+class PromptState(TypedDict, total=False):
     image_prompt: str
     negative_prompt: str
     style_modifiers: list[str]
 
-    # Image Generation
+
+class ImageState(TypedDict, total=False):
     image_path: str
     image_provider: str
     generation_params: dict[str, Any]
 
-    # Validation config (loaded at pipeline start from DB)
-    validation_rule_weights: dict[str, float]
-    validation_pass_threshold: float
 
-    # Validation
+class ValidationState(TypedDict, total=False):
     validation_results: list[dict[str, Any]]
     validation_score: float
     validation_passed: bool
+    rule_weights: dict[str, float]
+    pass_threshold: float
 
-    # Face Search
+
+class FaceState(TypedDict, total=False):
     face_search_url: str
     face_search_query: str
     face_search_provider: str
-
-    # Facial Compositing
     source_face_path: str
+
+
+class CompositingState(TypedDict, total=False):
     swapped_image_path: str
     original_image_path: str
 
-    # Export
+
+class ExportState(TypedDict, total=False):
     export_path: str
     export_format: str
+
+
+class AgentState(TypedDict, total=False):
+    # Input
+    request_id: str
+    input_text: str
+
+    # Domain namespaces
+    extraction: ExtractionState
+    research: ResearchState
+    prompt: PromptState
+    image: ImageState
+    validation: ValidationState
+    face: FaceState
+    compositing: CompositingState
+    export: ExportState
 
     # Audit
     llm_calls: list[dict[str, Any]]

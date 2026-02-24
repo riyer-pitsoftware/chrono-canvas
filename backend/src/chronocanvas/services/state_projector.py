@@ -17,8 +17,6 @@ _STATUS_MAP: dict[str, RequestStatus] = {
 _SNAPSHOT_EXCLUDE = frozenset({
     "llm_calls", "agent_trace", "request_id", "error",
     "should_regenerate", "retry_count",
-    "source_face_path", "image_path", "export_path",
-    "swapped_image_path", "original_image_path",
 })
 
 
@@ -36,28 +34,31 @@ class RequestStateProjector:
             "agent_trace": node_state.get("agent_trace", []),
             "llm_calls": node_state.get("llm_calls", []),
         }
-        if node_state.get("figure_name"):
+        ext = node_state.get("extraction")
+        if ext and ext.get("figure_name"):
             kwargs["extracted_data"] = {
-                "figure_name": node_state.get("figure_name"),
-                "time_period": node_state.get("time_period"),
-                "region": node_state.get("region"),
-                "occupation": node_state.get("occupation"),
-                "alternative_names": node_state.get("alternative_names", []),
-                "birth_year": node_state.get("birth_year", ""),
-                "death_year": node_state.get("death_year", ""),
-                "notable_features": node_state.get("notable_features", ""),
-                "cultural_context": node_state.get("cultural_context", ""),
-                "historical_significance": node_state.get("historical_significance", ""),
-                "associated_locations": node_state.get("associated_locations", []),
+                "figure_name": ext.get("figure_name"),
+                "time_period": ext.get("time_period"),
+                "region": ext.get("region"),
+                "occupation": ext.get("occupation"),
+                "alternative_names": ext.get("alternative_names", []),
+                "birth_year": ext.get("birth_year", ""),
+                "death_year": ext.get("death_year", ""),
+                "notable_features": ext.get("notable_features", ""),
+                "cultural_context": ext.get("cultural_context", ""),
+                "historical_significance": ext.get("historical_significance", ""),
+                "associated_locations": ext.get("associated_locations", []),
             }
-        if node_state.get("historical_context"):
+        res = node_state.get("research")
+        if res and res.get("historical_context"):
             kwargs["research_data"] = {
-                "historical_context": node_state.get("historical_context"),
-                "clothing_details": node_state.get("clothing_details"),
-                "physical_description": node_state.get("physical_description"),
+                "historical_context": res.get("historical_context"),
+                "clothing_details": res.get("clothing_details"),
+                "physical_description": res.get("physical_description"),
             }
-        if node_state.get("image_prompt"):
-            kwargs["generated_prompt"] = node_state["image_prompt"]
+        prompt_state = node_state.get("prompt")
+        if prompt_state and prompt_state.get("image_prompt"):
+            kwargs["generated_prompt"] = prompt_state["image_prompt"]
         return kwargs
 
     def attach_snapshot(

@@ -3,7 +3,7 @@ import json
 import logging
 import time
 
-from chronocanvas.agents.state import AgentState
+from chronocanvas.agents.state import AgentState, ValidationState
 from chronocanvas.config import settings
 from chronocanvas.llm.base import TaskType
 from chronocanvas.llm.router import get_llm_router
@@ -38,17 +38,21 @@ Respond with valid JSON only."""
 
 
 async def validation_node(state: AgentState) -> AgentState:
-    logger.info(f"Validation agent: validating output for {state.get('figure_name', '')}")
+    ext = state.get("extraction", {})
+    prompt_state = state.get("prompt", {})
+    val = state.get("validation", {})
+    figure_name = ext.get("figure_name", "")
+    logger.info(f"Validation agent: validating output for {figure_name}")
 
     response = await get_llm_router().generate(
         prompt=VALIDATION_PROMPT.format(
-            figure_name=state.get("figure_name", ""),
-            time_period=state.get("time_period", ""),
-            region=state.get("region", ""),
-            birth_year=state.get("birth_year", "") or "unknown",
-            death_year=state.get("death_year", "") or "unknown",
-            cultural_context=state.get("cultural_context", "") or "not specified",
-            image_prompt=state.get("image_prompt", ""),
+            figure_name=figure_name,
+            time_period=ext.get("time_period", ""),
+            region=ext.get("region", ""),
+            birth_year=ext.get("birth_year", "") or "unknown",
+            death_year=ext.get("death_year", "") or "unknown",
+            cultural_context=ext.get("cultural_context", "") or "not specified",
+            image_prompt=prompt_state.get("image_prompt", ""),
         ),
         task_type=TaskType.VALIDATION,
         temperature=0.3,
@@ -68,8 +72,8 @@ async def validation_node(state: AgentState) -> AgentState:
         }
 
     # Use weighted scoring if rule weights are present in state; fallback to simple average
-    rule_weights: dict[str, float] = state.get("validation_rule_weights") or {}
-    pass_threshold: float = state.get("validation_pass_threshold") or 70.0
+    rule_weights: dict[str, float] = val.get("rule_weights") or {}
+    pass_threshold: float = val.get("pass_threshold") or 70.0
 
     llm_overall = data.get("overall_score", 75.0)
     results_list = data.get("results", [])
@@ -121,11 +125,14 @@ async def validation_node(state: AgentState) -> AgentState:
     )
 
     return {
-        **state,
         "current_agent": "validation",
-        "validation_results": data.get("results", []),
-        "validation_score": overall_score,
-        "validation_passed": passed,
+        "validation": ValidationState(
+            validation_results=data.get("results", []),
+            validation_score=overall_score,
+            validation_passed=passed,
+            rule_weights=rule_weights,
+            pass_threshold=pass_threshold,
+        ),
         "should_regenerate": should_regenerate,
         "retry_count": retry_count + (1 if should_regenerate else 0),
         "agent_trace": trace,

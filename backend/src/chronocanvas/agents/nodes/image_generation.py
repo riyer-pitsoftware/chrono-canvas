@@ -2,7 +2,7 @@ import logging
 import time
 from pathlib import Path
 
-from chronocanvas.agents.state import AgentState
+from chronocanvas.agents.state import AgentState, ImageState
 from chronocanvas.config import settings
 from chronocanvas.imaging.comfyui_client import ComfyUIClient
 from chronocanvas.imaging.mock_generator import MockImageGenerator
@@ -22,9 +22,11 @@ def _get_generator():
 
 async def image_generation_node(state: AgentState) -> AgentState:
     request_id = state.get("request_id", "unknown")
+    ext = state.get("extraction", {})
+    prompt_state = state.get("prompt", {})
     logger.info(
         "Image generation agent: generating image for %s [request_id=%s]",
-        state.get("figure_name", ""),
+        ext.get("figure_name", ""),
         request_id,
     )
 
@@ -42,11 +44,11 @@ async def image_generation_node(state: AgentState) -> AgentState:
 
     try:
         result = await generator.generate(
-            prompt=state.get("image_prompt", "historical portrait"),
+            prompt=prompt_state.get("image_prompt", "historical portrait"),
             output_dir=output_dir,
             width=768,
             height=768,
-            negative_prompt=state.get("negative_prompt", ""),
+            negative_prompt=prompt_state.get("negative_prompt", ""),
             on_progress=on_progress,
         )
 
@@ -59,11 +61,12 @@ async def image_generation_node(state: AgentState) -> AgentState:
         })
 
         return {
-            **state,
             "current_agent": "image_generation",
-            "image_path": result.file_path,
-            "image_provider": result.provider,
-            "generation_params": result.generation_params,
+            "image": ImageState(
+                image_path=result.file_path,
+                image_provider=result.provider,
+                generation_params=result.generation_params,
+            ),
             "agent_trace": trace,
         }
     except Exception as e:
@@ -75,7 +78,6 @@ async def image_generation_node(state: AgentState) -> AgentState:
             "error": str(e),
         })
         return {
-            **state,
             "current_agent": "image_generation",
             "error": f"Image generation failed: {e}",
             "agent_trace": trace,

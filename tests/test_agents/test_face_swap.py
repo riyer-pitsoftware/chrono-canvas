@@ -12,8 +12,9 @@ def _base_state(tmp_path: str, **overrides) -> dict:
     return {
         "request_id": "test-req-1",
         "input_text": "Julius Caesar",
-        "figure_name": "Julius Caesar",
-        "image_path": "",
+        "extraction": {"figure_name": "Julius Caesar"},
+        "image": {"image_path": ""},
+        "face": {},
         "agent_trace": [],
         "error": None,
         **overrides,
@@ -30,13 +31,12 @@ async def test_skip_when_no_source_face():
     assert len(trace) == 1
     assert trace[0]["agent"] == "facial_compositing"
     assert trace[0]["skipped"] is True
-    assert "swapped_image_path" not in result
-    assert "original_image_path" not in result
+    assert "compositing" not in result
 
 
 @pytest.mark.asyncio
 async def test_skip_when_no_image_path():
-    state = _base_state("/tmp", source_face_path="/tmp/face.jpg", image_path="")
+    state = _base_state("/tmp", face={"source_face_path": "/tmp/face.jpg"}, image={"image_path": ""})
     result = await facial_compositing_node(state)
 
     trace = result["agent_trace"]
@@ -48,8 +48,8 @@ async def test_skip_when_no_image_path():
 async def test_skip_when_image_path_missing_file():
     state = _base_state(
         "/tmp",
-        source_face_path="/tmp/face.jpg",
-        image_path="/tmp/nonexistent_image.png",
+        face={"source_face_path": "/tmp/face.jpg"},
+        image={"image_path": "/tmp/nonexistent_image.png"},
     )
     result = await facial_compositing_node(state)
 
@@ -69,8 +69,8 @@ async def test_success_path(monkeypatch):
 
         state = _base_state(
             tmpdir,
-            source_face_path=str(face_file),
-            image_path=str(image_file),
+            face={"source_face_path": str(face_file)},
+            image={"image_path": str(image_file)},
         )
 
         with patch(
@@ -89,8 +89,9 @@ async def test_success_path(monkeypatch):
 
             result = await facial_compositing_node(state)
 
-        assert "swapped_image_path" in result
-        assert "original_" in result["original_image_path"]
+        comp = result["compositing"]
+        assert "swapped_image_path" in comp
+        assert "original_" in comp["original_image_path"]
         assert result["current_agent"] == "facial_compositing"
 
         trace = result["agent_trace"]
@@ -98,7 +99,7 @@ async def test_success_path(monkeypatch):
         assert trace[0]["skipped"] is False
         assert trace[0]["source_face"] == str(face_file)
 
-        assert Path(result["original_image_path"]).exists()
+        assert Path(comp["original_image_path"]).exists()
 
         mock_client.generate.assert_called_once()
         call_kwargs = mock_client.generate.call_args
@@ -114,8 +115,8 @@ async def test_graceful_degradation_on_exception():
 
         state = _base_state(
             tmpdir,
-            source_face_path="/tmp/face.jpg",
-            image_path=str(image_file),
+            face={"source_face_path": "/tmp/face.jpg"},
+            image={"image_path": str(image_file)},
         )
 
         with patch(
@@ -128,7 +129,7 @@ async def test_graceful_degradation_on_exception():
             result = await facial_compositing_node(state)
 
         assert result.get("error") is None or result.get("error") == state.get("error")
-        assert "swapped_image_path" not in result
+        assert "compositing" not in result
         assert result["current_agent"] == "facial_compositing"
 
         trace = result["agent_trace"]

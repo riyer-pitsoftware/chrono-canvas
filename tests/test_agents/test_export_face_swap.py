@@ -22,23 +22,35 @@ async def test_export_copies_swapped_image(monkeypatch):
 
         state = {
             "request_id": "test-export-1",
-            "figure_name": "Caesar",
-            "time_period": "1st century BC",
-            "region": "Rome",
-            "occupation": "Dictator",
-            "historical_context": "Roman leader",
-            "image_prompt": "A portrait of Caesar",
-            "validation_score": 85.0,
-            "image_provider": "comfyui",
-            "image_path": str(gen_image),
-            "swapped_image_path": str(swapped_image),
-            "original_image_path": str(original_copy),
+            "extraction": {
+                "figure_name": "Caesar",
+                "time_period": "1st century BC",
+                "region": "Rome",
+                "occupation": "Dictator",
+            },
+            "research": {
+                "historical_context": "Roman leader",
+            },
+            "prompt": {
+                "image_prompt": "A portrait of Caesar",
+            },
+            "validation": {
+                "validation_score": 85.0,
+            },
+            "image": {
+                "image_provider": "comfyui",
+                "image_path": str(gen_image),
+            },
+            "compositing": {
+                "swapped_image_path": str(swapped_image),
+                "original_image_path": str(original_copy),
+            },
             "agent_trace": [],
         }
 
         result = await export_node(state)
 
-        export_dir = Path(result["export_path"])
+        export_dir = Path(result["export"]["export_path"])
         assert export_dir.exists()
 
         # Original image was copied
@@ -63,21 +75,31 @@ async def test_export_without_face_swap(monkeypatch):
 
         state = {
             "request_id": "test-export-2",
-            "figure_name": "Napoleon",
-            "time_period": "19th century",
-            "region": "France",
-            "occupation": "Emperor",
-            "historical_context": "French leader",
-            "image_prompt": "A portrait of Napoleon",
-            "validation_score": 90.0,
-            "image_provider": "mock",
-            "image_path": str(gen_image),
+            "extraction": {
+                "figure_name": "Napoleon",
+                "time_period": "19th century",
+                "region": "France",
+                "occupation": "Emperor",
+            },
+            "research": {
+                "historical_context": "French leader",
+            },
+            "prompt": {
+                "image_prompt": "A portrait of Napoleon",
+            },
+            "validation": {
+                "validation_score": 90.0,
+            },
+            "image": {
+                "image_provider": "mock",
+                "image_path": str(gen_image),
+            },
             "agent_trace": [],
         }
 
         result = await export_node(state)
 
-        export_dir = Path(result["export_path"])
+        export_dir = Path(result["export"]["export_path"])
         metadata = json.loads((export_dir / "metadata.json").read_text())
 
         # Swapped path should be empty when no face swap

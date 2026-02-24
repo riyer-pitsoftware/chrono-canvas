@@ -3,7 +3,7 @@ import shutil
 import time
 from pathlib import Path
 
-from chronocanvas.agents.state import AgentState
+from chronocanvas.agents.state import AgentState, CompositingState
 from chronocanvas.config import settings
 from chronocanvas.imaging.facefusion_client import FaceFusionClient
 from chronocanvas.imaging.mock_face_swap import MockFaceSwapClient
@@ -18,7 +18,9 @@ def _get_compositing_client():
 
 
 async def facial_compositing_node(state: AgentState) -> AgentState:
-    source_face_path = state.get("source_face_path", "")
+    face = state.get("face", {})
+    img = state.get("image", {})
+    source_face_path = face.get("source_face_path", "")
     request_id = state.get("request_id", "unknown")
     trace = list(state.get("agent_trace", []))
 
@@ -29,17 +31,17 @@ async def facial_compositing_node(state: AgentState) -> AgentState:
             "skipped": True,
         })
         return {
-            **state,
             "current_agent": "facial_compositing",
             "agent_trace": trace,
         }
 
+    ext = state.get("extraction", {})
     logger.info(
         "Facial compositing agent: compositing face for %s [request_id=%s]",
-        state.get("figure_name", ""),
+        ext.get("figure_name", ""),
         request_id,
     )
-    image_path = state.get("image_path", "")
+    image_path = img.get("image_path", "")
 
     if not image_path or not Path(image_path).exists():
         logger.warning(
@@ -53,7 +55,6 @@ async def facial_compositing_node(state: AgentState) -> AgentState:
             "reason": "no_image",
         })
         return {
-            **state,
             "current_agent": "facial_compositing",
             "agent_trace": trace,
         }
@@ -85,10 +86,11 @@ async def facial_compositing_node(state: AgentState) -> AgentState:
         })
 
         return {
-            **state,
             "current_agent": "facial_compositing",
-            "swapped_image_path": result.file_path,
-            "original_image_path": str(original_copy),
+            "compositing": CompositingState(
+                swapped_image_path=result.file_path,
+                original_image_path=str(original_copy),
+            ),
             "agent_trace": trace,
         }
 
@@ -105,7 +107,6 @@ async def facial_compositing_node(state: AgentState) -> AgentState:
             "error_message": str(e),
         })
         return {
-            **state,
             "current_agent": "facial_compositing",
             "agent_trace": trace,
         }

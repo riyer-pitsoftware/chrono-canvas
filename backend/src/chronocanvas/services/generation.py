@@ -2,7 +2,7 @@ import logging
 import uuid
 
 from chronocanvas.agents.graph import agent_graph as _default_graph
-from chronocanvas.agents.state import AgentState
+from chronocanvas.agents.state import AgentState, FaceState, ValidationState
 from chronocanvas.db.engine import async_session as _default_session_factory
 from chronocanvas.db.models.request import RequestStatus
 from chronocanvas.db.repositories.images import ImageRepository
@@ -89,11 +89,13 @@ async def run_generation_pipeline(
                 "retry_count": 0,
                 "should_regenerate": False,
                 "error": None,
-                "validation_rule_weights": validation_weights,
-                "validation_pass_threshold": validation_threshold,
+                "validation": ValidationState(
+                    rule_weights=validation_weights,
+                    pass_threshold=validation_threshold,
+                ),
             }
             if source_face_path:
-                initial_state["source_face_path"] = source_face_path
+                initial_state["face"] = FaceState(source_face_path=source_face_path)
 
             config = {"configurable": {"thread_id": request_id}}
             runner = _make_runner(repo, session, _graph)

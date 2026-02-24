@@ -3,7 +3,7 @@ import json
 import logging
 import time
 
-from chronocanvas.agents.state import AgentState
+from chronocanvas.agents.state import AgentState, ExtractionState
 from chronocanvas.llm.base import TaskType
 from chronocanvas.llm.router import get_llm_router
 
@@ -86,20 +86,21 @@ async def extraction_node(state: AgentState) -> AgentState:
     })
 
     return {
-        **state,
         "current_agent": "extraction",
-        "figure_name": data.get("figure_name", input_text),
-        "time_period": data.get("time_period", "Unknown"),
-        "region": data.get("region", "Unknown"),
-        "occupation": data.get("occupation", "Historical figure"),
-        "extracted_attributes": data.get("attributes", {}),
-        "alternative_names": data.get("alternative_names", []),
-        "birth_year": data.get("birth_year", ""),
-        "death_year": data.get("death_year", ""),
-        "notable_features": data.get("notable_features", ""),
-        "cultural_context": data.get("cultural_context", ""),
-        "historical_significance": data.get("historical_significance", ""),
-        "associated_locations": data.get("associated_locations", []),
+        "extraction": ExtractionState(
+            figure_name=data.get("figure_name", input_text),
+            time_period=data.get("time_period", "Unknown"),
+            region=data.get("region", "Unknown"),
+            occupation=data.get("occupation", "Historical figure"),
+            extracted_attributes=data.get("attributes", {}),
+            alternative_names=data.get("alternative_names", []),
+            birth_year=data.get("birth_year", ""),
+            death_year=data.get("death_year", ""),
+            notable_features=data.get("notable_features", ""),
+            cultural_context=data.get("cultural_context", ""),
+            historical_significance=data.get("historical_significance", ""),
+            associated_locations=data.get("associated_locations", []),
+        ),
         "agent_trace": trace,
         "llm_calls": llm_calls,
     }

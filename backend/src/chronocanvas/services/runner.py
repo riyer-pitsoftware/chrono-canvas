@@ -57,7 +57,8 @@ class GenerationRunner:
                 for node_name, node_state in event.items():
                     current_agent = node_state.get("current_agent", node_name)
 
-                    if current_agent == "image_generation" and node_state.get("image_path"):
+                    img = node_state.get("image", {})
+                    if current_agent == "image_generation" and img.get("image_path"):
                         self._recorder.on_image_generated(node_state)
 
                     if current_agent == "validation":
@@ -90,20 +91,24 @@ class GenerationRunner:
                     final_state = node_state
 
             if final_state:
+                ext = final_state.get("extraction", {})
+                res = final_state.get("research", {})
+                prompt_state = final_state.get("prompt", {})
+                val = final_state.get("validation", {})
                 update_data: dict[str, Any] = {
                     "status": RequestStatus.COMPLETED,
                     "extracted_data": {
-                        "figure_name": final_state.get("figure_name"),
-                        "time_period": final_state.get("time_period"),
-                        "region": final_state.get("region"),
-                        "occupation": final_state.get("occupation"),
+                        "figure_name": ext.get("figure_name"),
+                        "time_period": ext.get("time_period"),
+                        "region": ext.get("region"),
+                        "occupation": ext.get("occupation"),
                     },
                     "research_data": {
-                        "historical_context": final_state.get("historical_context"),
-                        "clothing_details": final_state.get("clothing_details"),
-                        "physical_description": final_state.get("physical_description"),
+                        "historical_context": res.get("historical_context"),
+                        "clothing_details": res.get("clothing_details"),
+                        "physical_description": res.get("physical_description"),
                     },
-                    "generated_prompt": final_state.get("image_prompt"),
+                    "generated_prompt": prompt_state.get("image_prompt"),
                     "agent_trace": final_state.get("agent_trace", []),
                     "llm_calls": final_state.get("llm_calls", []),
                 }
@@ -115,7 +120,7 @@ class GenerationRunner:
                 await self._repo.update(request_id, **update_data)
                 await self._recorder.flush(self._session, request_id, final_state)
 
-                validation_results = final_state.get("validation_results")
+                validation_results = val.get("validation_results")
                 if validation_results:
                     await save_validation_results(
                         self._session,

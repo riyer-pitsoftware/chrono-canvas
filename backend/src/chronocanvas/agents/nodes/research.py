@@ -3,7 +3,7 @@ import json
 import logging
 import time
 
-from chronocanvas.agents.state import AgentState
+from chronocanvas.agents.state import AgentState, ResearchState
 from chronocanvas.config import settings
 from chronocanvas.llm.base import TaskType
 from chronocanvas.llm.router import get_llm_router
@@ -34,9 +34,10 @@ Respond with valid JSON only."""
 
 
 async def research_node(state: AgentState) -> AgentState:
-    figure_name = state.get("figure_name", "")
-    time_period = state.get("time_period", "")
-    region = state.get("region", "")
+    ext = state.get("extraction", {})
+    figure_name = ext.get("figure_name", "")
+    time_period = ext.get("time_period", "")
+    region = ext.get("region", "")
     logger.info(f"Research agent: researching {figure_name}")
 
     cache_hit = False
@@ -60,11 +61,11 @@ async def research_node(state: AgentState) -> AgentState:
                 figure_name=figure_name,
                 time_period=time_period,
                 region=region,
-                occupation=state.get("occupation", ""),
-                birth_year=state.get("birth_year", "") or "unknown",
-                death_year=state.get("death_year", "") or "unknown",
-                notable_features=state.get("notable_features", "") or "none recorded",
-                cultural_context=state.get("cultural_context", "") or "not specified",
+                occupation=ext.get("occupation", ""),
+                birth_year=ext.get("birth_year", "") or "unknown",
+                death_year=ext.get("death_year", "") or "unknown",
+                notable_features=ext.get("notable_features", "") or "none recorded",
+                cultural_context=ext.get("cultural_context", "") or "not specified",
             ),
             task_type=TaskType.RESEARCH,
             request_id=state.get("request_id", ""),
@@ -119,14 +120,15 @@ async def research_node(state: AgentState) -> AgentState:
         })
 
     return {
-        **state,
         "current_agent": "research",
-        "research_cache_hit": cache_hit,
-        "historical_context": data.get("historical_context", ""),
-        "clothing_details": data.get("clothing_details", ""),
-        "physical_description": data.get("physical_description", ""),
-        "art_style_reference": data.get("art_style_reference", "Classical portrait"),
-        "research_sources": data.get("sources", []),
+        "research": ResearchState(
+            historical_context=data.get("historical_context", ""),
+            clothing_details=data.get("clothing_details", ""),
+            physical_description=data.get("physical_description", ""),
+            art_style_reference=data.get("art_style_reference", "Classical portrait"),
+            research_sources=data.get("sources", []),
+            research_cache_hit=cache_hit,
+        ),
         "agent_trace": trace,
         "llm_calls": llm_calls,
     }
