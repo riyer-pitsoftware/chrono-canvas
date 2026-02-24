@@ -25,7 +25,7 @@ Score each category 0-100 and provide details:
 1. clothing_plausibility: Are the clothes period-appropriate?
 2. cultural_plausibility: Are cultural elements plausible for the setting?
 3. temporal_plausibility: Are there anachronistic elements?
-4. artistic_style: Does the art style match the period?
+4. artistic_plausibility: Does the art style match the period?
 
 Return JSON with:
 - results: list of objects with (category, rule_name, passed, score, details, reasoning)

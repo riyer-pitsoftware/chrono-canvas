@@ -29,8 +29,8 @@
       {"name": "writing_systems", "description": "Any text should use appropriate writing systems"}
     ]
   },
-  "artistic_style": {
-    "description": "Validates that the art style matches the period",
+  "artistic_plausibility": {
+    "description": "Validates that the art style feels plausible for the period",
     "weight": 0.2,
     "rules": [
       {"name": "period_art_style", "description": "Art style should reflect the artistic traditions of the period"},

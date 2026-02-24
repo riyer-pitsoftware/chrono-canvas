@@ -20,7 +20,7 @@ _DEFAULT_RULES = [
     ("clothing_plausibility", "Clothing Plausibility", 0.25, "Are the clothes period-appropriate?"),
     ("cultural_plausibility", "Cultural Plausibility", 0.25, "Are cultural elements plausible for the setting?"),
     ("temporal_plausibility", "Temporal Plausibility", 0.25, "Are there anachronistic elements?"),
-    ("artistic_style", "Artistic Style", 0.25, "Does the art style match the period?"),
+    ("artistic_plausibility", "Artistic Plausibility", 0.25, "Does the art style match the period?"),
 ]
 
 

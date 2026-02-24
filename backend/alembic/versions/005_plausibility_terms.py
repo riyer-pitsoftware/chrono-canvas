@@ -19,6 +19,7 @@ _CATEGORY_RENAMES = [
     ("clothing_accuracy", "clothing_plausibility", "Clothing Plausibility"),
     ("cultural_accuracy", "cultural_plausibility", "Cultural Plausibility"),
     ("temporal_accuracy", "temporal_plausibility", "Temporal Plausibility"),
+    ("artistic_style", "artistic_plausibility", "Artistic Plausibility"),
 ]
 
 
@@ -39,8 +40,12 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    _DISPLAY_DOWNGRADES = {
+        "artistic_style": "Artistic Style",  # original name was "Style", not "Accuracy"
+    }
     conn = op.get_bind()
     for old, new, display in _CATEGORY_RENAMES:
+        old_display = _DISPLAY_DOWNGRADES.get(old, display.replace("Plausibility", "Accuracy"))
         conn.execute(
             sa.text(
                 """
@@ -50,5 +55,5 @@ def downgrade() -> None:
                 WHERE category = :new_category
                 """
             ),
-            {"old_category": old, "old_display": display.replace("Plausibility", "Accuracy"), "new_category": new},
+            {"old_category": old, "old_display": old_display, "new_category": new},
         )
