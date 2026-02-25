@@ -1,6 +1,6 @@
 from langgraph.graph import END, StateGraph
 
-from chronocanvas.agents.checkpointer import checkpointer
+import chronocanvas.agents.checkpointer as _ckpt
 from chronocanvas.agents.decisions import (
     should_continue_after_image,
     should_continue_after_orchestrator,
@@ -64,8 +64,19 @@ def build_graph() -> StateGraph:
 
 def get_compiled_graph():
     graph = build_graph()
-    return graph.compile(checkpointer=checkpointer)
+    return graph.compile(checkpointer=_ckpt.checkpointer)
 
 
-# Singleton compiled graph
+def recompile_graph():
+    """Recompile the singleton graph with the current checkpointer.
+
+    Called after ``init_checkpointer`` upgrades from MemorySaver to
+    AsyncPostgresSaver so that the running graph uses durable storage.
+    """
+    global agent_graph
+    agent_graph = get_compiled_graph()
+
+
+# Singleton compiled graph — initially compiled with MemorySaver,
+# then recompiled with the durable checkpointer during startup.
 agent_graph = get_compiled_graph()

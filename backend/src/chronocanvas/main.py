@@ -8,6 +8,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from chronocanvas.agents.checkpointer import close_checkpointer, init_checkpointer
+from chronocanvas.agents.graph import recompile_graph
 from chronocanvas.api.middleware import AuditLoggingMiddleware
 from chronocanvas.api.router import api_router
 from chronocanvas.api.websocket import generation_websocket
@@ -36,8 +38,11 @@ async def lifespan(app: FastAPI):
     os.makedirs(settings.output_dir, exist_ok=True)
     os.makedirs(settings.upload_dir, exist_ok=True)
     app.state.arq_pool = await create_pool(RedisSettings.from_dsn(settings.redis_url))
+    await init_checkpointer()
+    recompile_graph()
     yield
     logger.info("ChronoCanvas shutting down")
+    await close_checkpointer()
     await app.state.arq_pool.close()
     await close_redis()
 
