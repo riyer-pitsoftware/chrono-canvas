@@ -1,12 +1,21 @@
 """Executable architecture invariants for the ChronoCanvas pipeline.
 
 Each function validates a specific contract from docs/architecture-invariants.md.
-Callable from tests and optionally at runtime via ``settings.invariant_checks_enabled``.
+Callable from tests and at runtime via ``settings.invariant_checks_enabled``.
+
+Runtime enforcement is wired through the :func:`checked` decorator which wraps
+node functions with precondition, postcondition, and LLM-call audit checks.
+When ``invariant_strict`` is True, violations raise; otherwise they are logged
+as warnings so the pipeline is never blocked in production.
 """
 
 from __future__ import annotations
 
-from typing import Any
+import functools
+import logging
+from typing import Any, Callable
+
+logger = logging.getLogger(__name__)
 
 
 class InvariantViolationError(AssertionError):
@@ -328,3 +337,75 @@ def validate_trace_completeness(
             raise InvariantViolationError(
                 f"trace completeness: missing nodes: {', '.join(missing)}"
             )
+
+
+# ---------------------------------------------------------------------------
+# 5. Runtime enforcement decorator
+# ---------------------------------------------------------------------------
+
+
+def _report(violation: InvariantViolationError, *, strict: bool) -> None:
+    """Log the violation; re-raise only when strict mode is on."""
+    logger.warning("INVARIANT VIOLATION: %s", violation)
+    if strict:
+        raise violation
+
+
+def checked(node_name: str) -> Callable:
+    """Wrap an async node function with runtime invariant checks.
+
+    Reads ``settings.invariant_checks_enabled`` / ``settings.invariant_strict``
+    at call time so the feature can be toggled without restarting.
+
+    Usage in ``graph.py``::
+
+        graph.add_node("extraction", checked("extraction")(extraction_node))
+    """
+
+    def decorator(fn: Callable) -> Callable:
+        @functools.wraps(fn)
+        async def wrapper(state: dict[str, Any]) -> dict[str, Any]:
+            from chronocanvas.config import settings
+
+            if not settings.invariant_checks_enabled:
+                return await fn(state)
+
+            strict = settings.invariant_strict
+
+            # --- Preconditions ---
+            try:
+                check_precondition(node_name, state)
+            except InvariantViolationError as exc:
+                _report(exc, strict=strict)
+
+            # --- Run the actual node ---
+            result = await fn(state)
+
+            # --- Postconditions ---
+            try:
+                validate_node_output(node_name, result)
+            except InvariantViolationError as exc:
+                _report(exc, strict=strict)
+
+            # --- LLM-call audit completeness (check latest calls only) ---
+            llm_calls = result.get("llm_calls", [])
+            if llm_calls:
+                # Only validate the tail entries added by this node
+                prev_count = len(state.get("llm_calls", []))
+                new_calls = llm_calls[prev_count:]
+                for i, call in enumerate(new_calls):
+                    issues = validate_llm_call(call)
+                    if issues:
+                        _report(
+                            InvariantViolationError(
+                                f"{node_name} llm_calls[{prev_count + i}]: "
+                                f"{', '.join(issues)}"
+                            ),
+                            strict=strict,
+                        )
+
+            return result
+
+        return wrapper
+
+    return decorator

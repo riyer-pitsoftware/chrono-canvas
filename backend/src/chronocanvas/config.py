@@ -67,7 +67,8 @@ class Settings(BaseSettings):
     research_cache_model: str = "all-MiniLM-L6-v2"
 
     # Invariant checks (runtime validation of pipeline contracts)
-    invariant_checks_enabled: bool = False
+    invariant_checks_enabled: bool = True    # run pre/postcondition checks on pipeline nodes
+    invariant_strict: bool = False           # raise on violation (True) vs log warning (False)
 
     # Logging
     log_level: str = "INFO"

@@ -2,6 +2,7 @@ import logging
 import uuid
 
 from chronocanvas.agents.graph import agent_graph as _default_graph
+from chronocanvas.agents.invariants import InvariantViolationError, validate_initial_state
 from chronocanvas.agents.state import AgentState, FaceState, ValidationState
 from chronocanvas.db.engine import async_session as _default_session_factory
 from chronocanvas.db.models.request import RequestStatus
@@ -96,6 +97,11 @@ async def run_generation_pipeline(
             }
             if source_face_path:
                 initial_state["face"] = FaceState(source_face_path=source_face_path)
+
+            try:
+                validate_initial_state(initial_state)
+            except InvariantViolationError:
+                logger.warning("Initial state invariant violation for %s", request_id)
 
             config = {"configurable": {"thread_id": request_id}}
             runner = _make_runner(repo, session, _graph)

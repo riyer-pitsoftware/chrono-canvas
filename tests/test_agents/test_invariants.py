@@ -6,11 +6,15 @@ import time
 
 import pytest
 
+from unittest.mock import patch
+
 from chronocanvas.agents.invariants import (
     FULL_PIPELINE_NODES,
     InvariantViolationError,
+    _report,
     check_postcondition,
     check_precondition,
+    checked,
     validate_all_llm_calls,
     validate_initial_state,
     validate_llm_call,
@@ -340,3 +344,125 @@ class TestTraceCompleteness:
     def test_trace_entry_zero_timestamp(self):
         with pytest.raises(InvariantViolationError, match="timestamp"):
             validate_trace_entry({"agent": "extraction", "timestamp": 0})
+
+
+# ---------------------------------------------------------------------------
+# TestReport
+# ---------------------------------------------------------------------------
+
+
+class TestReport:
+    def test_report_logs_warning(self, caplog):
+        exc = InvariantViolationError("test violation")
+        with caplog.at_level("WARNING"):
+            _report(exc, strict=False)
+        assert "INVARIANT VIOLATION" in caplog.text
+        assert "test violation" in caplog.text
+
+    def test_report_strict_raises(self):
+        exc = InvariantViolationError("strict violation")
+        with pytest.raises(InvariantViolationError, match="strict violation"):
+            _report(exc, strict=True)
+
+    def test_report_non_strict_does_not_raise(self):
+        exc = InvariantViolationError("soft violation")
+        _report(exc, strict=False)  # should not raise
+
+
+# ---------------------------------------------------------------------------
+# TestCheckedDecorator
+# ---------------------------------------------------------------------------
+
+
+class TestCheckedDecorator:
+    @pytest.fixture()
+    def _enable_invariants(self):
+        with patch("chronocanvas.config.settings") as mock_settings:
+            mock_settings.invariant_checks_enabled = True
+            mock_settings.invariant_strict = False
+            yield mock_settings
+
+    @pytest.fixture()
+    def _disable_invariants(self):
+        with patch("chronocanvas.config.settings") as mock_settings:
+            mock_settings.invariant_checks_enabled = False
+            yield mock_settings
+
+    @pytest.mark.asyncio
+    @pytest.mark.usefixtures("_enable_invariants")
+    async def test_checked_runs_node_and_returns_result(self):
+        async def extraction_node(state):
+            return {
+                "current_agent": "extraction",
+                "extraction": {"figure_name": "Napoleon"},
+                "llm_calls": state.get("llm_calls", []) + [make_llm_call()],
+            }
+
+        wrapped = checked("extraction")(extraction_node)
+        state = make_state(extraction={"figure_name": "Napoleon"})
+        result = await wrapped(state)
+        assert result["extraction"]["figure_name"] == "Napoleon"
+
+    @pytest.mark.asyncio
+    @pytest.mark.usefixtures("_disable_invariants")
+    async def test_checked_bypassed_when_disabled(self):
+        """When invariant_checks_enabled=False, decorator is a passthrough."""
+        call_count = 0
+
+        async def my_node(state):
+            nonlocal call_count
+            call_count += 1
+            return {"current_agent": "extraction"}
+
+        wrapped = checked("extraction")(my_node)
+        # Pass bad state — should not raise since checks are disabled
+        await wrapped({})
+        assert call_count == 1
+
+    @pytest.mark.asyncio
+    @pytest.mark.usefixtures("_enable_invariants")
+    async def test_checked_logs_precondition_violation_non_strict(self, caplog):
+        async def extraction_node(state):
+            return {
+                "current_agent": "extraction",
+                "extraction": {"figure_name": "Napoleon"},
+            }
+
+        wrapped = checked("extraction")(extraction_node)
+        # Missing input_text — precondition violation
+        state = {"request_id": "r1", "agent_trace": [], "llm_calls": [], "retry_count": 0}
+        with caplog.at_level("WARNING"):
+            result = await wrapped(state)
+        assert "INVARIANT VIOLATION" in caplog.text
+        assert result["extraction"]["figure_name"] == "Napoleon"
+
+    @pytest.mark.asyncio
+    async def test_checked_strict_raises_on_postcondition(self):
+        with patch("chronocanvas.config.settings") as mock_settings:
+            mock_settings.invariant_checks_enabled = True
+            mock_settings.invariant_strict = True
+
+            async def bad_extraction(state):
+                return {"current_agent": "extraction", "extraction": {}}
+
+            wrapped = checked("extraction")(bad_extraction)
+            state = make_state()
+            with pytest.raises(InvariantViolationError):
+                await wrapped(state)
+
+    @pytest.mark.asyncio
+    @pytest.mark.usefixtures("_enable_invariants")
+    async def test_checked_validates_new_llm_calls(self, caplog):
+        async def node_with_bad_llm_call(state):
+            return {
+                "current_agent": "extraction",
+                "extraction": {"figure_name": "Napoleon"},
+                "llm_calls": state.get("llm_calls", []) + [{"agent": "extraction"}],
+            }
+
+        wrapped = checked("extraction")(node_with_bad_llm_call)
+        state = make_state()
+        with caplog.at_level("WARNING"):
+            await wrapped(state)
+        assert "INVARIANT VIOLATION" in caplog.text
+        assert "missing" in caplog.text

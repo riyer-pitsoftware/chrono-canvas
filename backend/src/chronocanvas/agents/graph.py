@@ -6,6 +6,7 @@ from chronocanvas.agents.decisions import (
     should_continue_after_orchestrator,
     should_continue_after_validation,
 )
+from chronocanvas.agents.invariants import checked
 from chronocanvas.agents.nodes.export import export_node
 from chronocanvas.agents.nodes.extraction import extraction_node
 from chronocanvas.agents.nodes.face_search import face_search_node
@@ -21,16 +22,16 @@ from chronocanvas.agents.state import AgentState
 def build_graph() -> StateGraph:
     graph = StateGraph(AgentState)
 
-    # Add nodes
-    graph.add_node("orchestrator", orchestrator_node)
-    graph.add_node("extraction", extraction_node)
-    graph.add_node("research", research_node)
-    graph.add_node("face_search", face_search_node)
-    graph.add_node("prompt_generation", prompt_generation_node)
-    graph.add_node("image_generation", image_generation_node)
-    graph.add_node("validation", validation_node)
-    graph.add_node("facial_compositing", facial_compositing_node)
-    graph.add_node("export", export_node)
+    # Add nodes — each wrapped with runtime invariant checks
+    graph.add_node("orchestrator", checked("orchestrator")(orchestrator_node))
+    graph.add_node("extraction", checked("extraction")(extraction_node))
+    graph.add_node("research", checked("research")(research_node))
+    graph.add_node("face_search", checked("face_search")(face_search_node))
+    graph.add_node("prompt_generation", checked("prompt_generation")(prompt_generation_node))
+    graph.add_node("image_generation", checked("image_generation")(image_generation_node))
+    graph.add_node("validation", checked("validation")(validation_node))
+    graph.add_node("facial_compositing", checked("facial_compositing")(facial_compositing_node))
+    graph.add_node("export", checked("export")(export_node))
 
     # Define edges
     graph.set_entry_point("orchestrator")
