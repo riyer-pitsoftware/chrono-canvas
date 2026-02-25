@@ -15,6 +15,7 @@ from chronocanvas.api.router import api_router
 from chronocanvas.api.websocket import generation_websocket
 from chronocanvas.config import settings
 from chronocanvas.redis_client import close_redis
+from chronocanvas.service_registry import init_registry
 
 logging.basicConfig(level=getattr(logging, settings.log_level))
 logger = logging.getLogger(__name__)
@@ -38,6 +39,7 @@ async def lifespan(app: FastAPI):
     os.makedirs(settings.output_dir, exist_ok=True)
     os.makedirs(settings.upload_dir, exist_ok=True)
     app.state.arq_pool = await create_pool(RedisSettings.from_dsn(settings.redis_url))
+    init_registry()
     await init_checkpointer()
     recompile_graph()
     yield

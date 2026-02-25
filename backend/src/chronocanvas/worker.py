@@ -3,10 +3,12 @@ from arq.connections import RedisSettings
 from chronocanvas.agents.checkpointer import close_checkpointer, init_checkpointer
 from chronocanvas.agents.graph import recompile_graph
 from chronocanvas.config import settings
+from chronocanvas.service_registry import init_registry
 from chronocanvas.services.generation import retry_generation_pipeline, run_generation_pipeline
 
 
 async def startup(ctx: dict) -> None:
+    init_registry()
     await init_checkpointer()
     recompile_graph()
 

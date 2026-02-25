@@ -4,19 +4,19 @@ from pathlib import Path
 
 from chronocanvas.agents.state import AgentState, ImageState
 from chronocanvas.config import settings
-from chronocanvas.imaging.comfyui_client import ComfyUIClient
-from chronocanvas.imaging.mock_generator import MockImageGenerator
-from chronocanvas.imaging.sd_client import StableDiffusionClient
 from chronocanvas.redis_client import publish_progress
+from chronocanvas.service_registry import get_registry
 
 logger = logging.getLogger(__name__)
 
 
 def _get_generator():
-    if settings.image_provider == "stable_diffusion":
-        return StableDiffusionClient()
-    elif settings.image_provider == "comfyui":
-        return ComfyUIClient()
+    factory = get_registry().image_generator_factory
+    if factory is not None:
+        return factory()
+    # Fallback before registry init (tests, CLI)
+    from chronocanvas.imaging.mock_generator import MockImageGenerator
+
     return MockImageGenerator()
 
 

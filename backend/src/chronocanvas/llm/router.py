@@ -175,18 +175,18 @@ class LLMRouter:
         return result
 
 
-_llm_router: LLMRouter | None = None
-
-
 def get_llm_router() -> LLMRouter:
-    """Return the process-wide LLMRouter, creating it on first call.
+    """Return the process-wide LLMRouter from the service registry.
 
-    Tests can substitute a different instance before the first call by
-    setting ``chronocanvas.llm.router._llm_router = <mock>`` (or via
-    ``monkeypatch.setattr``).  Production code should always call this
-    function rather than importing the bare name.
+    In production the registry is populated during startup.  If called
+    before startup (e.g. during import-time graph compilation) this falls
+    back to creating a fresh instance so the module stays importable.
     """
-    global _llm_router
-    if _llm_router is None:
-        _llm_router = LLMRouter()
-    return _llm_router
+    from chronocanvas.service_registry import get_registry
+
+    router = get_registry().llm_router
+    if router is None:
+        # Fallback for early access before registry init (tests, CLI tools)
+        router = LLMRouter()
+        get_registry().llm_router = router
+    return router

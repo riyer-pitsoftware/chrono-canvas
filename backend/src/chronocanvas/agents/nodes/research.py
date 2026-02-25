@@ -7,10 +7,20 @@ from chronocanvas.agents.state import AgentState, ResearchState
 from chronocanvas.config import settings
 from chronocanvas.llm.base import TaskType
 from chronocanvas.llm.router import get_llm_router
-from chronocanvas.memory.cache_service import ResearchCacheService
+from chronocanvas.service_registry import get_registry
 
 logger = logging.getLogger(__name__)
-_cache_service = ResearchCacheService()
+
+
+def _get_cache_service():
+    cache = get_registry().research_cache
+    if cache is not None:
+        return cache
+    from chronocanvas.memory.cache_service import ResearchCacheService
+
+    cache = ResearchCacheService()
+    get_registry().research_cache = cache
+    return cache
 
 RESEARCH_PROMPT = """You are a historical research expert. Research the following historical figure
 for the purpose of generating an accurate portrait.
@@ -46,7 +56,7 @@ async def research_node(state: AgentState) -> AgentState:
 
     # Check cache first
     if settings.research_cache_enabled:
-        cached_data = await _cache_service.lookup(
+        cached_data = await _get_cache_service().lookup(
             figure_name, time_period, region, settings.research_cache_threshold
         )
         if cached_data:
@@ -88,7 +98,7 @@ async def research_node(state: AgentState) -> AgentState:
 
         # Store in cache
         if settings.research_cache_enabled:
-            await _cache_service.store(
+            await _get_cache_service().store(
                 figure_name, time_period, region, data, response.cost
             )
 

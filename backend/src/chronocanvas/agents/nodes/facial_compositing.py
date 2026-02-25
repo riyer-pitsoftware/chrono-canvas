@@ -5,15 +5,18 @@ from pathlib import Path
 
 from chronocanvas.agents.state import AgentState, CompositingState
 from chronocanvas.config import settings
-from chronocanvas.imaging.facefusion_client import FaceFusionClient
-from chronocanvas.imaging.mock_face_swap import MockFaceSwapClient
+from chronocanvas.service_registry import get_registry
 
 logger = logging.getLogger(__name__)
 
 
 def _get_compositing_client():
-    if settings.facefusion_enabled:
-        return FaceFusionClient()
+    factory = get_registry().compositing_client_factory
+    if factory is not None:
+        return factory()
+    # Fallback before registry init (tests, CLI)
+    from chronocanvas.imaging.mock_face_swap import MockFaceSwapClient
+
     return MockFaceSwapClient()
 
 
