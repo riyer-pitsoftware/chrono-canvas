@@ -11,6 +11,15 @@ from chronocanvas.services.state_projector import RequestStateProjector
 from chronocanvas.services.validation import save_validation_results
 
 logger = logging.getLogger(__name__)
+_invariant_checks: bool | None = None
+
+
+def _invariants_enabled() -> bool:
+    global _invariant_checks
+    if _invariant_checks is None:
+        from chronocanvas.config import settings
+        _invariant_checks = settings.invariant_checks_enabled
+    return _invariant_checks
 
 
 class GenerationRunner:
@@ -86,6 +95,16 @@ class GenerationRunner:
                             current_agent,
                             exc_info=True,
                         )
+
+                    if _invariants_enabled():
+                        from chronocanvas.agents.invariants import (
+                            InvariantViolationError,
+                            check_postcondition,
+                        )
+                        try:
+                            check_postcondition(node_name, node_state)
+                        except InvariantViolationError:
+                            logger.warning("Invariant violation in %s", node_name, exc_info=True)
 
                     last_successful_agent = current_agent
                     final_state = node_state

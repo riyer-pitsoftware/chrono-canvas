@@ -66,6 +66,9 @@ class Settings(BaseSettings):
     research_cache_threshold: float = 0.85   # cosine similarity threshold for a cache hit
     research_cache_model: str = "all-MiniLM-L6-v2"
 
+    # Invariant checks (runtime validation of pipeline contracts)
+    invariant_checks_enabled: bool = False
+
     # Logging
     log_level: str = "INFO"
 
