@@ -94,9 +94,15 @@ def make_rater(rater_name: str, model: str | None = None, temperature: float = 0
             model=model or "gpt-4o",
             temperature=temperature,
         )
+    elif rater_name in ("claude", "claude-vision"):
+        from eval.raters.claude import ClaudeRater
+        return ClaudeRater(
+            model=model or "claude-sonnet-4-5-20250929",
+            temperature=temperature,
+        )
     else:
         print(f"Error: unknown rater '{rater_name}'", file=sys.stderr)
-        print("Available raters: codex", file=sys.stderr)
+        print("Available raters: codex, claude", file=sys.stderr)
         sys.exit(1)
 
 
@@ -171,7 +177,7 @@ Examples:
     parser.add_argument(
         "--rater",
         required=True,
-        help="Rater to use (codex)",
+        help="Rater to use (codex, claude)",
     )
     parser.add_argument(
         "--runs",
