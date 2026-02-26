@@ -34,6 +34,8 @@ from pathlib import Path
 import httpx
 import yaml
 
+from heuristics import run_heuristics
+
 logger = logging.getLogger(__name__)
 
 EVAL_ROOT = Path(__file__).resolve().parent.parent
@@ -179,6 +181,12 @@ async def run_direct(
     (run_dir / "output_text.md").write_text(
         f"# Baseline {condition} — {case['title']}\n\n**Prompt:** {prompt}\n"
     )
+
+    # Run heuristic checks and merge into manifest
+    heuristic_result = run_heuristics(run_dir)
+    manifest["heuristic_pass"] = heuristic_result["passed"]
+    manifest["heuristic_failures"] = heuristic_result["failures"]
+    (run_dir / "run_manifest.json").write_text(json.dumps(manifest, indent=2))
 
     print(f"    OK — {latency_ms:.0f}ms — {run_dir.name}")
     return manifest
@@ -334,6 +342,12 @@ async def run_pipeline(
                 "api_url": api_url,
             },
         }
+        (run_dir / "run_manifest.json").write_text(json.dumps(manifest, indent=2))
+
+        # Run heuristic checks and merge into manifest
+        heuristic_result = run_heuristics(run_dir)
+        manifest["heuristic_pass"] = heuristic_result["passed"]
+        manifest["heuristic_failures"] = heuristic_result["failures"]
         (run_dir / "run_manifest.json").write_text(json.dumps(manifest, indent=2))
 
         status_icon = "OK" if success else "FAILED"
