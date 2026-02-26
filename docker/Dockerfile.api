@@ -4,6 +4,7 @@ WORKDIR /app
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
+    netcat-openbsd \
     && rm -rf /var/lib/apt/lists/*
 
 # Install dependencies first (cached unless pyproject.toml changes)
@@ -25,6 +26,10 @@ COPY backend/alembic/ alembic/
 COPY backend/alembic.ini .
 COPY seed/ /app/seed/
 
+# Entrypoint scripts for dependency waiting
+COPY docker/entrypoint.sh docker/wait-for-it.sh /app/docker/
+RUN chmod +x /app/docker/entrypoint.sh /app/docker/wait-for-it.sh
+
 # Create non-root user and set up writable dirs
 RUN groupadd --gid 1000 appuser \
     && useradd --uid 1000 --gid appuser --shell /bin/false appuser \
@@ -35,4 +40,5 @@ USER appuser
 
 EXPOSE 8000
 
+ENTRYPOINT ["/app/docker/entrypoint.sh"]
 CMD ["uvicorn", "chronocanvas.main:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -43,6 +43,7 @@ services:
       DATABASE_URL: postgresql+asyncpg://chronocanvas:chronocanvas@db:5432/chronocanvas
       REDIS_URL: redis://redis:6379/0
       COMFYUI_API_URL: http://host.docker.internal:8188
+      RUN_MIGRATIONS: "true"
     ports:
       - "8000:8000"
     depends_on:
