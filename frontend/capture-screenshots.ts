@@ -4,16 +4,17 @@
  * Prerequisites:
  *   - Full stack running (`make dev`) — API on :8000, frontend on :3000, ComfyUI for image gen
  *   - `cd frontend && npm install` (Playwright is a devDep)
+ *   - Chromium browser installed: `cd frontend && npx playwright install chromium`
  *
  * Usage:
- *   cd frontend && npx tsx ../scripts/capture-screenshots.ts
+ *   cd frontend && npm run capture-screenshots
  *
  * Produces:
  *   docs/images/generated-portrait.png
  *   docs/images/audit-trail.png
  */
 
-import { chromium } from "@playwright/test";
+import { chromium } from "playwright";
 import { resolve, dirname } from "path";
 import { existsSync, mkdirSync } from "fs";
 
