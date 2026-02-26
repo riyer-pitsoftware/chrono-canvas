@@ -57,6 +57,25 @@ All Docker services are defined in `docker-compose.dev.yml`. The API server runs
 ## Common commands
 
 ```bash
+# Lifecycle
+make start      # build + start all services (alias: make dev)
+make stop       # stop all services (alias: make down)
+make restart    # stop + start
+make fresh      # full reset: volumes wiped, rebuilt, re-seeded
+
+# Monitoring
+make status     # show running containers
+make logs       # tail all service logs
+make logs-api   # tail API logs only
+make logs-worker    # tail worker logs only
+make logs-frontend  # tail frontend logs only
+make health     # curl health endpoints for API and frontend
+
+# Shell access
+make shell-api  # bash into the API container
+make db-shell   # psql into the database
+
+# Development
 make backend    # run API server with hot reload (outside Docker)
 make frontend   # run Vite dev server
 make test       # run all tests
@@ -67,6 +86,29 @@ make down       # stop all Docker services
 make build      # rebuild Docker images
 make clean      # full clean including volumes and generated output
 ```
+
+---
+
+## Docker entrypoint & service startup
+
+Both the `api` and `worker` containers use a shared entrypoint script (`docker/entrypoint.sh`) that runs before the main process:
+
+1. **Wait for PostgreSQL** — TCP check on `db:5432` with 30-second timeout
+2. **Wait for Redis** — TCP check on `redis:6379` with 30-second timeout
+3. **Run Alembic migrations** — only when `RUN_MIGRATIONS=true` (set for `api`, not `worker`)
+4. **Exec into the command** — `uvicorn` for api, `arq` for worker
+
+The TCP checks use `docker/wait-for-it.sh`, a lightweight netcat-based utility. This provides a safety net on top of Docker Compose's `depends_on: condition: service_healthy` — if a service becomes briefly unavailable after its health check passes, the entrypoint will wait rather than crash.
+
+Environment variables:
+
+| Variable | Default | Description |
+|---|---|---|
+| `RUN_MIGRATIONS` | `false` | Set to `true` to run `alembic upgrade head` on startup |
+| `DB_HOST` | `db` | PostgreSQL hostname for wait check |
+| `DB_PORT` | `5432` | PostgreSQL port for wait check |
+| `REDIS_HOST` | `redis` | Redis hostname for wait check |
+| `REDIS_PORT` | `6379` | Redis port for wait check |
 
 ---
 
