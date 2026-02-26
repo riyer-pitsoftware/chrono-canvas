@@ -17,6 +17,14 @@ class ValidationRuleResponse(BaseModel):
     updated_at: datetime
 
 
+class CreateValidationRuleRequest(BaseModel):
+    category: str = Field(..., min_length=1, max_length=100, pattern=r"^[a-z][a-z0-9_]*$")
+    display_name: str = Field(..., min_length=1, max_length=255)
+    weight: float = Field(0.25, ge=0.0, le=1.0)
+    description: str | None = None
+    enabled: bool = True
+
+
 class UpdateValidationRuleRequest(BaseModel):
     weight: float = Field(..., ge=0.0, le=1.0)
     enabled: bool | None = None

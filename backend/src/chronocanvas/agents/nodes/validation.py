@@ -22,10 +22,7 @@ Image Prompt: {image_prompt}
 
 Use the life dates and cultural context above to ground your plausibility assessment.
 Score each category 0-100 and provide details:
-1. clothing_plausibility: Are the clothes period-appropriate?
-2. cultural_plausibility: Are cultural elements plausible for the setting?
-3. temporal_plausibility: Are there anachronistic elements?
-4. artistic_plausibility: Does the art style match the period?
+{category_list}
 
 Return JSON with:
 - results: list of objects with (category, rule_name, passed, score, details, reasoning)
@@ -36,6 +33,28 @@ Return JSON with:
 
 Respond with valid JSON only."""
 
+# Fallback category descriptions when rule_weights don't carry descriptions
+_DEFAULT_CATEGORY_DESCRIPTIONS: dict[str, str] = {
+    "clothing_plausibility": "Are the clothes period-appropriate?",
+    "cultural_plausibility": "Are cultural elements plausible for the setting?",
+    "temporal_plausibility": "Are there anachronistic elements?",
+    "artistic_plausibility": "Does the art style match the period?",
+    "pose_plausibility": "Is the stance/gesture appropriate for the figure's role and era?",
+    "lighting_plausibility": "Are light sources consistent with what was available in the era?",
+    "color_palette_plausibility": "Are the pigments and dyes historically available for this period?",
+}
+
+
+def _build_category_list(rule_weights: dict[str, float]) -> str:
+    """Build a numbered list of categories for the validation prompt."""
+    if not rule_weights:
+        rule_weights = {k: 0.25 for k in list(_DEFAULT_CATEGORY_DESCRIPTIONS)[:4]}
+    lines = []
+    for i, category in enumerate(rule_weights, 1):
+        desc = _DEFAULT_CATEGORY_DESCRIPTIONS.get(category, f"Evaluate {category.replace('_', ' ')}")
+        lines.append(f"{i}. {category}: {desc}")
+    return "\n".join(lines)
+
 
 async def validation_node(state: AgentState) -> AgentState:
     ext = state.get("extraction", {})
@@ -43,6 +62,9 @@ async def validation_node(state: AgentState) -> AgentState:
     val = state.get("validation", {})
     figure_name = ext.get("figure_name", "")
     logger.info(f"Validation agent: validating output for {figure_name}")
+
+    rule_weights: dict[str, float] = val.get("rule_weights") or {}
+    category_list = _build_category_list(rule_weights)
 
     response = await get_llm_router().generate(
         prompt=VALIDATION_PROMPT.format(
@@ -53,6 +75,7 @@ async def validation_node(state: AgentState) -> AgentState:
             death_year=ext.get("death_year", "") or "unknown",
             cultural_context=ext.get("cultural_context", "") or "not specified",
             image_prompt=prompt_state.get("image_prompt", ""),
+            category_list=category_list,
         ),
         task_type=TaskType.VALIDATION,
         temperature=0.3,
@@ -72,7 +95,6 @@ async def validation_node(state: AgentState) -> AgentState:
         }
 
     # Use weighted scoring if rule weights are present in state; fallback to simple average
-    rule_weights: dict[str, float] = val.get("rule_weights") or {}
     pass_threshold: float = val.get("pass_threshold") or 70.0
 
     llm_overall = data.get("overall_score", 75.0)

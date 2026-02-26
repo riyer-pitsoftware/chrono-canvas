@@ -18,6 +18,11 @@ class ValidationRuleRepository(BaseRepository[ValidationRule]):
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
 
+    async def get_by_category(self, category: str) -> ValidationRule | None:
+        stmt = select(ValidationRule).where(ValidationRule.category == category)
+        result = await self.session.execute(stmt)
+        return result.scalars().first()
+
     async def get_weights(self) -> dict[str, float]:
         """Return {category: weight} for all enabled rules."""
         rules = await self.list_all()

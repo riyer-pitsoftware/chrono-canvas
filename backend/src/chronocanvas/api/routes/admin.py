@@ -6,6 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from chronocanvas.api.schemas.admin import (
+    CreateValidationRuleRequest,
     HumanReviewRequest,
     HumanReviewResponse,
     UpdateValidationRuleRequest,
@@ -59,6 +60,41 @@ async def update_validation_rule(
         raise HTTPException(status_code=404, detail="Validation rule not found")
     await session.commit()
     return ValidationRuleResponse.model_validate(rule)
+
+
+@router.post("/validation/rules", response_model=ValidationRuleResponse, status_code=201)
+async def create_validation_rule(
+    body: CreateValidationRuleRequest,
+    session: AsyncSession = Depends(get_session),
+):
+    rule_repo = ValidationRuleRepository(session)
+    existing = await rule_repo.get_by_category(body.category)
+    if existing is not None:
+        raise HTTPException(
+            status_code=409,
+            detail=f"A rule with category '{body.category}' already exists",
+        )
+    rule = await rule_repo.create(
+        category=body.category,
+        display_name=body.display_name,
+        weight=body.weight,
+        description=body.description,
+        enabled=body.enabled,
+    )
+    await session.commit()
+    return ValidationRuleResponse.model_validate(rule)
+
+
+@router.delete("/validation/rules/{rule_id}", status_code=204)
+async def delete_validation_rule(
+    rule_id: uuid.UUID,
+    session: AsyncSession = Depends(get_session),
+):
+    rule_repo = ValidationRuleRepository(session)
+    deleted = await rule_repo.delete(rule_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Validation rule not found")
+    await session.commit()
 
 
 @router.put("/validation/threshold", response_model=dict)
