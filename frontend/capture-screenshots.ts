@@ -2,12 +2,13 @@
  * Capture README screenshots via Playwright.
  *
  * Prerequisites:
- *   - Full stack running (`make dev`) — API on :8000, frontend on :3000, ComfyUI for image gen
+ *   - Full stack running (`make dev`) — API on :8000, frontend on :3000
  *   - `cd frontend && npm install` (Playwright is a devDep)
  *   - Chromium browser installed: `cd frontend && npx playwright install chromium`
  *
  * Usage:
  *   cd frontend && npm run capture-screenshots
+ *   cd frontend && npm run capture-screenshots -- --request-id <existing-id>
  *
  * Produces:
  *   docs/images/generated-portrait.png
@@ -49,43 +50,63 @@ async function main() {
     mkdirSync(OUTPUT_DIR, { recursive: true });
   }
 
+  // Parse --request-id from CLI args
+  const requestIdArg = (() => {
+    const idx = process.argv.indexOf("--request-id");
+    return idx !== -1 && process.argv[idx + 1] ? process.argv[idx + 1] : null;
+  })();
+
   // 1. Health check
   console.log("Checking API health…");
   try {
-    await apiFetch("/health");
-  } catch (e) {
+    await apiFetch("/api/health");
+  } catch {
     console.error(`API is not reachable at ${API_BASE}. Start the stack first (make dev).`);
     process.exit(1);
   }
   console.log("API is healthy.");
 
-  // 2. Trigger generation
-  console.log("Triggering generation…");
-  const { id: requestId } = await apiFetch<{ id: string }>("/api/generate", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      input_text: "Aryabhata, 5th-century Indian mathematician and astronomer",
-    }),
-  });
-  console.log(`Generation started: ${requestId}`);
+  let requestId: string;
 
-  // 3. Poll for completion
-  console.log("Waiting for pipeline to complete (timeout 180s)…");
-  const start = Date.now();
-  let status = "pending";
-  while (Date.now() - start < TIMEOUT_MS) {
+  if (requestIdArg) {
+    // Use existing generation
+    requestId = requestIdArg;
+    console.log(`Using existing generation: ${requestId}`);
     const gen = await apiFetch<{ status: string }>(`/api/generate/${requestId}`);
-    status = gen.status;
-    if (status === "completed" || status === "failed") break;
-    process.stdout.write(".");
-    await sleep(POLL_INTERVAL_MS);
-  }
-  console.log();
+    if (gen.status !== "completed") {
+      console.error(`Generation ${requestId} is not completed (status: ${gen.status}).`);
+      process.exit(1);
+    }
+  } else {
+    // 2. Trigger new generation
+    console.log("Triggering generation…");
+    const { id } = await apiFetch<{ id: string }>("/api/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        input_text: "Aryabhata, 5th-century Indian mathematician and astronomer",
+      }),
+    });
+    requestId = id;
+    console.log(`Generation started: ${requestId}`);
 
-  if (status !== "completed") {
-    console.error(`Generation did not complete (status: ${status}). Screenshots skipped.`);
-    process.exit(1);
+    // 3. Poll for completion
+    console.log("Waiting for pipeline to complete (timeout 180s)…");
+    const start = Date.now();
+    let status = "pending";
+    while (Date.now() - start < TIMEOUT_MS) {
+      const gen = await apiFetch<{ status: string }>(`/api/generate/${requestId}`);
+      status = gen.status;
+      if (status === "completed" || status === "failed") break;
+      process.stdout.write(".");
+      await sleep(POLL_INTERVAL_MS);
+    }
+    console.log();
+
+    if (status !== "completed") {
+      console.error(`Generation did not complete (status: ${status}). Screenshots skipped.`);
+      process.exit(1);
+    }
   }
   console.log("Generation completed.");
 
@@ -98,24 +119,63 @@ async function main() {
   });
   const page = await context.newPage();
 
-  const auditUrl = `${FRONTEND_BASE}/audit/${requestId}`;
-  console.log(`Navigating to ${auditUrl}`);
-  await page.goto(auditUrl, { waitUntil: "networkidle" });
+  // Load the SPA then navigate client-side (Zustand router doesn't read URL path)
+  console.log(`Loading app and navigating to audit detail for ${requestId}`);
+  await page.goto(FRONTEND_BASE, { waitUntil: "networkidle", timeout: 30_000 });
 
-  // Wait for content to render
-  await page.waitForSelector("text=Audit Detail", { timeout: 15_000 });
+  // Wait for dashboard to render
+  await page.waitForSelector("text=Dashboard", { timeout: 10_000 });
 
-  // 5. Screenshot 1 — Portrait (hero section with images, metadata, pipeline stepper)
-  console.log("Capturing portrait screenshot…");
+  // Click Audit in sidebar
+  await page.locator("nav >> text=Audit").click();
+  await page.waitForTimeout(1_500);
 
-  // Wait for images to load
+  // On the audit list page, find our request and click it
+  // The audit list shows request IDs — look for the first few chars
+  const shortId = requestId.slice(0, 8);
+  const auditRow = page.locator(`text=${shortId}`).first();
+  if (await auditRow.isVisible({ timeout: 5_000 }).catch(() => false)) {
+    await auditRow.click();
+  } else {
+    // Fallback: go back to dashboard, click the generation by name
+    console.log("Request not found in audit list, trying dashboard…");
+    await page.locator("nav >> text=Dashboard").click();
+    await page.waitForTimeout(1_000);
+    // Click "Leonardo da Vinci" (or the first completed generation)
+    const genLink = page.locator("text=Leonardo da Vinci").first();
+    if (await genLink.isVisible({ timeout: 3_000 }).catch(() => false)) {
+      await genLink.click();
+    }
+  }
+
   await page.waitForTimeout(2_000);
 
-  // Capture the top portion: header + pipeline timeline + images
+  // Verify we're on audit detail
+  const onAuditPage = await page.locator("text=Audit Detail").isVisible().catch(() => false);
+  if (!onAuditPage) {
+    console.log("Warning: Could not navigate to audit detail page. Taking screenshot anyway.");
+  }
+
+  // 5. Screenshot 1 — Portrait (Generated Images section with context)
+  console.log("Capturing portrait screenshot…");
+
+  // Scroll to Generated Images section
+  const imagesHeading = page.locator("text=Generated Images").first();
+  if (await imagesHeading.isVisible({ timeout: 5_000 }).catch(() => false)) {
+    await imagesHeading.scrollIntoViewIfNeeded();
+    await page.waitForTimeout(2_000); // let images load
+
+    // Scroll up a bit to include the Validation section above for context
+    await page.evaluate(() => window.scrollBy(0, -200));
+    await page.waitForTimeout(500);
+  } else {
+    console.log("Warning: Generated Images section not found, capturing top of page.");
+  }
+
   const portraitPath = resolve(OUTPUT_DIR, "generated-portrait.png");
   await page.screenshot({
     path: portraitPath,
-    clip: { x: 0, y: 0, width: 1280, height: 800 },
+    fullPage: false,
   });
   console.log(`Saved: ${portraitPath}`);
 

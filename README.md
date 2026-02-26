@@ -14,7 +14,7 @@ ChronoCanvas is a focused case study in building traceable, evaluable AI systems
 </p>
 
 <p align="center">
-  <em>A generated portrait of Aryabhata — with researched Gupta-era clothing, validated against 4 historical criteria, and a full audit trail of every LLM call.</em>
+  <em>A generated portrait of Leonardo da Vinci — with researched Renaissance-era clothing, validated against 4 historical criteria, and a full audit trail of every LLM call.</em>
 </p>
 
 <details>
