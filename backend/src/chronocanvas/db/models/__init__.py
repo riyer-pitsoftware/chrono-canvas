@@ -1,4 +1,5 @@
 from chronocanvas.db.models.audit import AuditLog
+from chronocanvas.db.models.feedback import AuditFeedback
 from chronocanvas.db.models.figure import Figure
 from chronocanvas.db.models.image import GeneratedImage
 from chronocanvas.db.models.period import Period
@@ -9,6 +10,7 @@ from chronocanvas.db.models.validation_rule import AdminSetting, ValidationRule
 
 __all__ = [
     "AdminSetting",
+    "AuditFeedback",
     "AuditLog",
     "Figure",
     "GeneratedImage",

@@ -204,6 +204,21 @@ export interface AuditDetail {
   agent_trace: Array<Record<string, unknown>>;
 }
 
+// ── Audit Feedback ────────────────────────────────────────────────────────
+
+export interface AuditFeedback {
+  id: string;
+  request_id: string;
+  step_name: string;
+  comment: string;
+  author: string;
+  created_at: string;
+}
+
+export interface AuditFeedbackListResponse {
+  items: AuditFeedback[];
+}
+
 // ── Memory Cache ──────────────────────────────────────────────────────────
 
 export interface CacheEntry {

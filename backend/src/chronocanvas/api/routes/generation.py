@@ -7,6 +7,11 @@ from pathlib import Path
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from chronocanvas.api.schemas.feedback import (
+    CreateFeedbackRequest,
+    FeedbackListResponse,
+    FeedbackResponse,
+)
 from chronocanvas.api.schemas.generation import (
     AuditDetailResponse,
     BatchGenerationCreate,
@@ -19,6 +24,7 @@ from chronocanvas.api.schemas.generation import (
 from chronocanvas.config import settings
 from chronocanvas.content_moderation import check_input
 from chronocanvas.db.engine import get_session
+from chronocanvas.db.repositories.feedback import FeedbackRepository
 from chronocanvas.db.repositories.images import ImageRepository
 from chronocanvas.db.repositories.requests import RequestRepository
 from chronocanvas.security import confine_path
@@ -200,3 +206,37 @@ async def retry_generation(
         "retry_generation_pipeline_task", str(request_id), from_step
     )
     return GenerationResponse.model_validate(gen_request)
+
+
+@router.post("/{request_id}/feedback", response_model=FeedbackResponse, status_code=201)
+async def create_feedback(
+    request_id: uuid.UUID,
+    data: CreateFeedbackRequest,
+    session: AsyncSession = Depends(get_session),
+):
+    req_repo = RequestRepository(session)
+    gen_request = await req_repo.get(request_id)
+    if not gen_request:
+        raise HTTPException(status_code=404, detail="Generation request not found")
+
+    repo = FeedbackRepository(session)
+    feedback = await repo.create(
+        request_id=request_id,
+        step_name=data.step_name,
+        comment=data.comment,
+        author=data.author,
+    )
+    await session.commit()
+    return FeedbackResponse.model_validate(feedback)
+
+
+@router.get("/{request_id}/feedback", response_model=FeedbackListResponse)
+async def list_feedback(
+    request_id: uuid.UUID,
+    session: AsyncSession = Depends(get_session),
+):
+    repo = FeedbackRepository(session)
+    items = await repo.list_by_request(request_id)
+    return FeedbackListResponse(
+        items=[FeedbackResponse.model_validate(f) for f in items]
+    )

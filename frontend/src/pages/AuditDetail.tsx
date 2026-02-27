@@ -2,14 +2,15 @@ import { useCallback, useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { useAuditDetail, useDeleteGeneration, useRetryGeneration } from "@/api/hooks/useGeneration";
+import { useAuditDetail, useAuditFeedback, useCreateFeedback, useDeleteGeneration, useRetryGeneration } from "@/api/hooks/useGeneration";
 import { useNavigation } from "@/stores/navigation";
 import { PipelineStepper } from "@/components/generation/PipelineStepper";
 import { StateInspector } from "@/components/generation/StateInspector";
 import { CostTimeline } from "@/components/generation/CostTimeline";
 import { DAGVisualizer } from "@/components/generation/DAGVisualizer";
 import { BookOpen, ChevronDown, ChevronLeft, ChevronRight, Copy, Download, ExternalLink, RotateCcw, ShieldCheck, Trash2, X } from "lucide-react";
-import type { GeneratedImage } from "@/api/types";
+import type { AuditFeedback, GeneratedImage } from "@/api/types";
+import { MessageSquare, Send } from "lucide-react";
 
 const PIPELINE_STEPS = [
   { value: "orchestrator", label: "Orchestrator" },
@@ -25,6 +26,7 @@ const PIPELINE_STEPS = [
 
 export function AuditDetail({ requestId }: { requestId: string }) {
   const { data, isLoading, error } = useAuditDetail(requestId);
+  const { data: feedbackData } = useAuditFeedback(requestId);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [retryStep, setRetryStep] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -214,6 +216,11 @@ export function AuditDetail({ requestId }: { requestId: string }) {
                           </pre>
                         </div>
                       )}
+                      <StepFeedback
+                        requestId={requestId}
+                        stepName={call.agent}
+                        feedback={feedbackData?.items?.filter((f) => f.step_name === call.agent) ?? []}
+                      />
                     </div>
                   )}
                 </div>
@@ -224,7 +231,7 @@ export function AuditDetail({ requestId }: { requestId: string }) {
       )}
 
       {/* Agent Steps (non-LLM nodes: face_search, facial_compositing) */}
-      <AgentStepsCard agentTrace={data.agent_trace ?? []} requestId={requestId} />
+      <AgentStepsCard agentTrace={data.agent_trace ?? []} requestId={requestId} feedback={feedbackData?.items ?? []} />
 
       {/* Agent State Inspector */}
       <Card>
@@ -349,7 +356,7 @@ export function AuditDetail({ requestId }: { requestId: string }) {
 // Agents that produce trace entries but no LLM calls
 const NON_LLM_AGENTS = ["face_search", "facial_compositing"];
 
-function AgentStepsCard({ agentTrace, requestId }: { agentTrace: Array<Record<string, unknown>>; requestId: string }) {
+function AgentStepsCard({ agentTrace, requestId, feedback }: { agentTrace: Array<Record<string, unknown>>; requestId: string; feedback: AuditFeedback[] }) {
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const toggle = (key: string) => setExpanded((prev) => ({ ...prev, [key]: !prev[key] }));
 
@@ -465,6 +472,11 @@ function AgentStepsCard({ agentTrace, requestId }: { agentTrace: Array<Record<st
                       {JSON.stringify(entry, null, 2)}
                     </pre>
                   </details>
+                  <StepFeedback
+                    requestId={requestId}
+                    stepName={agent}
+                    feedback={feedback.filter((f) => f.step_name === agent)}
+                  />
                 </div>
               )}
             </div>
@@ -472,6 +484,98 @@ function AgentStepsCard({ agentTrace, requestId }: { agentTrace: Array<Record<st
         })}
       </CardContent>
     </Card>
+  );
+}
+
+// ── Step Feedback ─────────────────────────────────────────────────────────────
+
+function StepFeedback({
+  requestId,
+  stepName,
+  feedback,
+}: {
+  requestId: string;
+  stepName: string;
+  feedback: AuditFeedback[];
+}) {
+  const [open, setOpen] = useState(false);
+  const [author, setAuthor] = useState("");
+  const [comment, setComment] = useState("");
+  const createFeedback = useCreateFeedback();
+
+  const handleSubmit = () => {
+    if (!comment.trim() || !author.trim()) return;
+    createFeedback.mutate(
+      { requestId, step_name: stepName, comment: comment.trim(), author: author.trim() },
+      {
+        onSuccess: () => {
+          setComment("");
+          setOpen(false);
+        },
+      },
+    );
+  };
+
+  return (
+    <div className="mt-3 pt-3 border-t border-dashed">
+      {/* Existing comments */}
+      {feedback.length > 0 && (
+        <div className="space-y-2 mb-3">
+          {feedback.map((f) => (
+            <div key={f.id} className="flex items-start gap-2 text-xs">
+              <MessageSquare className="w-3.5 h-3.5 mt-0.5 text-[var(--muted-foreground)] flex-shrink-0" />
+              <div>
+                <span className="font-medium">{f.author}</span>
+                <span className="text-[var(--muted-foreground)] ml-2">
+                  {new Date(f.created_at).toLocaleString()}
+                </span>
+                <p className="mt-0.5">{f.comment}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Add comment toggle */}
+      {!open ? (
+        <button
+          onClick={() => setOpen(true)}
+          className="flex items-center gap-1.5 text-xs text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors"
+        >
+          <MessageSquare className="w-3.5 h-3.5" />
+          Add comment
+        </button>
+      ) : (
+        <div className="space-y-2">
+          <input
+            type="text"
+            placeholder="Your name"
+            value={author}
+            onChange={(e) => setAuthor(e.target.value)}
+            className="w-full text-xs rounded border border-[var(--border)] bg-[var(--background)] px-2 py-1.5"
+          />
+          <div className="flex gap-2">
+            <input
+              type="text"
+              placeholder="Add a comment on this step..."
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
+              className="flex-1 text-xs rounded border border-[var(--border)] bg-[var(--background)] px-2 py-1.5"
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 px-2"
+              disabled={!comment.trim() || !author.trim() || createFeedback.isPending}
+              onClick={handleSubmit}
+            >
+              <Send className="w-3.5 h-3.5" />
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
