@@ -1,0 +1,16 @@
+apiVersion: cloud.google.com/v1
+kind: BackendConfig
+metadata:
+  name: chronocanvas-backend-config
+  namespace: chronocanvas
+  labels:
+    app.kubernetes.io/part-of: chronocanvas
+spec:
+  # 1-hour timeout for WebSocket connections (routed through frontend nginx)
+  timeoutSec: 3600
+  connectionDraining:
+    drainingTimeoutSec: 60
+  healthCheck:
+    type: HTTP
+    requestPath: /
+    port: 8080

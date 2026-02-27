@@ -1,0 +1,43 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: chronocanvas-config
+  namespace: chronocanvas
+  labels:
+    app.kubernetes.io/part-of: chronocanvas
+data:
+  # ── LLM providers ──────────────────────────────────────────────────
+  DEFAULT_LLM_PROVIDER: "anthropic"
+  CLAUDE_MODEL: "claude-sonnet-4-5-20250929"
+  OPENAI_MODEL: "gpt-4o"
+
+  # ── Image generation ───────────────────────────────────────────────
+  IMAGE_PROVIDER: "mock"
+  FACEFUSION_ENABLED: "false"
+
+  # ── Pipeline settings ──────────────────────────────────────────────
+  CONTENT_MODERATION_ENABLED: "true"
+  RESEARCH_CACHE_ENABLED: "true"
+  RESEARCH_CACHE_THRESHOLD: "0.85"
+  VALIDATION_RETRY_ENABLED: "true"
+  FACE_SEARCH_ENABLED: "true"
+
+  # ── Rate limiting ──────────────────────────────────────────────────
+  RATE_LIMIT_RPM: "60"
+  LLM_MAX_CONCURRENT: "5"
+
+  # ── Storage paths (inside the PVC mount) ───────────────────────────
+  OUTPUT_DIR: "/data/output"
+  UPLOAD_DIR: "/data/uploads"
+
+  # ── Service discovery (matches K8s Service names) ──────────────────
+  DB_HOST: "postgres"
+  DB_PORT: "5432"
+  REDIS_HOST: "redis"
+  REDIS_PORT: "6379"
+
+  # ── Application ────────────────────────────────────────────────────
+  LOG_LEVEL: "INFO"
+  RUN_MIGRATIONS: "false"
+  # Update CORS_ORIGINS to your actual domain before deploying
+  CORS_ORIGINS: '["https://chronocanvas.example.com"]'

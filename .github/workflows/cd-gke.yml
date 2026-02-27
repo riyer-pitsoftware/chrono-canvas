@@ -1,0 +1,156 @@
+name: CD — Deploy to GKE
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: deploy-gke
+  cancel-in-progress: false
+
+env:
+  REGION: ${{ secrets.GCP_REGION || 'us-central1' }}
+
+jobs:
+  # ── Build and push images ──────────────────────────────────────────
+  build-push:
+    name: Build & push images
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    outputs:
+      sha: ${{ steps.meta.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: meta
+        run: echo "sha=${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
+
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker "${{ env.REGION }}-docker.pkg.dev" --quiet
+
+      - name: Build and push API image
+        run: |
+          TAG="${{ env.REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/chronocanvas/api"
+          docker build -f docker/Dockerfile.api \
+            -t "${TAG}:${{ steps.meta.outputs.sha }}" \
+            -t "${TAG}:latest" .
+          docker push "${TAG}:${{ steps.meta.outputs.sha }}"
+          docker push "${TAG}:latest"
+
+      - name: Build and push Frontend image
+        run: |
+          TAG="${{ env.REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/chronocanvas/frontend"
+          docker build -f docker/Dockerfile.frontend \
+            -t "${TAG}:${{ steps.meta.outputs.sha }}" \
+            -t "${TAG}:latest" .
+          docker push "${TAG}:${{ steps.meta.outputs.sha }}"
+          docker push "${TAG}:latest"
+
+  # ── Deploy to GKE (requires environment approval) ──────────────────
+  deploy:
+    name: Deploy to GKE
+    needs: build-push
+    runs-on: ubuntu-latest
+    environment: gke-production
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      SHA: ${{ needs.build-push.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+      - uses: google-github-actions/get-gke-credentials@v2
+        with:
+          cluster_name: chronocanvas-cluster
+          location: ${{ env.REGION }}
+
+      # ── Create namespace and base resources ──────────────────────────
+      - name: Apply base manifests
+        run: |
+          kubectl apply -f deploy/gke/namespace.yaml
+          kubectl apply -f deploy/gke/service-account.yaml
+          kubectl apply -f deploy/gke/configmap.yaml
+
+      # ── Create secrets from GitHub Secrets ───────────────────────────
+      - name: Apply secrets
+        run: |
+          kubectl create secret generic chronocanvas-secrets \
+            --namespace=chronocanvas \
+            --from-literal="DATABASE_URL=postgresql+asyncpg://chronocanvas:${{ secrets.DB_PASSWORD }}@postgres:5432/chronocanvas" \
+            --from-literal="REDIS_URL=redis://redis:6379/0" \
+            --from-literal="ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}" \
+            --from-literal="OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" \
+            --from-literal="SERPAPI_KEY=${{ secrets.SERPAPI_KEY }}" \
+            --from-literal="SECRET_KEY=${{ secrets.APP_SECRET_KEY }}" \
+            --from-literal="POSTGRES_PASSWORD=${{ secrets.DB_PASSWORD }}" \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      # ── Data tier ────────────────────────────────────────────────────
+      - name: Apply data tier
+        run: |
+          kubectl apply -f deploy/gke/data-pvc.yaml
+          kubectl apply -f deploy/gke/postgres-statefulset.yaml
+          kubectl apply -f deploy/gke/postgres-service.yaml
+          kubectl apply -f deploy/gke/redis-deployment.yaml
+          kubectl apply -f deploy/gke/redis-service.yaml
+
+      - name: Wait for data tier
+        run: |
+          kubectl rollout status statefulset/postgres -n chronocanvas --timeout=180s
+          kubectl rollout status deployment/redis -n chronocanvas --timeout=60s
+
+      # ── Run migrations ───────────────────────────────────────────────
+      - name: Run database migration
+        run: |
+          JOB_NAME="migrate-${SHA}"
+          REGISTRY="${{ env.REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/chronocanvas"
+          sed "s|us-docker.pkg.dev/PROJECT_ID/chronocanvas/api:SHA|${REGISTRY}/api:${SHA}|g; s|name: migrate-SHA|name: ${JOB_NAME}|g" \
+            deploy/gke/migration-job.yaml | kubectl apply -f -
+          kubectl wait --for=condition=complete --timeout=120s "job/${JOB_NAME}" -n chronocanvas
+
+      # ── Deploy workloads ─────────────────────────────────────────────
+      - name: Deploy application
+        run: |
+          REGISTRY="${{ env.REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/chronocanvas"
+          for f in api-deployment.yaml worker-deployment.yaml frontend-deployment.yaml \
+                   api-service.yaml frontend-service.yaml \
+                   api-hpa.yaml worker-hpa.yaml; do
+            sed "s|us-docker.pkg.dev/PROJECT_ID/chronocanvas|${REGISTRY}|g; s|:SHA|:${SHA}|g" \
+              "deploy/gke/${f}" | kubectl apply -f -
+          done
+
+      # ── Ingress and TLS ─────────────────────────────────────────────
+      - name: Apply ingress
+        run: |
+          kubectl apply -f deploy/gke/backend-config.yaml
+          kubectl apply -f deploy/gke/frontend-config.yaml
+          kubectl apply -f deploy/gke/managed-certificate.yaml
+          kubectl apply -f deploy/gke/ingress.yaml
+
+      # ── Verify ───────────────────────────────────────────────────────
+      - name: Verify rollouts
+        run: |
+          kubectl rollout status deployment/api -n chronocanvas --timeout=180s
+          kubectl rollout status deployment/worker -n chronocanvas --timeout=180s
+          kubectl rollout status deployment/frontend -n chronocanvas --timeout=120s
+          echo "=== Pod status ==="
+          kubectl get pods -n chronocanvas
+          echo "=== Ingress ==="
+          kubectl get ingress -n chronocanvas

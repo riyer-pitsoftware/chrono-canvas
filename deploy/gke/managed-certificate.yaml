@@ -1,0 +1,12 @@
+apiVersion: networking.gke.io/v1
+kind: ManagedCertificate
+metadata:
+  name: chronocanvas-cert
+  namespace: chronocanvas
+  labels:
+    app.kubernetes.io/part-of: chronocanvas
+spec:
+  domains:
+    # Replace with your actual domain before deploying.
+    # DNS A record must point to the reserved static IP (chronocanvas-ip).
+    - chronocanvas.example.com

@@ -1,0 +1,11 @@
+apiVersion: networking.gke.io/v1beta1
+kind: FrontendConfig
+metadata:
+  name: chronocanvas-frontend-config
+  namespace: chronocanvas
+  labels:
+    app.kubernetes.io/part-of: chronocanvas
+spec:
+  redirectToHttps:
+    enabled: true
+    responseCodeName: MOVED_PERMANENTLY_DEFAULT

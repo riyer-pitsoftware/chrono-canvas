@@ -1,0 +1,21 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: chronocanvas-ingress
+  namespace: chronocanvas
+  annotations:
+    # Reserve a static IP via: gcloud compute addresses create chronocanvas-ip --global
+    kubernetes.io/ingress.global-static-ip-name: chronocanvas-ip
+    networking.gke.io/managed-certificates: chronocanvas-cert
+    kubernetes.io/ingress.class: "gce"
+    networking.gke.io/v1beta1.FrontendConfig: chronocanvas-frontend-config
+  labels:
+    app.kubernetes.io/part-of: chronocanvas
+spec:
+  # All traffic goes to the frontend nginx, which internally proxies
+  # /api/*, /ws/*, /output/* to the "api" ClusterIP service via K8s DNS.
+  defaultBackend:
+    service:
+      name: frontend
+      port:
+        number: 8080

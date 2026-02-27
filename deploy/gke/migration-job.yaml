@@ -1,0 +1,43 @@
+# Template — SHA and PROJECT_ID are replaced by the CD pipeline via sed.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: migrate-SHA
+  namespace: chronocanvas
+  labels:
+    app.kubernetes.io/part-of: chronocanvas
+    app.kubernetes.io/component: migration
+spec:
+  backoffLimit: 3
+  ttlSecondsAfterFinished: 300
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/part-of: chronocanvas
+        app.kubernetes.io/component: migration
+    spec:
+      serviceAccountName: chronocanvas-sa
+      restartPolicy: Never
+      containers:
+        - name: migrate
+          image: us-docker.pkg.dev/PROJECT_ID/chronocanvas/api:SHA
+          # Override entrypoint — run alembic directly, no wait-for-it needed
+          # because the migration Job starts after postgres is ready.
+          command:
+            - alembic
+            - upgrade
+            - head
+          envFrom:
+            - configMapRef:
+                name: chronocanvas-config
+            - secretRef:
+                name: chronocanvas-secrets
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+              ephemeral-storage: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "1Gi"
+              ephemeral-storage: "256Mi"
