@@ -1,0 +1,40 @@
+{
+  "run_id": "2026-02-26T16-18-14Z_CCV1-009_baselineD",
+  "eval_version": "chronocanvas-evalset-v1",
+  "case_id": "CCV1-009",
+  "condition": "baselineD_full_pipeline",
+  "timestamp_utc": "2026-02-26T23:07:19.992838+00:00",
+  "git_commit": "a70544c",
+  "app_version": "0.1.0",
+  "config_profile": "eval-baselineD",
+  "llm_provider": null,
+  "llm_model": null,
+  "image_provider": "comfyui",
+  "image_model": "juggernautXL_v9.safetensors",
+  "face_pipeline_enabled": true,
+  "face_search_enabled": true,
+  "validation_retry_enabled": true,
+  "max_retries": 2,
+  "seed": 42,
+  "prompt_used": "photorealistic portrait,(masterpiece:1.2),(best quality:1.2),(ultra detailed face:1.3), \nhuman face with skin texture and pores, facial bone structure with subtle imperfections, brown eyes with almond shape, natural wrinkles on forehead, nose, mouth, and chin,\nmedium to dark complexion with nuanced undertones, curly hair with loose waves, slender build typical of West African populations,\ntraditional Edo Kingdom attire made from cotton, linen, or adire fabrics in earthy tones (beige, brown, sienna), loincloth or kilt with intricate embroidery, headwrap with woven patterns, flowing garment for women with adornments,\nAfrican bronze casting and woodcarvings of the Edo Kingdom era as art style influence,\nRembrandt lighting, soft key light, subtle fill light, catchlights in eyes (1.1), 85mm lens, shallow depth of field, sharp focus on eyes, bokeh background,\nRAW photo, 8K, DSLR, detailed skin texture (1.2), film grain, natural imperfections and blemishes, realistic human features (sharp facial features:1.2),(realistic skin:1.3)",
+  "success": false,
+  "terminal_state": "generating_prompt",
+  "total_latency_ms": 603564.3,
+  "token_input_count": 919,
+  "token_output_count": 425,
+  "llm_cost_usd": 0,
+  "image_cost_usd": 0.0,
+  "total_cost_usd": 0,
+  "total_retries": 0,
+  "audit_event_count": 5,
+  "trace_complete": true,
+  "error_message": null,
+  "runtime_env": {
+    "api_url": "http://localhost:8000"
+  },
+  "heuristic_pass": false,
+  "heuristic_failures": [
+    "file_valid",
+    "resolution_ok"
+  ]
+}

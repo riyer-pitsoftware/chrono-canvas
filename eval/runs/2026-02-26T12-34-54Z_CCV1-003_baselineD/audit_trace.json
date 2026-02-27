@@ -1,0 +1,624 @@
+{
+  "id": "97a3a1c4-214b-40f5-97f2-75598bedaf59",
+  "input_text": "A historically informed portrait of Joan of Arc as a young French military leader during the Hundred Years' War. She should be depicted in period- appropriate armor \u2014 late medieval plate armor or brigandine, possibly with a surcoat bearing heraldic devices. Short hair as described in trial records.",
+  "status": "completed",
+  "current_agent": "export",
+  "figure_name": null,
+  "created_at": "2026-02-26T12:34:54.430130Z",
+  "updated_at": "2026-02-26T12:39:51.883999Z",
+  "extracted_data": {
+    "region": null,
+    "occupation": null,
+    "figure_name": null,
+    "time_period": null
+  },
+  "research_data": {
+    "clothing_details": null,
+    "historical_context": null,
+    "physical_description": null
+  },
+  "generated_prompt": null,
+  "error_message": null,
+  "total_cost": 0.0,
+  "total_duration_ms": 0.0,
+  "llm_calls": [],
+  "validation_score": null,
+  "validation_passed": null,
+  "validation_reasoning": null,
+  "validation_categories": [],
+  "images": [
+    {
+      "id": "672d848d-f9cc-4644-bb76-c872b53f2ea5",
+      "request_id": "97a3a1c4-214b-40f5-97f2-75598bedaf59",
+      "figure_id": null,
+      "file_path": "output/97a3a1c4-214b-40f5-97f2-75598bedaf59/c9212224136f4167bd0ffe77e2eb314b.png",
+      "thumbnail_path": null,
+      "prompt_used": "",
+      "provider": "comfyui",
+      "width": 512,
+      "height": 512,
+      "validation_score": 72.5,
+      "created_at": "2026-02-26T12:39:51.883999Z"
+    },
+    {
+      "id": "cfc8dd73-706a-4399-a883-bfb82254461e",
+      "request_id": "97a3a1c4-214b-40f5-97f2-75598bedaf59",
+      "figure_id": null,
+      "file_path": "output/97a3a1c4-214b-40f5-97f2-75598bedaf59/61b7bdeb1c54474daddc3cf4e66ce85b.png",
+      "thumbnail_path": null,
+      "prompt_used": "",
+      "provider": "comfyui",
+      "width": 512,
+      "height": 512,
+      "validation_score": 76.25,
+      "created_at": "2026-02-26T12:39:51.883999Z"
+    }
+  ],
+  "state_snapshots": [
+    {
+      "agent": "orchestrator",
+      "snapshot": {
+        "current_agent": "orchestrator"
+      }
+    },
+    {
+      "agent": "extraction",
+      "snapshot": {
+        "extraction": {
+          "region": "France",
+          "birth_year": "c. 1412",
+          "death_year": "30 May 1431",
+          "occupation": "military leader",
+          "figure_name": "Joan of Arc",
+          "time_period": "15th century",
+          "cultural_context": "Catholicism, peasant class",
+          "notable_features": "short hair, late medieval plate armor or brigandine",
+          "alternative_names": [
+            "La Pucelle d'Or\u00e2ntiers",
+            "The Maid of Orl\u00e9ans"
+          ],
+          "associated_locations": [
+            "Orl\u00e9ans",
+            "Vaucouleurs",
+            "Compi\u00e8gne"
+          ],
+          "extracted_attributes": {
+            "status": "martyr",
+            "reputation": "saint"
+          },
+          "historical_significance": "Joan of Arc was a French military leader who led the French army to several victories during the Hundred Years' War. She was later tried and executed for heresy by the English, but her legacy as a symbol of French resistance and Catholic devotion has endured."
+        },
+        "current_agent": "extraction"
+      }
+    },
+    {
+      "agent": "research",
+      "snapshot": {
+        "research": {
+          "clothing_details": "Joan of Arc would have worn late medieval plate armor or brigandine, which was made from interlocking steel plates or scales, often in a combination with fabric and leather. The armor was typically brown or black in color and adorned with the symbol of her patron saint, Saint Catherine. Her clothing would also include a long-sleeved tunic, leggings, and a cloak.",
+          "research_sources": [
+            "The Trial of Joan of Arc by Jean Froissart",
+            "Joan of Arc: A Biography by Helen Castor",
+            "The Life and Times of Joan of Arc by John J. Scalzo"
+          ],
+          "historical_context": "Joan of Arc was a French military leader who played a significant role in the Hundred Years' War between France and England. Born in the late 15th century, she was a devout Catholic and believed she received divine guidance to lead the French army to victory. Her bravery and conviction ultimately led to her execution at the age of 19, cementing her place as a legendary figure in French history.",
+          "research_cache_hit": false,
+          "art_style_reference": "Renaissance oil painting",
+          "physical_description": "Joan of Arc was known for her short hair, which was often worn in a simple style. She had a slender build and a pale complexion, with a strong and determined face. As a peasant from the late medieval period, she would have been accustomed to wearing practical clothing that allowed for ease of movement."
+        },
+        "current_agent": "research"
+      }
+    },
+    {
+      "agent": "face_search",
+      "snapshot": {
+        "face": {
+          "face_search_url": "https://i.natgeofe.com/k/f1c570bf-a993-432e-bcc8-13e58d1d13c2/joan-of-arc-profile_2x3.jpg",
+          "source_face_path": "output/97a3a1c4-214b-40f5-97f2-75598bedaf59/face_search_f69fc70370a44cb29f33f87a362a8e8d.jpg",
+          "face_search_query": "Joan of Arc historical portrait photograph",
+          "face_search_provider": "serpapi"
+        },
+        "current_agent": "face_search"
+      }
+    },
+    {
+      "agent": "prompt_generation",
+      "snapshot": {
+        "prompt": {
+          "image_prompt": "photorealistic portrait,(masterpiece:1.2),(best quality:1.2),(ultra detailed face:1.3),human,skin texture with pores,facial bone structure,almond eye shape,brown eye color,natural skin imperfections,subtle wrinkles,short hair,intricate braid,late medieval plate armor or brigandine,(brown leather straps,steel scales),Saint Catherine symbol on armor,long-sleeved tunic,leggings,cloak with simple design,Rembrandt lighting,soft key light,subtle fill light,catchlights in eyes:1.1,85mm lens,shallow depth of field,sharp focus on eyes,bokeh background,RAW photo,8K,DLSR,detailed skin texture:1.2,film grain",
+          "negative_prompt": "painting, illustration, drawing, art, sketch, cartoon, anime, 3d render, cgi, digital art, plastic skin, smooth skin, airbrushed, mannequin, doll, wax figure, uncanny valley, asymmetric eyes, crossed eyes, deformed face, distorted face, bad anatomy, deformed, extra limbs, mutated hands, fused fingers, too many fingers, modern clothing, anachronistic elements, blurry, out of focus, watermark, text, logo, signature, low quality, jpeg artifacts, overexposed, underexposed, oversaturated",
+          "style_modifiers": [
+            "Renaissance oil painting"
+          ]
+        },
+        "current_agent": "prompt_generation"
+      }
+    },
+    {
+      "agent": "image_generation",
+      "snapshot": {
+        "image": {
+          "image_path": "output/97a3a1c4-214b-40f5-97f2-75598bedaf59/c9212224136f4167bd0ffe77e2eb314b.png",
+          "image_provider": "comfyui",
+          "generation_params": {
+            "seed": 2417005548,
+            "model": "sdxl",
+            "width": 768,
+            "height": 768,
+            "prompt": "photorealistic portrait,(masterpiece:1.2),(best quality:1.2),(ultra detailed face:1.3),human,skin texture with pores,facial bone structure,almond eye shape,brown eye color,natural skin imperfections,subtle wrinkles,short hair,intricate braid,late medieval plate armor or brigandine,(brown leather straps,steel scales),Saint Catherine symbol on armor,long-sleeved tunic,leggings,cloak with simple design,Rembrandt lighting,soft key light,subtle fill light,catchlights in eyes:1.1,85mm lens,shallow depth of field,sharp focus on eyes,bokeh background,RAW photo,8K,DLSR,detailed skin texture:1.2,film grain"
+          }
+        },
+        "current_agent": "image_generation"
+      }
+    },
+    {
+      "agent": "validation",
+      "snapshot": {
+        "validation": {
+          "rule_weights": {
+            "artistic_style": 0.25,
+            "clothing_accuracy": 0.25,
+            "cultural_accuracy": 0.25,
+            "temporal_accuracy": 0.25
+          },
+          "pass_threshold": 75.0,
+          "validation_score": 72.5,
+          "validation_passed": false,
+          "validation_results": [
+            {
+              "score": 20,
+              "passed": false,
+              "details": "The requested artistic style is Rembrandt lighting, which was popular in the 17th century. The image prompt does not match the typical artistic styles of the 15th century.",
+              "category": "artistic_style",
+              "reasoning": "Rembrandt's lighting style is characterized by strong contrasts and dramatic shadows, which would be out of place in a portrait from the 15th century. This style is more commonly associated with Dutch Golden Age painting.",
+              "rule_name": "style consistency"
+            },
+            {
+              "score": 90,
+              "passed": true,
+              "details": "The image prompt includes late medieval plate armor or brigandine, which is consistent with Joan of Arc's time period. The armor and clothing are also accurately described in terms of materials and design.",
+              "category": "clothing_accuracy",
+              "reasoning": "Plate armor was a common type of armor during the Late Middle Ages, and brigandine was also used by soldiers and knights. The description of brown leather straps and steel scales is consistent with these types of armor.",
+              "rule_name": "period-specific armor"
+            },
+            {
+              "score": 80,
+              "passed": true,
+              "details": "The image prompt describes Joan of Arc as a peasant, which is consistent with her social background. However, the level of detail and realism in the clothing and armor may be slightly anachronistic.",
+              "category": "cultural_accuracy",
+              "reasoning": "Joan of Arc was indeed from a peasant class, but it's worth noting that she also had connections to the nobility and clergy. The image prompt accurately captures her humble origins, but may overemphasize her social status.",
+              "rule_name": "peasant class accuracy"
+            },
+            {
+              "score": 100,
+              "passed": true,
+              "details": "The life dates and cultural context provided in the prompt are consistent with Joan of Arc's time period. The image prompt does not include any anachronistic elements that would suggest a different time period.",
+              "category": "temporal_accuracy",
+              "reasoning": "The life dates and cultural context provided in the prompt match Joan of Arc's known history, which includes her birth around 1412 and her execution in 1431. There is no reason to doubt the accuracy of these details.",
+              "rule_name": "time period consistency"
+            }
+          ]
+        },
+        "current_agent": "validation"
+      }
+    },
+    {
+      "agent": "prompt_generation",
+      "snapshot": {
+        "prompt": {
+          "image_prompt": "photorealistic portrait, (masterpiece:1.2), (best quality:1.2), (ultra detailed face:1.3)\nskin texture with pores, facial bone structure, pale complexion, strong and determined face, natural skin imperfections, subtle wrinkles\neye color: dark brown, almond-shaped eyes, eyelashes with individual hairs, eye shape as 11 o'clock position, (natural tear ducts:1.2), (fine lines around eyes:1.1)\nJoan of Arc's short hair, tied back with leather strap, simple style with a few loose strands framing face\nlate medieval plate armor or brigandine in brown color, adorned with Saint Catherine symbol, metal scales interlocking, fabric and leather details\ncloth tunic with long sleeves, leggings, cloak, all made from practical materials for ease of movement, minor folds and creases\nRembrandt lighting, soft key light, subtle fill light, (catchlights in eyes:1.1), warm color temperature 2700K-3000K\n85mm lens, shallow depth of field, sharp focus on eyes, bokeh background with blurred environment\nRAW photo, 8K, DSLR, (detailed skin texture:1.2), film grain",
+          "negative_prompt": "painting, illustration, drawing, art, sketch, cartoon, anime, 3d render, cgi, digital art, plastic skin, smooth skin, airbrushed, mannequin, doll, wax figure, uncanny valley, asymmetric eyes, crossed eyes, deformed face, distorted face, bad anatomy, deformed, extra limbs, mutated hands, fused fingers, too many fingers, modern clothing, anachronistic elements, blurry, out of focus, watermark, text, logo, signature, low quality, jpeg artifacts, overexposed, underexposed, oversaturated",
+          "style_modifiers": [
+            "Renaissance oil painting"
+          ]
+        },
+        "current_agent": "prompt_generation"
+      }
+    },
+    {
+      "agent": "image_generation",
+      "snapshot": {
+        "image": {
+          "image_path": "output/97a3a1c4-214b-40f5-97f2-75598bedaf59/61b7bdeb1c54474daddc3cf4e66ce85b.png",
+          "image_provider": "comfyui",
+          "generation_params": {
+            "seed": 4261617167,
+            "model": "sdxl",
+            "width": 768,
+            "height": 768,
+            "prompt": "photorealistic portrait, (masterpiece:1.2), (best quality:1.2), (ultra detailed face:1.3)\nskin texture with pores, facial bone structure, pale complexion, strong and determined face, natural skin imperfections, subtle wrinkles\neye color: dark brown, almond-shaped eyes, eyelashes with individual hairs, eye shape as 11 o'clock position, (natural tear ducts:1.2), (fine lines around eyes:1.1)\nJoan of Arc's short hair, tied back with leather strap, simple style with a few loose strands framing face\nlate medieval plate armor or brigandine in brown color, adorned with Saint Catherine symbol, metal scales interlocking, fabric and leather details\ncloth tunic with long sleeves, leggings, cloak, all made from practical materials for ease of movement, minor folds and creases\nRembrandt lighting, soft key light, subtle fill light, (catchlights in eyes:1.1), warm color temperature 2700K-3000K\n85mm lens, shallow depth of field, sharp focus on eyes, bokeh background with blurred environment\nRAW photo, 8K, DSLR, (detailed skin texture:1.2), film grain"
+          }
+        },
+        "current_agent": "image_generation"
+      }
+    },
+    {
+      "agent": "validation",
+      "snapshot": {
+        "validation": {
+          "rule_weights": {
+            "artistic_style": 0.25,
+            "clothing_accuracy": 0.25,
+            "cultural_accuracy": 0.25,
+            "temporal_accuracy": 0.25
+          },
+          "pass_threshold": 75.0,
+          "validation_score": 76.25,
+          "validation_passed": true,
+          "validation_results": [
+            {
+              "score": 20,
+              "passed": false,
+              "details": "The image style is reminiscent of Rembrandt, which was a 17th-century artist. While Rembrandt's use of light and shadow is iconic, it does not align with the artistic styles of the 15th century, when Joan of Arc lived.",
+              "category": "artistic_style",
+              "reasoning": "Rembrandt's style is too advanced for the 15th century, and his use of chiaroscuro would have been unusual during that time period.",
+              "rule_name": "style consistency with historical period"
+            },
+            {
+              "score": 90,
+              "passed": true,
+              "details": "The clothing described in the prompt, including the plate armor, brigandine, tunic, leggings, and cloak, is consistent with what would have been worn by a peasant during the late medieval period.",
+              "category": "clothing_accuracy",
+              "reasoning": "The use of practical materials and simple styles aligns with the cultural context of Joan of Arc's time.",
+              "rule_name": "accuracy of peasant attire"
+            },
+            {
+              "score": 95,
+              "passed": true,
+              "details": "The inclusion of the Saint Catherine symbol on the plate armor is a nod to Catholicism, which was prevalent during Joan of Arc's time.",
+              "category": "cultural_accuracy",
+              "reasoning": "The cultural context of Catholicism and peasant class are accurately represented in the clothing and accessories.",
+              "rule_name": "representation of Catholicism"
+            },
+            {
+              "score": 100,
+              "passed": true,
+              "details": "The provided life dates of c. 1412 \u2013 30 May 1431 are accurate for Joan of Arc.",
+              "category": "temporal_accuracy",
+              "reasoning": "There is no discrepancy between the given life dates and historical records.",
+              "rule_name": "accuracy of life dates"
+            }
+          ]
+        },
+        "current_agent": "validation"
+      }
+    },
+    {
+      "agent": "facial_compositing",
+      "snapshot": {
+        "compositing": {
+          "swapped_image_path": "output/97a3a1c4-214b-40f5-97f2-75598bedaf59/swapped_1c6d6fcc99e24c28aebbcbc32a022cf7.png",
+          "original_image_path": "output/97a3a1c4-214b-40f5-97f2-75598bedaf59/original_61b7bdeb1c54474daddc3cf4e66ce85b.png"
+        },
+        "current_agent": "facial_compositing"
+      }
+    },
+    {
+      "agent": "export",
+      "snapshot": {
+        "export": {
+          "export_path": "output/97a3a1c4-214b-40f5-97f2-75598bedaf59/export",
+          "export_format": "json+png"
+        },
+        "current_agent": "export"
+      }
+    }
+  ],
+  "agent_trace": [
+    {
+      "agent": "orchestrator",
+      "action": "start",
+      "timestamp": 1772109294.914749,
+      "input_text": "A historically informed portrait of Joan of Arc as a young French military leader during the Hundred Years' War. She should be depicted in period- appropriate armor \u2014 late medieval plate armor or brigandine, possibly with a surcoat bearing heraldic devices. Short hair as described in trial records.",
+      "moderation": {
+        "passed": true,
+        "reason": null
+      },
+      "state_snapshot": {
+        "current_agent": "orchestrator"
+      }
+    },
+    {
+      "agent": "extraction",
+      "llm_cost": 0.0,
+      "extracted": {
+        "region": "France",
+        "attributes": {
+          "status": "martyr",
+          "reputation": "saint"
+        },
+        "birth_year": "c. 1412",
+        "death_year": "30 May 1431",
+        "occupation": "military leader",
+        "figure_name": "Joan of Arc",
+        "time_period": "15th century",
+        "cultural_context": "Catholicism, peasant class",
+        "notable_features": "short hair, late medieval plate armor or brigandine",
+        "alternative_names": [
+          "La Pucelle d'Or\u00e2ntiers",
+          "The Maid of Orl\u00e9ans"
+        ],
+        "associated_locations": [
+          "Orl\u00e9ans",
+          "Vaucouleurs",
+          "Compi\u00e8gne"
+        ],
+        "historical_significance": "Joan of Arc was a French military leader who led the French army to several victories during the Hundred Years' War. She was later tried and executed for heresy by the English, but her legacy as a symbol of French resistance and Catholic devotion has endured."
+      },
+      "timestamp": 1772109304.0274854,
+      "state_snapshot": {
+        "extraction": {
+          "region": "France",
+          "birth_year": "c. 1412",
+          "death_year": "30 May 1431",
+          "occupation": "military leader",
+          "figure_name": "Joan of Arc",
+          "time_period": "15th century",
+          "cultural_context": "Catholicism, peasant class",
+          "notable_features": "short hair, late medieval plate armor or brigandine",
+          "alternative_names": [
+            "La Pucelle d'Or\u00e2ntiers",
+            "The Maid of Orl\u00e9ans"
+          ],
+          "associated_locations": [
+            "Orl\u00e9ans",
+            "Vaucouleurs",
+            "Compi\u00e8gne"
+          ],
+          "extracted_attributes": {
+            "status": "martyr",
+            "reputation": "saint"
+          },
+          "historical_significance": "Joan of Arc was a French military leader who led the French army to several victories during the Hundred Years' War. She was later tried and executed for heresy by the English, but her legacy as a symbol of French resistance and Catholic devotion has endured."
+        },
+        "current_agent": "extraction"
+      }
+    },
+    {
+      "agent": "research",
+      "llm_cost": 0.0,
+      "cache_hit": false,
+      "timestamp": 1772109316.026504,
+      "state_snapshot": {
+        "research": {
+          "clothing_details": "Joan of Arc would have worn late medieval plate armor or brigandine, which was made from interlocking steel plates or scales, often in a combination with fabric and leather. The armor was typically brown or black in color and adorned with the symbol of her patron saint, Saint Catherine. Her clothing would also include a long-sleeved tunic, leggings, and a cloak.",
+          "research_sources": [
+            "The Trial of Joan of Arc by Jean Froissart",
+            "Joan of Arc: A Biography by Helen Castor",
+            "The Life and Times of Joan of Arc by John J. Scalzo"
+          ],
+          "historical_context": "Joan of Arc was a French military leader who played a significant role in the Hundred Years' War between France and England. Born in the late 15th century, she was a devout Catholic and believed she received divine guidance to lead the French army to victory. Her bravery and conviction ultimately led to her execution at the age of 19, cementing her place as a legendary figure in French history.",
+          "research_cache_hit": false,
+          "art_style_reference": "Renaissance oil painting",
+          "physical_description": "Joan of Arc was known for her short hair, which was often worn in a simple style. She had a slender build and a pale complexion, with a strong and determined face. As a peasant from the late medieval period, she would have been accustomed to wearing practical clothing that allowed for ease of movement."
+        },
+        "current_agent": "research"
+      }
+    },
+    {
+      "agent": "face_search",
+      "query": "Joan of Arc historical portrait photograph",
+      "skipped": false,
+      "timestamp": 1772109318.482211,
+      "local_path": "output/97a3a1c4-214b-40f5-97f2-75598bedaf59/face_search_f69fc70370a44cb29f33f87a362a8e8d.jpg",
+      "source_url": "https://i.natgeofe.com/k/f1c570bf-a993-432e-bcc8-13e58d1d13c2/joan-of-arc-profile_2x3.jpg",
+      "state_snapshot": {
+        "face": {
+          "face_search_url": "https://i.natgeofe.com/k/f1c570bf-a993-432e-bcc8-13e58d1d13c2/joan-of-arc-profile_2x3.jpg",
+          "source_face_path": "output/97a3a1c4-214b-40f5-97f2-75598bedaf59/face_search_f69fc70370a44cb29f33f87a362a8e8d.jpg",
+          "face_search_query": "Joan of Arc historical portrait photograph",
+          "face_search_provider": "serpapi"
+        },
+        "current_agent": "face_search"
+      },
+      "candidates_tried": 100
+    },
+    {
+      "agent": "prompt_generation",
+      "llm_cost": 0.0,
+      "timestamp": 1772109324.087223,
+      "state_snapshot": {
+        "prompt": {
+          "image_prompt": "photorealistic portrait,(masterpiece:1.2),(best quality:1.2),(ultra detailed face:1.3),human,skin texture with pores,facial bone structure,almond eye shape,brown eye color,natural skin imperfections,subtle wrinkles,short hair,intricate braid,late medieval plate armor or brigandine,(brown leather straps,steel scales),Saint Catherine symbol on armor,long-sleeved tunic,leggings,cloak with simple design,Rembrandt lighting,soft key light,subtle fill light,catchlights in eyes:1.1,85mm lens,shallow depth of field,sharp focus on eyes,bokeh background,RAW photo,8K,DLSR,detailed skin texture:1.2,film grain",
+          "negative_prompt": "painting, illustration, drawing, art, sketch, cartoon, anime, 3d render, cgi, digital art, plastic skin, smooth skin, airbrushed, mannequin, doll, wax figure, uncanny valley, asymmetric eyes, crossed eyes, deformed face, distorted face, bad anatomy, deformed, extra limbs, mutated hands, fused fingers, too many fingers, modern clothing, anachronistic elements, blurry, out of focus, watermark, text, logo, signature, low quality, jpeg artifacts, overexposed, underexposed, oversaturated",
+          "style_modifiers": [
+            "Renaissance oil painting"
+          ]
+        },
+        "current_agent": "prompt_generation"
+      }
+    },
+    {
+      "agent": "image_generation",
+      "provider": "comfyui",
+      "file_path": "output/97a3a1c4-214b-40f5-97f2-75598bedaf59/c9212224136f4167bd0ffe77e2eb314b.png",
+      "timestamp": 1772109427.2833335,
+      "state_snapshot": {
+        "image": {
+          "image_path": "output/97a3a1c4-214b-40f5-97f2-75598bedaf59/c9212224136f4167bd0ffe77e2eb314b.png",
+          "image_provider": "comfyui",
+          "generation_params": {
+            "seed": 2417005548,
+            "model": "sdxl",
+            "width": 768,
+            "height": 768,
+            "prompt": "photorealistic portrait,(masterpiece:1.2),(best quality:1.2),(ultra detailed face:1.3),human,skin texture with pores,facial bone structure,almond eye shape,brown eye color,natural skin imperfections,subtle wrinkles,short hair,intricate braid,late medieval plate armor or brigandine,(brown leather straps,steel scales),Saint Catherine symbol on armor,long-sleeved tunic,leggings,cloak with simple design,Rembrandt lighting,soft key light,subtle fill light,catchlights in eyes:1.1,85mm lens,shallow depth of field,sharp focus on eyes,bokeh background,RAW photo,8K,DLSR,detailed skin texture:1.2,film grain"
+          }
+        },
+        "current_agent": "image_generation"
+      }
+    },
+    {
+      "agent": "validation",
+      "score": 72.5,
+      "passed": false,
+      "llm_cost": 0.0,
+      "timestamp": 1772109450.8793595,
+      "state_snapshot": {
+        "validation": {
+          "rule_weights": {
+            "artistic_style": 0.25,
+            "clothing_accuracy": 0.25,
+            "cultural_accuracy": 0.25,
+            "temporal_accuracy": 0.25
+          },
+          "pass_threshold": 75.0,
+          "validation_score": 72.5,
+          "validation_passed": false,
+          "validation_results": [
+            {
+              "score": 20,
+              "passed": false,
+              "details": "The requested artistic style is Rembrandt lighting, which was popular in the 17th century. The image prompt does not match the typical artistic styles of the 15th century.",
+              "category": "artistic_style",
+              "reasoning": "Rembrandt's lighting style is characterized by strong contrasts and dramatic shadows, which would be out of place in a portrait from the 15th century. This style is more commonly associated with Dutch Golden Age painting.",
+              "rule_name": "style consistency"
+            },
+            {
+              "score": 90,
+              "passed": true,
+              "details": "The image prompt includes late medieval plate armor or brigandine, which is consistent with Joan of Arc's time period. The armor and clothing are also accurately described in terms of materials and design.",
+              "category": "clothing_accuracy",
+              "reasoning": "Plate armor was a common type of armor during the Late Middle Ages, and brigandine was also used by soldiers and knights. The description of brown leather straps and steel scales is consistent with these types of armor.",
+              "rule_name": "period-specific armor"
+            },
+            {
+              "score": 80,
+              "passed": true,
+              "details": "The image prompt describes Joan of Arc as a peasant, which is consistent with her social background. However, the level of detail and realism in the clothing and armor may be slightly anachronistic.",
+              "category": "cultural_accuracy",
+              "reasoning": "Joan of Arc was indeed from a peasant class, but it's worth noting that she also had connections to the nobility and clergy. The image prompt accurately captures her humble origins, but may overemphasize her social status.",
+              "rule_name": "peasant class accuracy"
+            },
+            {
+              "score": 100,
+              "passed": true,
+              "details": "The life dates and cultural context provided in the prompt are consistent with Joan of Arc's time period. The image prompt does not include any anachronistic elements that would suggest a different time period.",
+              "category": "temporal_accuracy",
+              "reasoning": "The life dates and cultural context provided in the prompt match Joan of Arc's known history, which includes her birth around 1412 and her execution in 1431. There is no reason to doubt the accuracy of these details.",
+              "rule_name": "time period consistency"
+            }
+          ]
+        },
+        "current_agent": "validation"
+      }
+    },
+    {
+      "agent": "prompt_generation",
+      "llm_cost": 0.0,
+      "timestamp": 1772109458.8852434,
+      "state_snapshot": {
+        "prompt": {
+          "image_prompt": "photorealistic portrait, (masterpiece:1.2), (best quality:1.2), (ultra detailed face:1.3)\nskin texture with pores, facial bone structure, pale complexion, strong and determined face, natural skin imperfections, subtle wrinkles\neye color: dark brown, almond-shaped eyes, eyelashes with individual hairs, eye shape as 11 o'clock position, (natural tear ducts:1.2), (fine lines around eyes:1.1)\nJoan of Arc's short hair, tied back with leather strap, simple style with a few loose strands framing face\nlate medieval plate armor or brigandine in brown color, adorned with Saint Catherine symbol, metal scales interlocking, fabric and leather details\ncloth tunic with long sleeves, leggings, cloak, all made from practical materials for ease of movement, minor folds and creases\nRembrandt lighting, soft key light, subtle fill light, (catchlights in eyes:1.1), warm color temperature 2700K-3000K\n85mm lens, shallow depth of field, sharp focus on eyes, bokeh background with blurred environment\nRAW photo, 8K, DSLR, (detailed skin texture:1.2), film grain",
+          "negative_prompt": "painting, illustration, drawing, art, sketch, cartoon, anime, 3d render, cgi, digital art, plastic skin, smooth skin, airbrushed, mannequin, doll, wax figure, uncanny valley, asymmetric eyes, crossed eyes, deformed face, distorted face, bad anatomy, deformed, extra limbs, mutated hands, fused fingers, too many fingers, modern clothing, anachronistic elements, blurry, out of focus, watermark, text, logo, signature, low quality, jpeg artifacts, overexposed, underexposed, oversaturated",
+          "style_modifiers": [
+            "Renaissance oil painting"
+          ]
+        },
+        "current_agent": "prompt_generation"
+      }
+    },
+    {
+      "agent": "image_generation",
+      "provider": "comfyui",
+      "file_path": "output/97a3a1c4-214b-40f5-97f2-75598bedaf59/61b7bdeb1c54474daddc3cf4e66ce85b.png",
+      "timestamp": 1772109571.5939317,
+      "state_snapshot": {
+        "image": {
+          "image_path": "output/97a3a1c4-214b-40f5-97f2-75598bedaf59/61b7bdeb1c54474daddc3cf4e66ce85b.png",
+          "image_provider": "comfyui",
+          "generation_params": {
+            "seed": 4261617167,
+            "model": "sdxl",
+            "width": 768,
+            "height": 768,
+            "prompt": "photorealistic portrait, (masterpiece:1.2), (best quality:1.2), (ultra detailed face:1.3)\nskin texture with pores, facial bone structure, pale complexion, strong and determined face, natural skin imperfections, subtle wrinkles\neye color: dark brown, almond-shaped eyes, eyelashes with individual hairs, eye shape as 11 o'clock position, (natural tear ducts:1.2), (fine lines around eyes:1.1)\nJoan of Arc's short hair, tied back with leather strap, simple style with a few loose strands framing face\nlate medieval plate armor or brigandine in brown color, adorned with Saint Catherine symbol, metal scales interlocking, fabric and leather details\ncloth tunic with long sleeves, leggings, cloak, all made from practical materials for ease of movement, minor folds and creases\nRembrandt lighting, soft key light, subtle fill light, (catchlights in eyes:1.1), warm color temperature 2700K-3000K\n85mm lens, shallow depth of field, sharp focus on eyes, bokeh background with blurred environment\nRAW photo, 8K, DSLR, (detailed skin texture:1.2), film grain"
+          }
+        },
+        "current_agent": "image_generation"
+      }
+    },
+    {
+      "agent": "validation",
+      "score": 76.25,
+      "passed": true,
+      "llm_cost": 0.0,
+      "timestamp": 1772109591.690537,
+      "state_snapshot": {
+        "validation": {
+          "rule_weights": {
+            "artistic_style": 0.25,
+            "clothing_accuracy": 0.25,
+            "cultural_accuracy": 0.25,
+            "temporal_accuracy": 0.25
+          },
+          "pass_threshold": 75.0,
+          "validation_score": 76.25,
+          "validation_passed": true,
+          "validation_results": [
+            {
+              "score": 20,
+              "passed": false,
+              "details": "The image style is reminiscent of Rembrandt, which was a 17th-century artist. While Rembrandt's use of light and shadow is iconic, it does not align with the artistic styles of the 15th century, when Joan of Arc lived.",
+              "category": "artistic_style",
+              "reasoning": "Rembrandt's style is too advanced for the 15th century, and his use of chiaroscuro would have been unusual during that time period.",
+              "rule_name": "style consistency with historical period"
+            },
+            {
+              "score": 90,
+              "passed": true,
+              "details": "The clothing described in the prompt, including the plate armor, brigandine, tunic, leggings, and cloak, is consistent with what would have been worn by a peasant during the late medieval period.",
+              "category": "clothing_accuracy",
+              "reasoning": "The use of practical materials and simple styles aligns with the cultural context of Joan of Arc's time.",
+              "rule_name": "accuracy of peasant attire"
+            },
+            {
+              "score": 95,
+              "passed": true,
+              "details": "The inclusion of the Saint Catherine symbol on the plate armor is a nod to Catholicism, which was prevalent during Joan of Arc's time.",
+              "category": "cultural_accuracy",
+              "reasoning": "The cultural context of Catholicism and peasant class are accurately represented in the clothing and accessories.",
+              "rule_name": "representation of Catholicism"
+            },
+            {
+              "score": 100,
+              "passed": true,
+              "details": "The provided life dates of c. 1412 \u2013 30 May 1431 are accurate for Joan of Arc.",
+              "category": "temporal_accuracy",
+              "reasoning": "There is no discrepancy between the given life dates and historical records.",
+              "rule_name": "accuracy of life dates"
+            }
+          ]
+        },
+        "current_agent": "validation"
+      }
+    },
+    {
+      "agent": "facial_compositing",
+      "skipped": false,
+      "timestamp": 1772109591.872677,
+      "source_face": "output/97a3a1c4-214b-40f5-97f2-75598bedaf59/face_search_f69fc70370a44cb29f33f87a362a8e8d.jpg",
+      "swapped_path": "output/97a3a1c4-214b-40f5-97f2-75598bedaf59/swapped_1c6d6fcc99e24c28aebbcbc32a022cf7.png",
+      "original_path": "output/97a3a1c4-214b-40f5-97f2-75598bedaf59/original_61b7bdeb1c54474daddc3cf4e66ce85b.png",
+      "state_snapshot": {
+        "compositing": {
+          "swapped_image_path": "output/97a3a1c4-214b-40f5-97f2-75598bedaf59/swapped_1c6d6fcc99e24c28aebbcbc32a022cf7.png",
+          "original_image_path": "output/97a3a1c4-214b-40f5-97f2-75598bedaf59/original_61b7bdeb1c54474daddc3cf4e66ce85b.png"
+        },
+        "current_agent": "facial_compositing"
+      }
+    },
+    {
+      "agent": "export",
+      "timestamp": 1772109591.881073,
+      "export_path": "output/97a3a1c4-214b-40f5-97f2-75598bedaf59/export",
+      "state_snapshot": {
+        "export": {
+          "export_path": "output/97a3a1c4-214b-40f5-97f2-75598bedaf59/export",
+          "export_format": "json+png"
+        },
+        "current_agent": "export"
+      }
+    }
+  ]
+}

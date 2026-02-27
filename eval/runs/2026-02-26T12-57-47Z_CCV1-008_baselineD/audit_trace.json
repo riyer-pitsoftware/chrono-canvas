@@ -1,0 +1,851 @@
+{
+  "id": "693cdea8-9bdf-4f2b-80a5-0ae16b858331",
+  "input_text": "A historically informed portrait of an Aboriginal Australian elder in a pre-European contact setting. The figure should show body paint patterns (ochre-based), minimal clothing appropriate to tropical climate, and cultural objects such as a coolamon, digging stick, or spear. The landscape should suggest Australian bushland or coast.",
+  "status": "completed",
+  "current_agent": "export",
+  "figure_name": null,
+  "created_at": "2026-02-26T12:57:47.918900Z",
+  "updated_at": "2026-02-26T16:00:32.264612Z",
+  "extracted_data": {
+    "region": null,
+    "occupation": null,
+    "figure_name": null,
+    "time_period": null
+  },
+  "research_data": {
+    "clothing_details": null,
+    "historical_context": null,
+    "physical_description": null
+  },
+  "generated_prompt": null,
+  "error_message": null,
+  "total_cost": 0.0,
+  "total_duration_ms": 0.0,
+  "llm_calls": [],
+  "validation_score": null,
+  "validation_passed": null,
+  "validation_reasoning": null,
+  "validation_categories": [],
+  "images": [
+    {
+      "id": "98cff1d3-2ab1-4cf8-ba8e-8fac79daabd3",
+      "request_id": "693cdea8-9bdf-4f2b-80a5-0ae16b858331",
+      "figure_id": null,
+      "file_path": "output/693cdea8-9bdf-4f2b-80a5-0ae16b858331/4a4ddbab6cb84e70b6092faf985d8b36.png",
+      "thumbnail_path": null,
+      "prompt_used": "",
+      "provider": "comfyui",
+      "width": 512,
+      "height": 512,
+      "validation_score": 53.75,
+      "created_at": "2026-02-26T16:00:32.264612Z"
+    },
+    {
+      "id": "71565b27-f46c-4d69-8d7a-658bebf75652",
+      "request_id": "693cdea8-9bdf-4f2b-80a5-0ae16b858331",
+      "figure_id": null,
+      "file_path": "output/693cdea8-9bdf-4f2b-80a5-0ae16b858331/80927edd646442c6aa15b275ef65e5e3.png",
+      "thumbnail_path": null,
+      "prompt_used": "",
+      "provider": "comfyui",
+      "width": 512,
+      "height": 512,
+      "validation_score": 35.0,
+      "created_at": "2026-02-26T16:00:32.264612Z"
+    },
+    {
+      "id": "83996aa9-64ef-44ed-a92b-2703246c559f",
+      "request_id": "693cdea8-9bdf-4f2b-80a5-0ae16b858331",
+      "figure_id": null,
+      "file_path": "output/693cdea8-9bdf-4f2b-80a5-0ae16b858331/f2e02f4aa97740e1a9c9bb0513554bee.png",
+      "thumbnail_path": null,
+      "prompt_used": "",
+      "provider": "comfyui",
+      "width": 512,
+      "height": 512,
+      "validation_score": 35.0,
+      "created_at": "2026-02-26T16:00:32.264612Z"
+    }
+  ],
+  "state_snapshots": [
+    {
+      "agent": "orchestrator",
+      "snapshot": {
+        "current_agent": "orchestrator"
+      }
+    },
+    {
+      "agent": "extraction",
+      "snapshot": {
+        "extraction": {
+          "region": "Australia",
+          "birth_year": "c. 1500s",
+          "death_year": "c. 1600s",
+          "occupation": "Elder",
+          "figure_name": "An Aboriginal Australian Elder",
+          "time_period": "Pre-European contact era",
+          "cultural_context": "Indigenous Australian culture, bushland or coastal lifestyle",
+          "notable_features": "",
+          "alternative_names": [],
+          "associated_locations": [
+            "Australian bushland",
+            "coastal regions"
+          ],
+          "extracted_attributes": {},
+          "historical_significance": "This figure represents the traditional knowledge and practices of Aboriginal Australians before European settlement, highlighting the importance of preserving indigenous cultures and histories."
+        },
+        "current_agent": "extraction"
+      }
+    },
+    {
+      "agent": "research",
+      "snapshot": {
+        "research": {
+          "clothing_details": "Traditional Aboriginal clothing consisted of loincloths made from animal hides or woven fibers, with intricate patterns and designs that conveyed important cultural messages. The clothing was often worn in natural colors such as earth tones, ochres, and umbers, and may have included adornments like feathers, shells, or carved wood.",
+          "research_sources": [
+            "Australian Institute of Aboriginal Studies",
+            "National Museum of Australia",
+            "Tribal histories and oral traditions"
+          ],
+          "historical_context": "Aboriginal Australian Elders played a vital role in preserving and passing down their culture, traditions, and knowledge to younger generations. They were respected for their wisdom, spiritual connection, and deep understanding of the land. Their significance extends beyond their individual lives to the very fabric of Indigenous Australian society.",
+          "research_cache_hit": false,
+          "art_style_reference": "Australian Aboriginal art from this era would be characterized by simple yet expressive forms, using natural materials like ochres, clays, and charcoal to create intricate designs and patterns. The art style may have been influenced by traditional storytelling and ancestral beings.",
+          "physical_description": "Unfortunately, no detailed physical description of Aboriginal Australian Elders is recorded in historical accounts. However, it can be inferred that they would have had a strong and lean build, adapted to their active lifestyle in the bush or coastal regions. Their hair may have been styled in traditional ways, such as being tied back with a string or adornments like feathers or shells. Skin tones varied among different Indigenous Australian groups, but were often darkened by exposure to the sun."
+        },
+        "current_agent": "research"
+      }
+    },
+    {
+      "agent": "face_search",
+      "snapshot": {
+        "face": {
+          "face_search_url": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTFpC0boXabYBx8S1cDOUpBIkfWArcjAbwF4g&s",
+          "source_face_path": "output/693cdea8-9bdf-4f2b-80a5-0ae16b858331/face_search_6011701b3a614643a64d35c4e96b63f4.jpg",
+          "face_search_query": "An Aboriginal Australian Elder historical portrait photograph",
+          "face_search_provider": "serpapi"
+        },
+        "current_agent": "face_search"
+      }
+    },
+    {
+      "agent": "prompt_generation",
+      "snapshot": {
+        "prompt": {
+          "image_prompt": "photorealistic portrait,(masterpiece:1.2),(best quality:1.2),(ultra detailed face:1.3)\nhigh definition skin texture with pores, facial bone structure, almond shaped eyes, brown eye color, subtle wrinkles, natural skin imperfections\ntraditional Aboriginal clothing made from animal hides or woven fibers, intricate patterns and designs, earth tones, ochres, umbers, feathers, shells, carved wood, worn in a loincloth style\nsoft key light, Rembrandt lighting, subtle fill light, catchlights in eyes:1.1, sharp focus on eyes, 85mm lens, shallow depth of field, bokeh background, RAW photo, 8K, DSLR, detailed skin texture:1.2, film grain",
+          "negative_prompt": "painting, illustration, drawing, art, sketch, cartoon, anime, 3d render, cgi, digital art, plastic skin, smooth skin, airbrushed, mannequin, doll, wax figure, uncanny valley, asymmetric eyes, crossed eyes, deformed face, distorted face, bad anatomy, deformed, extra limbs, mutated hands, fused fingers, too many fingers, modern clothing, anachronistic elements, blurry, out of focus, watermark, text, logo, signature, low quality, jpeg artifacts, overexposed, underexposed, oversaturated",
+          "style_modifiers": [
+            "Australian Aboriginal art from this era would be characterized by simple yet expressive forms, using natural materials like ochres, clays, and charcoal to create intricate designs and patterns. The art style may have been influenced by traditional storytelling and ancestral beings."
+          ]
+        },
+        "current_agent": "prompt_generation"
+      }
+    },
+    {
+      "agent": "image_generation",
+      "snapshot": {
+        "image": {
+          "image_path": "output/693cdea8-9bdf-4f2b-80a5-0ae16b858331/4a4ddbab6cb84e70b6092faf985d8b36.png",
+          "image_provider": "comfyui",
+          "generation_params": {
+            "seed": 1920830136,
+            "model": "sdxl",
+            "width": 768,
+            "height": 768,
+            "prompt": "photorealistic portrait,(masterpiece:1.2),(best quality:1.2),(ultra detailed face:1.3)\nhigh definition skin texture with pores, facial bone structure, almond shaped eyes, brown eye color, subtle wrinkles, natural skin imperfections\ntraditional Aboriginal clothing made from animal hides or woven fibers, intricate patterns and designs, earth tones, ochres, umbers, feathers, shells, carved wood, worn in a loincloth style\nsoft key light, Rembrandt lighting, subtle fill light, catchlights in eyes:1.1, sharp focus on eyes, 85mm lens, shallow depth of field, bokeh background, RAW photo, 8K, DSLR, detailed skin texture:1.2, film grain"
+          }
+        },
+        "current_agent": "image_generation"
+      }
+    },
+    {
+      "agent": "validation",
+      "snapshot": {
+        "validation": {
+          "rule_weights": {
+            "artistic_style": 0.25,
+            "clothing_accuracy": 0.25,
+            "cultural_accuracy": 0.25,
+            "temporal_accuracy": 0.25
+          },
+          "pass_threshold": 75.0,
+          "validation_score": 53.75,
+          "validation_passed": false,
+          "validation_results": [
+            {
+              "score": 20,
+              "passed": false,
+              "details": "The image prompt describes a photorealistic portrait with Rembrandt lighting, which is consistent with the artistic styles of the 16th century. However, the use of 8K resolution and DSLR technology is anachronistic for this time period.",
+              "category": "artistic_style",
+              "reasoning": "While the artistic style itself is plausible, the use of modern camera equipment and high-resolution technology is not consistent with the pre-European contact era.",
+              "rule_name": "style consistency with historical period"
+            },
+            {
+              "score": 90,
+              "passed": true,
+              "details": "The description of traditional Aboriginal clothing made from animal hides or woven fibers, intricate patterns and designs, earth tones, ochres, umbers, feathers, shells, carved wood is consistent with historical records.",
+              "category": "clothing_accuracy",
+              "reasoning": "The use of specific materials and techniques is well-documented in historical accounts, making this category highly plausible.",
+              "rule_name": "traditional Aboriginal clothing accuracy"
+            },
+            {
+              "score": 95,
+              "passed": true,
+              "details": "The cultural context described as Indigenous Australian culture, bushland or coastal lifestyle is consistent with historical records of Aboriginal cultures.",
+              "category": "cultural_accuracy",
+              "reasoning": "The description of cultural practices and traditions is consistent with known historical accounts, making this category highly plausible.",
+              "rule_name": "cultural context consistency"
+            },
+            {
+              "score": 10,
+              "passed": false,
+              "details": "The life dates specified as c. 1500s \u2013 c. 1600s are consistent with the pre-European contact era, but the use of modern camera equipment and high-resolution technology is not.",
+              "category": "temporal_accuracy",
+              "reasoning": "While the time period itself is plausible, the anachronistic use of modern technology undermines this category.",
+              "rule_name": "time period consistency"
+            }
+          ]
+        },
+        "current_agent": "validation"
+      }
+    },
+    {
+      "agent": "prompt_generation",
+      "snapshot": {
+        "prompt": {
+          "image_prompt": "photorealistic portrait, (masterpiece:1.2), (best quality:1.2), (ultra detailed face:1.3) \nhuman face with skin texture and pores, facial bone structure, eye color brown with golden flecks, natural skin imperfections, subtle wrinkles \nAboriginal Australian Elder clothing made from animal hides or woven fibers in earth tones ochres, umbers, with intricate patterns and designs conveying cultural messages, adorned with feathers shells carved wood \nRembrandt lighting soft key light subtle fill light catchlights in eyes:1.1 \n85mm lens shallow depth of field sharp focus on eyes bokeh background \nRAW photo 8K DSLR detailed skin texture:1.2 film grain",
+          "negative_prompt": "painting, illustration, drawing, art, sketch, cartoon, anime, 3d render, cgi, digital art, plastic skin, smooth skin, airbrushed, mannequin, doll, wax figure, uncanny valley, asymmetric eyes, crossed eyes, deformed face, distorted face, bad anatomy, deformed, extra limbs, mutated hands, fused fingers, too many fingers, modern clothing, anachronistic elements, blurry, out of focus, watermark, text, logo, signature, low quality, jpeg artifacts, overexposed, underexposed, oversaturated",
+          "style_modifiers": [
+            "Australian Aboriginal art from this era would be characterized by simple yet expressive forms, using natural materials like ochres, clays, and charcoal to create intricate designs and patterns. The art style may have been influenced by traditional storytelling and ancestral beings."
+          ]
+        },
+        "current_agent": "prompt_generation"
+      }
+    },
+    {
+      "agent": "image_generation",
+      "snapshot": {
+        "image": {
+          "image_path": "output/693cdea8-9bdf-4f2b-80a5-0ae16b858331/80927edd646442c6aa15b275ef65e5e3.png",
+          "image_provider": "comfyui",
+          "generation_params": {
+            "seed": 2270278934,
+            "model": "sdxl",
+            "width": 768,
+            "height": 768,
+            "prompt": "photorealistic portrait, (masterpiece:1.2), (best quality:1.2), (ultra detailed face:1.3) \nhuman face with skin texture and pores, facial bone structure, eye color brown with golden flecks, natural skin imperfections, subtle wrinkles \nAboriginal Australian Elder clothing made from animal hides or woven fibers in earth tones ochres, umbers, with intricate patterns and designs conveying cultural messages, adorned with feathers shells carved wood \nRembrandt lighting soft key light subtle fill light catchlights in eyes:1.1 \n85mm lens shallow depth of field sharp focus on eyes bokeh background \nRAW photo 8K DSLR detailed skin texture:1.2 film grain"
+          }
+        },
+        "current_agent": "image_generation"
+      }
+    },
+    {
+      "agent": "validation",
+      "snapshot": {
+        "validation": {
+          "rule_weights": {
+            "artistic_style": 0.25,
+            "clothing_accuracy": 0.25,
+            "cultural_accuracy": 0.25,
+            "temporal_accuracy": 0.25
+          },
+          "pass_threshold": 75.0,
+          "validation_score": 35.0,
+          "validation_passed": false,
+          "validation_results": [
+            {
+              "score": 20,
+              "passed": false,
+              "details": "The requested level of detail is unusually high for a pre-European contact era portrait. While it's possible that some Aboriginal Australian artists may have achieved such levels of realism, the combination of photorealistic and ultra-detailed features makes this image less plausible.",
+              "category": "artistic_style",
+              "reasoning": "The use of 8K resolution and DSLR technology would not have been available during the requested time period. Additionally, the level of detail required to achieve a 'masterpiece' rating is unlikely for a traditional Aboriginal Australian portrait.",
+              "rule_name": "overly-realistic"
+            },
+            {
+              "score": 30,
+              "passed": false,
+              "details": "While animal hides and woven fibers were used in some Indigenous Australian cultures, the use of specific materials like ochres and umbers is not well-documented. The image's earthy tones are plausible, but the exact materials and patterns used would need further research to confirm accuracy.",
+              "category": "clothing_accuracy",
+              "reasoning": "The use of these materials may have been present in certain regions or cultures, but their widespread use across all Aboriginal Australian groups during this time period is unlikely.",
+              "rule_name": "inaccurate_materials"
+            },
+            {
+              "score": 40,
+              "passed": false,
+              "details": "The image's focus on the elder's face and clothing, as well as the use of Rembrandt lighting, may be influenced by European artistic traditions. While Aboriginal Australian art often features intricate patterns and designs, the specific cultural messages conveyed in this image are not well-documented.",
+              "category": "cultural_accuracy",
+              "reasoning": "Aboriginal Australian art is known for its unique characteristics, such as the use of dot painting and bark paintings, which differ from European styles like Rembrandt lighting.",
+              "rule_name": "inaccurate_cultural_elements"
+            },
+            {
+              "score": 50,
+              "passed": false,
+              "details": "The requested life dates (c. 1500s - c. 1600s) are relatively narrow and may not accurately represent the diversity of Aboriginal Australian cultures during this time period.",
+              "category": "temporal_accuracy",
+              "reasoning": "Aboriginal Australian cultures existed across a wide range of regions and time periods, making it difficult to pinpoint an exact era for this image.",
+              "rule_name": "inconsistent_life_dates"
+            },
+            {
+              "score": 20,
+              "passed": false,
+              "details": "The use of a shallow depth of field and bokeh background is not typical of traditional Aboriginal Australian art, which often features more complex compositions.",
+              "category": "artistic_style",
+              "reasoning": "Aboriginal Australian art frequently incorporates natural elements and storytelling through composition, making this image's focus on the subject's face less plausible.",
+              "rule_name": "unusual_composition"
+            },
+            {
+              "score": 30,
+              "passed": false,
+              "details": "The intricate patterns and designs in the clothing are not well-documented for Aboriginal Australian cultures during this time period. While some patterns may have been present, their specific designs and meanings would need further research to confirm accuracy.",
+              "category": "clothing_accuracy",
+              "reasoning": "Aboriginal Australian art often features unique patterns and designs that reflect regional and cultural differences, making it challenging to accurately depict these elements in a single image.",
+              "rule_name": "inaccurate_pattern_designs"
+            },
+            {
+              "score": 40,
+              "passed": false,
+              "details": "The use of feathers, shells, and carved wood as adornments is not well-documented for Aboriginal Australian cultures during this time period. While these materials may have been used in some contexts, their specific use in this image would need further research to confirm accuracy.",
+              "category": "cultural_accuracy",
+              "reasoning": "Aboriginal Australian art often incorporates natural materials and storytelling through adornment, making the specific use of these materials in this image less plausible.",
+              "rule_name": "inaccurate_adornment"
+            },
+            {
+              "score": 50,
+              "passed": false,
+              "details": "The image's cultural context as a 'bushland or coastal lifestyle' is relatively narrow and may not accurately represent the diversity of Aboriginal Australian cultures during this time period.",
+              "category": "temporal_accuracy",
+              "reasoning": "Aboriginal Australian cultures existed across a wide range of regions and environments, making it difficult to pinpoint an exact cultural context for this image.",
+              "rule_name": "inconsistent_cultural_context"
+            }
+          ]
+        },
+        "current_agent": "validation"
+      }
+    },
+    {
+      "agent": "prompt_generation",
+      "snapshot": {
+        "prompt": {
+          "image_prompt": "photorealistic portrait,(masterpiece:1.2),(best quality:1.2),(ultra detailed face:1.3) \nhigh resolution image (8K), DSLR camera, RAW photo\n85mm lens with shallow depth of field and sharp focus on eyes, bokeh background\nsoft key light with subtle fill light and Rembrandt lighting effect\ncatchlights in eyes:1.1, (sharp facial features:1.2)\nrealistic skin texture with pores, natural skin imperfections and subtle wrinkles\n(ultra detailed skin:1.3), darkened skin tone with warm undertones\ntraditional Aboriginal clothing made from animal hides or woven fibers, intricate patterns and designs\nloincloth worn in natural colors such as earth tones, ochres, and umbers, feathers and shells adornments\nhair styled in traditional ways, tied back with string or adorned with feathers or shells",
+          "negative_prompt": "painting, illustration, drawing, art, sketch, cartoon, anime, 3d render, cgi, digital art, plastic skin, smooth skin, airbrushed, mannequin, doll, wax figure, uncanny valley, asymmetric eyes, crossed eyes, deformed face, distorted face, bad anatomy, deformed, extra limbs, mutated hands, fused fingers, too many fingers, modern clothing, anachronistic elements, blurry, out of focus, watermark, text, logo, signature, low quality, jpeg artifacts, overexposed, underexposed, oversaturated",
+          "style_modifiers": [
+            "Australian Aboriginal art from this era would be characterized by simple yet expressive forms, using natural materials like ochres, clays, and charcoal to create intricate designs and patterns. The art style may have been influenced by traditional storytelling and ancestral beings."
+          ]
+        },
+        "current_agent": "prompt_generation"
+      }
+    },
+    {
+      "agent": "image_generation",
+      "snapshot": {
+        "image": {
+          "image_path": "output/693cdea8-9bdf-4f2b-80a5-0ae16b858331/f2e02f4aa97740e1a9c9bb0513554bee.png",
+          "image_provider": "comfyui",
+          "generation_params": {
+            "seed": 2356342966,
+            "model": "sdxl",
+            "width": 768,
+            "height": 768,
+            "prompt": "photorealistic portrait,(masterpiece:1.2),(best quality:1.2),(ultra detailed face:1.3) \nhigh resolution image (8K), DSLR camera, RAW photo\n85mm lens with shallow depth of field and sharp focus on eyes, bokeh background\nsoft key light with subtle fill light and Rembrandt lighting effect\ncatchlights in eyes:1.1, (sharp facial features:1.2)\nrealistic skin texture with pores, natural skin imperfections and subtle wrinkles\n(ultra detailed skin:1.3), darkened skin tone with warm undertones\ntraditional Aboriginal clothing made from animal hides or woven fibers, intricate patterns and designs\nloincloth worn in natural colors such as earth tones, ochres, and umbers, feathers and shells adornments\nhair styled in traditional ways, tied back with string or adorned with feathers or shells"
+          }
+        },
+        "current_agent": "image_generation"
+      }
+    },
+    {
+      "agent": "validation",
+      "snapshot": {
+        "validation": {
+          "rule_weights": {
+            "artistic_style": 0.25,
+            "clothing_accuracy": 0.25,
+            "cultural_accuracy": 0.25,
+            "temporal_accuracy": 0.25
+          },
+          "pass_threshold": 75.0,
+          "validation_score": 35.0,
+          "validation_passed": false,
+          "validation_results": [
+            {
+              "score": 20,
+              "passed": false,
+              "details": "The requested artistic style is photorealistic, which may be too realistic for an Aboriginal Australian Elder portrait from the pre-European contact era. Traditional Aboriginal art often features more stylized and abstract representations of people and animals.",
+              "category": "artistic_style",
+              "reasoning": "While it's possible that a highly skilled artist could create a photorealistic portrait in this time period, it's unlikely that such a level of realism would be achieved without some artistic license or interpretation.",
+              "rule_name": "overly-realistic"
+            },
+            {
+              "score": 30,
+              "passed": false,
+              "details": "The image depicts traditional Aboriginal clothing made from animal hides or woven fibers, which is accurate. However, the use of DSLR camera and RAW photo with modern equipment and software may not be consistent with the time period.",
+              "category": "clothing_accuracy",
+              "reasoning": "While it's possible that a skilled artist could create a realistic image using ancient materials and techniques, the use of modern technology would likely be anachronistic.",
+              "rule_name": "inaccurate_materials"
+            },
+            {
+              "score": 40,
+              "passed": false,
+              "details": "The image depicts hair styled in traditional ways, tied back with string or adorned with feathers or shells. However, the use of a DSLR camera and modern equipment may not be consistent with the cultural context.",
+              "category": "cultural_accuracy",
+              "reasoning": "While it's possible that a skilled artist could create a realistic image using ancient materials and techniques, the use of modern technology would likely be anachronistic.",
+              "rule_name": "inaccurate_hair_styles"
+            },
+            {
+              "score": 50,
+              "passed": false,
+              "details": "The life dates specified in the prompt (c. 1500s \u2013 c. 1600s) may not be consistent with the cultural context, as many Aboriginal Australian cultures had more complex and nuanced histories.",
+              "category": "temporal_accuracy",
+              "reasoning": "While it's possible that an individual could have lived during this time period, the specific life dates may not accurately reflect the broader cultural context.",
+              "rule_name": "inconsistent_life_dates"
+            }
+          ]
+        },
+        "current_agent": "validation"
+      }
+    },
+    {
+      "agent": "facial_compositing",
+      "snapshot": {
+        "compositing": {
+          "swapped_image_path": "output/693cdea8-9bdf-4f2b-80a5-0ae16b858331/swapped_f680af2a96de4ad684f74b08899305cf.png",
+          "original_image_path": "output/693cdea8-9bdf-4f2b-80a5-0ae16b858331/original_f2e02f4aa97740e1a9c9bb0513554bee.png"
+        },
+        "current_agent": "facial_compositing"
+      }
+    },
+    {
+      "agent": "export",
+      "snapshot": {
+        "export": {
+          "export_path": "output/693cdea8-9bdf-4f2b-80a5-0ae16b858331/export",
+          "export_format": "json+png"
+        },
+        "current_agent": "export"
+      }
+    }
+  ],
+  "agent_trace": [
+    {
+      "agent": "orchestrator",
+      "action": "start",
+      "timestamp": 1772110668.3172796,
+      "input_text": "A historically informed portrait of an Aboriginal Australian elder in a pre-European contact setting. The figure should show body paint patterns (ochre-based), minimal clothing appropriate to tropical climate, and cultural objects such as a coolamon, digging stick, or spear. The landscape should suggest Australian bushland or coast.",
+      "moderation": {
+        "passed": true,
+        "reason": null
+      },
+      "state_snapshot": {
+        "current_agent": "orchestrator"
+      }
+    },
+    {
+      "agent": "extraction",
+      "llm_cost": 0.0,
+      "extracted": {
+        "region": "Australia",
+        "attributes": {},
+        "birth_year": "c. 1500s",
+        "death_year": "c. 1600s",
+        "occupation": "Elder",
+        "figure_name": "An Aboriginal Australian Elder",
+        "time_period": "Pre-European contact era",
+        "cultural_context": "Indigenous Australian culture, bushland or coastal lifestyle",
+        "notable_features": "",
+        "alternative_names": [],
+        "associated_locations": [
+          "Australian bushland",
+          "coastal regions"
+        ],
+        "historical_significance": "This figure represents the traditional knowledge and practices of Aboriginal Australians before European settlement, highlighting the importance of preserving indigenous cultures and histories."
+      },
+      "timestamp": 1772110674.3234293,
+      "state_snapshot": {
+        "extraction": {
+          "region": "Australia",
+          "birth_year": "c. 1500s",
+          "death_year": "c. 1600s",
+          "occupation": "Elder",
+          "figure_name": "An Aboriginal Australian Elder",
+          "time_period": "Pre-European contact era",
+          "cultural_context": "Indigenous Australian culture, bushland or coastal lifestyle",
+          "notable_features": "",
+          "alternative_names": [],
+          "associated_locations": [
+            "Australian bushland",
+            "coastal regions"
+          ],
+          "extracted_attributes": {},
+          "historical_significance": "This figure represents the traditional knowledge and practices of Aboriginal Australians before European settlement, highlighting the importance of preserving indigenous cultures and histories."
+        },
+        "current_agent": "extraction"
+      }
+    },
+    {
+      "agent": "research",
+      "llm_cost": 0.0,
+      "cache_hit": false,
+      "timestamp": 1772110686.6570482,
+      "state_snapshot": {
+        "research": {
+          "clothing_details": "Traditional Aboriginal clothing consisted of loincloths made from animal hides or woven fibers, with intricate patterns and designs that conveyed important cultural messages. The clothing was often worn in natural colors such as earth tones, ochres, and umbers, and may have included adornments like feathers, shells, or carved wood.",
+          "research_sources": [
+            "Australian Institute of Aboriginal Studies",
+            "National Museum of Australia",
+            "Tribal histories and oral traditions"
+          ],
+          "historical_context": "Aboriginal Australian Elders played a vital role in preserving and passing down their culture, traditions, and knowledge to younger generations. They were respected for their wisdom, spiritual connection, and deep understanding of the land. Their significance extends beyond their individual lives to the very fabric of Indigenous Australian society.",
+          "research_cache_hit": false,
+          "art_style_reference": "Australian Aboriginal art from this era would be characterized by simple yet expressive forms, using natural materials like ochres, clays, and charcoal to create intricate designs and patterns. The art style may have been influenced by traditional storytelling and ancestral beings.",
+          "physical_description": "Unfortunately, no detailed physical description of Aboriginal Australian Elders is recorded in historical accounts. However, it can be inferred that they would have had a strong and lean build, adapted to their active lifestyle in the bush or coastal regions. Their hair may have been styled in traditional ways, such as being tied back with a string or adornments like feathers or shells. Skin tones varied among different Indigenous Australian groups, but were often darkened by exposure to the sun."
+        },
+        "current_agent": "research"
+      }
+    },
+    {
+      "agent": "face_search",
+      "query": "An Aboriginal Australian Elder historical portrait photograph",
+      "skipped": false,
+      "timestamp": 1772110690.80527,
+      "local_path": "output/693cdea8-9bdf-4f2b-80a5-0ae16b858331/face_search_6011701b3a614643a64d35c4e96b63f4.jpg",
+      "source_url": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTFpC0boXabYBx8S1cDOUpBIkfWArcjAbwF4g&s",
+      "state_snapshot": {
+        "face": {
+          "face_search_url": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTFpC0boXabYBx8S1cDOUpBIkfWArcjAbwF4g&s",
+          "source_face_path": "output/693cdea8-9bdf-4f2b-80a5-0ae16b858331/face_search_6011701b3a614643a64d35c4e96b63f4.jpg",
+          "face_search_query": "An Aboriginal Australian Elder historical portrait photograph",
+          "face_search_provider": "serpapi"
+        },
+        "current_agent": "face_search"
+      },
+      "candidates_tried": 100
+    },
+    {
+      "agent": "prompt_generation",
+      "llm_cost": 0.0,
+      "timestamp": 1772110696.3606608,
+      "state_snapshot": {
+        "prompt": {
+          "image_prompt": "photorealistic portrait,(masterpiece:1.2),(best quality:1.2),(ultra detailed face:1.3)\nhigh definition skin texture with pores, facial bone structure, almond shaped eyes, brown eye color, subtle wrinkles, natural skin imperfections\ntraditional Aboriginal clothing made from animal hides or woven fibers, intricate patterns and designs, earth tones, ochres, umbers, feathers, shells, carved wood, worn in a loincloth style\nsoft key light, Rembrandt lighting, subtle fill light, catchlights in eyes:1.1, sharp focus on eyes, 85mm lens, shallow depth of field, bokeh background, RAW photo, 8K, DSLR, detailed skin texture:1.2, film grain",
+          "negative_prompt": "painting, illustration, drawing, art, sketch, cartoon, anime, 3d render, cgi, digital art, plastic skin, smooth skin, airbrushed, mannequin, doll, wax figure, uncanny valley, asymmetric eyes, crossed eyes, deformed face, distorted face, bad anatomy, deformed, extra limbs, mutated hands, fused fingers, too many fingers, modern clothing, anachronistic elements, blurry, out of focus, watermark, text, logo, signature, low quality, jpeg artifacts, overexposed, underexposed, oversaturated",
+          "style_modifiers": [
+            "Australian Aboriginal art from this era would be characterized by simple yet expressive forms, using natural materials like ochres, clays, and charcoal to create intricate designs and patterns. The art style may have been influenced by traditional storytelling and ancestral beings."
+          ]
+        },
+        "current_agent": "prompt_generation"
+      }
+    },
+    {
+      "agent": "image_generation",
+      "provider": "comfyui",
+      "file_path": "output/693cdea8-9bdf-4f2b-80a5-0ae16b858331/4a4ddbab6cb84e70b6092faf985d8b36.png",
+      "timestamp": 1772110799.840359,
+      "state_snapshot": {
+        "image": {
+          "image_path": "output/693cdea8-9bdf-4f2b-80a5-0ae16b858331/4a4ddbab6cb84e70b6092faf985d8b36.png",
+          "image_provider": "comfyui",
+          "generation_params": {
+            "seed": 1920830136,
+            "model": "sdxl",
+            "width": 768,
+            "height": 768,
+            "prompt": "photorealistic portrait,(masterpiece:1.2),(best quality:1.2),(ultra detailed face:1.3)\nhigh definition skin texture with pores, facial bone structure, almond shaped eyes, brown eye color, subtle wrinkles, natural skin imperfections\ntraditional Aboriginal clothing made from animal hides or woven fibers, intricate patterns and designs, earth tones, ochres, umbers, feathers, shells, carved wood, worn in a loincloth style\nsoft key light, Rembrandt lighting, subtle fill light, catchlights in eyes:1.1, sharp focus on eyes, 85mm lens, shallow depth of field, bokeh background, RAW photo, 8K, DSLR, detailed skin texture:1.2, film grain"
+          }
+        },
+        "current_agent": "image_generation"
+      }
+    },
+    {
+      "agent": "validation",
+      "score": 53.75,
+      "passed": false,
+      "llm_cost": 0.0,
+      "timestamp": 1772110820.235842,
+      "state_snapshot": {
+        "validation": {
+          "rule_weights": {
+            "artistic_style": 0.25,
+            "clothing_accuracy": 0.25,
+            "cultural_accuracy": 0.25,
+            "temporal_accuracy": 0.25
+          },
+          "pass_threshold": 75.0,
+          "validation_score": 53.75,
+          "validation_passed": false,
+          "validation_results": [
+            {
+              "score": 20,
+              "passed": false,
+              "details": "The image prompt describes a photorealistic portrait with Rembrandt lighting, which is consistent with the artistic styles of the 16th century. However, the use of 8K resolution and DSLR technology is anachronistic for this time period.",
+              "category": "artistic_style",
+              "reasoning": "While the artistic style itself is plausible, the use of modern camera equipment and high-resolution technology is not consistent with the pre-European contact era.",
+              "rule_name": "style consistency with historical period"
+            },
+            {
+              "score": 90,
+              "passed": true,
+              "details": "The description of traditional Aboriginal clothing made from animal hides or woven fibers, intricate patterns and designs, earth tones, ochres, umbers, feathers, shells, carved wood is consistent with historical records.",
+              "category": "clothing_accuracy",
+              "reasoning": "The use of specific materials and techniques is well-documented in historical accounts, making this category highly plausible.",
+              "rule_name": "traditional Aboriginal clothing accuracy"
+            },
+            {
+              "score": 95,
+              "passed": true,
+              "details": "The cultural context described as Indigenous Australian culture, bushland or coastal lifestyle is consistent with historical records of Aboriginal cultures.",
+              "category": "cultural_accuracy",
+              "reasoning": "The description of cultural practices and traditions is consistent with known historical accounts, making this category highly plausible.",
+              "rule_name": "cultural context consistency"
+            },
+            {
+              "score": 10,
+              "passed": false,
+              "details": "The life dates specified as c. 1500s \u2013 c. 1600s are consistent with the pre-European contact era, but the use of modern camera equipment and high-resolution technology is not.",
+              "category": "temporal_accuracy",
+              "reasoning": "While the time period itself is plausible, the anachronistic use of modern technology undermines this category.",
+              "rule_name": "time period consistency"
+            }
+          ]
+        },
+        "current_agent": "validation"
+      }
+    },
+    {
+      "agent": "prompt_generation",
+      "llm_cost": 0.0,
+      "timestamp": 1772110825.4755802,
+      "state_snapshot": {
+        "prompt": {
+          "image_prompt": "photorealistic portrait, (masterpiece:1.2), (best quality:1.2), (ultra detailed face:1.3) \nhuman face with skin texture and pores, facial bone structure, eye color brown with golden flecks, natural skin imperfections, subtle wrinkles \nAboriginal Australian Elder clothing made from animal hides or woven fibers in earth tones ochres, umbers, with intricate patterns and designs conveying cultural messages, adorned with feathers shells carved wood \nRembrandt lighting soft key light subtle fill light catchlights in eyes:1.1 \n85mm lens shallow depth of field sharp focus on eyes bokeh background \nRAW photo 8K DSLR detailed skin texture:1.2 film grain",
+          "negative_prompt": "painting, illustration, drawing, art, sketch, cartoon, anime, 3d render, cgi, digital art, plastic skin, smooth skin, airbrushed, mannequin, doll, wax figure, uncanny valley, asymmetric eyes, crossed eyes, deformed face, distorted face, bad anatomy, deformed, extra limbs, mutated hands, fused fingers, too many fingers, modern clothing, anachronistic elements, blurry, out of focus, watermark, text, logo, signature, low quality, jpeg artifacts, overexposed, underexposed, oversaturated",
+          "style_modifiers": [
+            "Australian Aboriginal art from this era would be characterized by simple yet expressive forms, using natural materials like ochres, clays, and charcoal to create intricate designs and patterns. The art style may have been influenced by traditional storytelling and ancestral beings."
+          ]
+        },
+        "current_agent": "prompt_generation"
+      }
+    },
+    {
+      "agent": "image_generation",
+      "provider": "comfyui",
+      "file_path": "output/693cdea8-9bdf-4f2b-80a5-0ae16b858331/80927edd646442c6aa15b275ef65e5e3.png",
+      "timestamp": 1772111981.1069915,
+      "state_snapshot": {
+        "image": {
+          "image_path": "output/693cdea8-9bdf-4f2b-80a5-0ae16b858331/80927edd646442c6aa15b275ef65e5e3.png",
+          "image_provider": "comfyui",
+          "generation_params": {
+            "seed": 2270278934,
+            "model": "sdxl",
+            "width": 768,
+            "height": 768,
+            "prompt": "photorealistic portrait, (masterpiece:1.2), (best quality:1.2), (ultra detailed face:1.3) \nhuman face with skin texture and pores, facial bone structure, eye color brown with golden flecks, natural skin imperfections, subtle wrinkles \nAboriginal Australian Elder clothing made from animal hides or woven fibers in earth tones ochres, umbers, with intricate patterns and designs conveying cultural messages, adorned with feathers shells carved wood \nRembrandt lighting soft key light subtle fill light catchlights in eyes:1.1 \n85mm lens shallow depth of field sharp focus on eyes bokeh background \nRAW photo 8K DSLR detailed skin texture:1.2 film grain"
+          }
+        },
+        "current_agent": "image_generation"
+      }
+    },
+    {
+      "agent": "validation",
+      "score": 35.0,
+      "passed": false,
+      "llm_cost": 0.0,
+      "timestamp": 1772112027.1632688,
+      "state_snapshot": {
+        "validation": {
+          "rule_weights": {
+            "artistic_style": 0.25,
+            "clothing_accuracy": 0.25,
+            "cultural_accuracy": 0.25,
+            "temporal_accuracy": 0.25
+          },
+          "pass_threshold": 75.0,
+          "validation_score": 35.0,
+          "validation_passed": false,
+          "validation_results": [
+            {
+              "score": 20,
+              "passed": false,
+              "details": "The requested level of detail is unusually high for a pre-European contact era portrait. While it's possible that some Aboriginal Australian artists may have achieved such levels of realism, the combination of photorealistic and ultra-detailed features makes this image less plausible.",
+              "category": "artistic_style",
+              "reasoning": "The use of 8K resolution and DSLR technology would not have been available during the requested time period. Additionally, the level of detail required to achieve a 'masterpiece' rating is unlikely for a traditional Aboriginal Australian portrait.",
+              "rule_name": "overly-realistic"
+            },
+            {
+              "score": 30,
+              "passed": false,
+              "details": "While animal hides and woven fibers were used in some Indigenous Australian cultures, the use of specific materials like ochres and umbers is not well-documented. The image's earthy tones are plausible, but the exact materials and patterns used would need further research to confirm accuracy.",
+              "category": "clothing_accuracy",
+              "reasoning": "The use of these materials may have been present in certain regions or cultures, but their widespread use across all Aboriginal Australian groups during this time period is unlikely.",
+              "rule_name": "inaccurate_materials"
+            },
+            {
+              "score": 40,
+              "passed": false,
+              "details": "The image's focus on the elder's face and clothing, as well as the use of Rembrandt lighting, may be influenced by European artistic traditions. While Aboriginal Australian art often features intricate patterns and designs, the specific cultural messages conveyed in this image are not well-documented.",
+              "category": "cultural_accuracy",
+              "reasoning": "Aboriginal Australian art is known for its unique characteristics, such as the use of dot painting and bark paintings, which differ from European styles like Rembrandt lighting.",
+              "rule_name": "inaccurate_cultural_elements"
+            },
+            {
+              "score": 50,
+              "passed": false,
+              "details": "The requested life dates (c. 1500s - c. 1600s) are relatively narrow and may not accurately represent the diversity of Aboriginal Australian cultures during this time period.",
+              "category": "temporal_accuracy",
+              "reasoning": "Aboriginal Australian cultures existed across a wide range of regions and time periods, making it difficult to pinpoint an exact era for this image.",
+              "rule_name": "inconsistent_life_dates"
+            },
+            {
+              "score": 20,
+              "passed": false,
+              "details": "The use of a shallow depth of field and bokeh background is not typical of traditional Aboriginal Australian art, which often features more complex compositions.",
+              "category": "artistic_style",
+              "reasoning": "Aboriginal Australian art frequently incorporates natural elements and storytelling through composition, making this image's focus on the subject's face less plausible.",
+              "rule_name": "unusual_composition"
+            },
+            {
+              "score": 30,
+              "passed": false,
+              "details": "The intricate patterns and designs in the clothing are not well-documented for Aboriginal Australian cultures during this time period. While some patterns may have been present, their specific designs and meanings would need further research to confirm accuracy.",
+              "category": "clothing_accuracy",
+              "reasoning": "Aboriginal Australian art often features unique patterns and designs that reflect regional and cultural differences, making it challenging to accurately depict these elements in a single image.",
+              "rule_name": "inaccurate_pattern_designs"
+            },
+            {
+              "score": 40,
+              "passed": false,
+              "details": "The use of feathers, shells, and carved wood as adornments is not well-documented for Aboriginal Australian cultures during this time period. While these materials may have been used in some contexts, their specific use in this image would need further research to confirm accuracy.",
+              "category": "cultural_accuracy",
+              "reasoning": "Aboriginal Australian art often incorporates natural materials and storytelling through adornment, making the specific use of these materials in this image less plausible.",
+              "rule_name": "inaccurate_adornment"
+            },
+            {
+              "score": 50,
+              "passed": false,
+              "details": "The image's cultural context as a 'bushland or coastal lifestyle' is relatively narrow and may not accurately represent the diversity of Aboriginal Australian cultures during this time period.",
+              "category": "temporal_accuracy",
+              "reasoning": "Aboriginal Australian cultures existed across a wide range of regions and environments, making it difficult to pinpoint an exact cultural context for this image.",
+              "rule_name": "inconsistent_cultural_context"
+            }
+          ]
+        },
+        "current_agent": "validation"
+      }
+    },
+    {
+      "agent": "prompt_generation",
+      "llm_cost": 0.0,
+      "timestamp": 1772112045.682536,
+      "state_snapshot": {
+        "prompt": {
+          "image_prompt": "photorealistic portrait,(masterpiece:1.2),(best quality:1.2),(ultra detailed face:1.3) \nhigh resolution image (8K), DSLR camera, RAW photo\n85mm lens with shallow depth of field and sharp focus on eyes, bokeh background\nsoft key light with subtle fill light and Rembrandt lighting effect\ncatchlights in eyes:1.1, (sharp facial features:1.2)\nrealistic skin texture with pores, natural skin imperfections and subtle wrinkles\n(ultra detailed skin:1.3), darkened skin tone with warm undertones\ntraditional Aboriginal clothing made from animal hides or woven fibers, intricate patterns and designs\nloincloth worn in natural colors such as earth tones, ochres, and umbers, feathers and shells adornments\nhair styled in traditional ways, tied back with string or adorned with feathers or shells",
+          "negative_prompt": "painting, illustration, drawing, art, sketch, cartoon, anime, 3d render, cgi, digital art, plastic skin, smooth skin, airbrushed, mannequin, doll, wax figure, uncanny valley, asymmetric eyes, crossed eyes, deformed face, distorted face, bad anatomy, deformed, extra limbs, mutated hands, fused fingers, too many fingers, modern clothing, anachronistic elements, blurry, out of focus, watermark, text, logo, signature, low quality, jpeg artifacts, overexposed, underexposed, oversaturated",
+          "style_modifiers": [
+            "Australian Aboriginal art from this era would be characterized by simple yet expressive forms, using natural materials like ochres, clays, and charcoal to create intricate designs and patterns. The art style may have been influenced by traditional storytelling and ancestral beings."
+          ]
+        },
+        "current_agent": "prompt_generation"
+      }
+    },
+    {
+      "agent": "image_generation",
+      "provider": "comfyui",
+      "file_path": "output/693cdea8-9bdf-4f2b-80a5-0ae16b858331/f2e02f4aa97740e1a9c9bb0513554bee.png",
+      "timestamp": 1772117968.187888,
+      "state_snapshot": {
+        "image": {
+          "image_path": "output/693cdea8-9bdf-4f2b-80a5-0ae16b858331/f2e02f4aa97740e1a9c9bb0513554bee.png",
+          "image_provider": "comfyui",
+          "generation_params": {
+            "seed": 2356342966,
+            "model": "sdxl",
+            "width": 768,
+            "height": 768,
+            "prompt": "photorealistic portrait,(masterpiece:1.2),(best quality:1.2),(ultra detailed face:1.3) \nhigh resolution image (8K), DSLR camera, RAW photo\n85mm lens with shallow depth of field and sharp focus on eyes, bokeh background\nsoft key light with subtle fill light and Rembrandt lighting effect\ncatchlights in eyes:1.1, (sharp facial features:1.2)\nrealistic skin texture with pores, natural skin imperfections and subtle wrinkles\n(ultra detailed skin:1.3), darkened skin tone with warm undertones\ntraditional Aboriginal clothing made from animal hides or woven fibers, intricate patterns and designs\nloincloth worn in natural colors such as earth tones, ochres, and umbers, feathers and shells adornments\nhair styled in traditional ways, tied back with string or adorned with feathers or shells"
+          }
+        },
+        "current_agent": "image_generation"
+      }
+    },
+    {
+      "agent": "validation",
+      "score": 35.0,
+      "passed": false,
+      "llm_cost": 0.0,
+      "timestamp": 1772121632.1048052,
+      "state_snapshot": {
+        "validation": {
+          "rule_weights": {
+            "artistic_style": 0.25,
+            "clothing_accuracy": 0.25,
+            "cultural_accuracy": 0.25,
+            "temporal_accuracy": 0.25
+          },
+          "pass_threshold": 75.0,
+          "validation_score": 35.0,
+          "validation_passed": false,
+          "validation_results": [
+            {
+              "score": 20,
+              "passed": false,
+              "details": "The requested artistic style is photorealistic, which may be too realistic for an Aboriginal Australian Elder portrait from the pre-European contact era. Traditional Aboriginal art often features more stylized and abstract representations of people and animals.",
+              "category": "artistic_style",
+              "reasoning": "While it's possible that a highly skilled artist could create a photorealistic portrait in this time period, it's unlikely that such a level of realism would be achieved without some artistic license or interpretation.",
+              "rule_name": "overly-realistic"
+            },
+            {
+              "score": 30,
+              "passed": false,
+              "details": "The image depicts traditional Aboriginal clothing made from animal hides or woven fibers, which is accurate. However, the use of DSLR camera and RAW photo with modern equipment and software may not be consistent with the time period.",
+              "category": "clothing_accuracy",
+              "reasoning": "While it's possible that a skilled artist could create a realistic image using ancient materials and techniques, the use of modern technology would likely be anachronistic.",
+              "rule_name": "inaccurate_materials"
+            },
+            {
+              "score": 40,
+              "passed": false,
+              "details": "The image depicts hair styled in traditional ways, tied back with string or adorned with feathers or shells. However, the use of a DSLR camera and modern equipment may not be consistent with the cultural context.",
+              "category": "cultural_accuracy",
+              "reasoning": "While it's possible that a skilled artist could create a realistic image using ancient materials and techniques, the use of modern technology would likely be anachronistic.",
+              "rule_name": "inaccurate_hair_styles"
+            },
+            {
+              "score": 50,
+              "passed": false,
+              "details": "The life dates specified in the prompt (c. 1500s \u2013 c. 1600s) may not be consistent with the cultural context, as many Aboriginal Australian cultures had more complex and nuanced histories.",
+              "category": "temporal_accuracy",
+              "reasoning": "While it's possible that an individual could have lived during this time period, the specific life dates may not accurately reflect the broader cultural context.",
+              "rule_name": "inconsistent_life_dates"
+            }
+          ]
+        },
+        "current_agent": "validation"
+      }
+    },
+    {
+      "agent": "facial_compositing",
+      "skipped": false,
+      "timestamp": 1772121632.244037,
+      "source_face": "output/693cdea8-9bdf-4f2b-80a5-0ae16b858331/face_search_6011701b3a614643a64d35c4e96b63f4.jpg",
+      "swapped_path": "output/693cdea8-9bdf-4f2b-80a5-0ae16b858331/swapped_f680af2a96de4ad684f74b08899305cf.png",
+      "original_path": "output/693cdea8-9bdf-4f2b-80a5-0ae16b858331/original_f2e02f4aa97740e1a9c9bb0513554bee.png",
+      "state_snapshot": {
+        "compositing": {
+          "swapped_image_path": "output/693cdea8-9bdf-4f2b-80a5-0ae16b858331/swapped_f680af2a96de4ad684f74b08899305cf.png",
+          "original_image_path": "output/693cdea8-9bdf-4f2b-80a5-0ae16b858331/original_f2e02f4aa97740e1a9c9bb0513554bee.png"
+        },
+        "current_agent": "facial_compositing"
+      }
+    },
+    {
+      "agent": "export",
+      "timestamp": 1772121632.259454,
+      "export_path": "output/693cdea8-9bdf-4f2b-80a5-0ae16b858331/export",
+      "state_snapshot": {
+        "export": {
+          "export_path": "output/693cdea8-9bdf-4f2b-80a5-0ae16b858331/export",
+          "export_format": "json+png"
+        },
+        "current_agent": "export"
+      }
+    }
+  ]
+}

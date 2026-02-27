@@ -1,0 +1,427 @@
+{
+  "id": "9304e82a-6426-4623-85a8-e99e4d0793a5",
+  "input_text": "A historically informed portrait of an Aztec scribe (tlacuilo) at work in a temple school or codex workshop. The figure should wear a cotton tilmatli (cloak) with modest ornamentation befitting a priestly-intellectual role. May be shown with writing implements \u2014 brushes, pigment pots, or an unfolded codex (amatl paper).",
+  "status": "completed",
+  "current_agent": "export",
+  "figure_name": null,
+  "created_at": "2026-02-26T12:55:03.094658Z",
+  "updated_at": "2026-02-26T12:57:47.690827Z",
+  "extracted_data": {
+    "region": null,
+    "occupation": null,
+    "figure_name": null,
+    "time_period": null
+  },
+  "research_data": {
+    "clothing_details": null,
+    "historical_context": null,
+    "physical_description": null
+  },
+  "generated_prompt": null,
+  "error_message": null,
+  "total_cost": 0.0,
+  "total_duration_ms": 0.0,
+  "llm_calls": [],
+  "validation_score": null,
+  "validation_passed": null,
+  "validation_reasoning": null,
+  "validation_categories": [],
+  "images": [
+    {
+      "id": "8f8bac36-33cb-4609-bb5a-475cce967478",
+      "request_id": "9304e82a-6426-4623-85a8-e99e4d0793a5",
+      "figure_id": null,
+      "file_path": "output/9304e82a-6426-4623-85a8-e99e4d0793a5/42b666ac17c641cda64d1fe3f60613bb.png",
+      "thumbnail_path": null,
+      "prompt_used": "",
+      "provider": "comfyui",
+      "width": 512,
+      "height": 512,
+      "validation_score": 76.25,
+      "created_at": "2026-02-26T12:57:47.690827Z"
+    }
+  ],
+  "state_snapshots": [
+    {
+      "agent": "orchestrator",
+      "snapshot": {
+        "current_agent": "orchestrator"
+      }
+    },
+    {
+      "agent": "extraction",
+      "snapshot": {
+        "extraction": {
+          "region": "Mesoamerica",
+          "birth_year": "c. 1200",
+          "death_year": "c. 1519",
+          "occupation": "Scribe",
+          "figure_name": "Aztec Scribe",
+          "time_period": "Post-Classic era",
+          "cultural_context": "Priestly-intellectual role, temple school or codex workshop",
+          "notable_features": "",
+          "alternative_names": [
+            "Tlacuilo"
+          ],
+          "associated_locations": [
+            "Tenochtitl\u00e1n",
+            "Texcoco"
+          ],
+          "extracted_attributes": {
+            "writing tools": "Brushes, pigment pots"
+          },
+          "historical_significance": "The Aztec scribe played a crucial role in the development of Mesoamerican writing systems and was responsible for recording important historical events and rituals. They were also known for their expertise in astronomy and mathematics."
+        },
+        "current_agent": "extraction"
+      }
+    },
+    {
+      "agent": "research",
+      "snapshot": {
+        "research": {
+          "clothing_details": "Aztec scribes wore simple yet dignified clothing made from cotton or linen fabrics in shades of white, beige, or blue. They would have worn loincloths or kilts, with a cloak or mantle draped over their shoulders. Their feet were likely bare or covered with sandals.\n\nIn terms of accessories, they may have worn a feathered headdress or a necklace made from jade or other precious stones. However, these details are not well-documented and should be treated with caution.",
+          "research_sources": [
+            "Bierhorst, John. The Codex Borgia: A Study of the Sacred Book of the Aztecs. University of Texas Press, 1993.\n\n"
+          ],
+          "historical_context": "Aztec scribes played a crucial role in the priestly-intellectual class of Mesoamerica during the Post-Classic era. They were responsible for recording and interpreting sacred texts, maintaining temple records, and creating codices. Their work was essential to the Aztecs' understanding of their history, mythology, and cosmology.\n\nAs scribes, they were part of a network of intellectuals who worked together to preserve and transmit knowledge. Their role was highly respected, and they were often considered to be among the most learned members of society.",
+          "research_cache_hit": false,
+          "art_style_reference": "Pre-Columbian Mesoamerican art, characterized by intricate codices and textiles.",
+          "physical_description": "Unfortunately, there are no recorded physical descriptions of Aztec scribes. However, based on the clothing and cultural context, we can make some educated guesses about their appearance.\n\nThey likely had a slender build, as was common among the Aztecs, and may have had dark skin tones due to their indigenous ancestry. Their hair would have been black or dark brown, possibly worn in a style that was considered dignified for an intellectual.\n\nIt is also possible that they wore some form of facial tattooing or body painting, although this is not well-documented and should be treated with caution."
+        },
+        "current_agent": "research"
+      }
+    },
+    {
+      "agent": "face_search",
+      "snapshot": {
+        "face": {
+          "face_search_url": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQqIaT-PyAL1rMvutGarp2H78AnylsrZA072w&s",
+          "source_face_path": "output/9304e82a-6426-4623-85a8-e99e4d0793a5/face_search_0ecb2c796ae44155abad082893d1abe9.jpg",
+          "face_search_query": "Aztec Scribe historical portrait photograph",
+          "face_search_provider": "serpapi"
+        },
+        "current_agent": "face_search"
+      }
+    },
+    {
+      "agent": "prompt_generation",
+      "snapshot": {
+        "prompt": {
+          "image_prompt": "photorealistic portrait,(masterpiece:1.2),(best quality:1.2),(ultra detailed face:1.3)\nskin texture with pores, facial bone structure, dark brown eye color, subtle wrinkles, natural skin imperfections\nloincloth made from white cotton fabric, draped over a simple beige cloak, sandals on feet, feathered headdress worn at an angle\nRembrandt lighting, soft key light, subtle fill light, catchlights in eyes:1.1, sharp facial features:1.2\n85mm lens, shallow depth of field, sharp focus on dark brown eyes, bokeh background with blurred details\nRAW photo, 8K, DSLR, detailed skin texture:1.2, film grain, realistic skin:1.3",
+          "negative_prompt": "painting, illustration, drawing, art, sketch, cartoon, anime, 3d render, cgi, digital art, plastic skin, smooth skin, airbrushed, mannequin, doll, wax figure, uncanny valley, asymmetric eyes, crossed eyes, deformed face, distorted face, bad anatomy, deformed, extra limbs, mutated hands, fused fingers, too many fingers, modern clothing, anachronistic elements, blurry, out of focus, watermark, text, logo, signature, low quality, jpeg artifacts, overexposed, underexposed, oversaturated",
+          "style_modifiers": [
+            "Pre-Columbian Mesoamerican art, characterized by intricate codices and textiles."
+          ]
+        },
+        "current_agent": "prompt_generation"
+      }
+    },
+    {
+      "agent": "image_generation",
+      "snapshot": {
+        "image": {
+          "image_path": "output/9304e82a-6426-4623-85a8-e99e4d0793a5/42b666ac17c641cda64d1fe3f60613bb.png",
+          "image_provider": "comfyui",
+          "generation_params": {
+            "seed": 2978708474,
+            "model": "sdxl",
+            "width": 768,
+            "height": 768,
+            "prompt": "photorealistic portrait,(masterpiece:1.2),(best quality:1.2),(ultra detailed face:1.3)\nskin texture with pores, facial bone structure, dark brown eye color, subtle wrinkles, natural skin imperfections\nloincloth made from white cotton fabric, draped over a simple beige cloak, sandals on feet, feathered headdress worn at an angle\nRembrandt lighting, soft key light, subtle fill light, catchlights in eyes:1.1, sharp facial features:1.2\n85mm lens, shallow depth of field, sharp focus on dark brown eyes, bokeh background with blurred details\nRAW photo, 8K, DSLR, detailed skin texture:1.2, film grain, realistic skin:1.3"
+          }
+        },
+        "current_agent": "image_generation"
+      }
+    },
+    {
+      "agent": "validation",
+      "snapshot": {
+        "validation": {
+          "rule_weights": {
+            "artistic_style": 0.25,
+            "clothing_accuracy": 0.25,
+            "cultural_accuracy": 0.25,
+            "temporal_accuracy": 0.25
+          },
+          "pass_threshold": 75.0,
+          "validation_score": 76.25,
+          "validation_passed": true,
+          "validation_results": [
+            {
+              "score": 20,
+              "passed": false,
+              "details": "Rembrandt lighting is a style typically associated with European art, particularly Dutch Masters like Rembrandt. While it's possible that an Aztec artist could have used this style, it's highly unlikely given the cultural context of Mesoamerica during the Post-Classic era.",
+              "category": "artistic_style",
+              "reasoning": "The use of Rembrandt lighting in the image prompt is a red flag for historical plausibility. It's more likely that an Aztec artist would have used their own unique artistic styles, which were influenced by their cultural and religious traditions.",
+              "rule_name": "use of Rembrandt lighting"
+            },
+            {
+              "score": 90,
+              "passed": true,
+              "details": "The use of cotton fabric for the loincloth is consistent with Aztec textile production. Sandals are also a common footwear choice in Mesoamerica during this time period.",
+              "category": "clothing_accuracy",
+              "reasoning": "The clothing described in the image prompt is generally consistent with what we know about Aztec attire. However, it's worth noting that the specific type of fabric and sandals used may have varied depending on social class and region.",
+              "rule_name": "cotton fabric and sandals"
+            },
+            {
+              "score": 95,
+              "passed": true,
+              "details": "The description of the Aztec scribe as a priestly figure, working in a temple school or codex workshop, is consistent with our understanding of their cultural context. This role was highly valued in Aztec society.",
+              "category": "cultural_accuracy",
+              "reasoning": "The image prompt accurately captures the cultural significance of the Aztec scribe's role in Mesoamerican society. The description of their work and social status is consistent with historical records.",
+              "rule_name": "priestly-intellectual role"
+            },
+            {
+              "score": 100,
+              "passed": true,
+              "details": "The life dates provided for the Aztec scribe are consistent with our understanding of the Post-Classic era. This time period is well-documented in historical records and matches the cultural context described.",
+              "category": "temporal_accuracy",
+              "reasoning": "The life dates provided for the Aztec scribe are a strong indicator of temporal accuracy. The Post-Classic era is a well-defined period in Mesoamerican history, and the dates provided align with this timeframe.",
+              "rule_name": "life dates"
+            }
+          ]
+        },
+        "current_agent": "validation"
+      }
+    },
+    {
+      "agent": "facial_compositing",
+      "snapshot": {
+        "compositing": {
+          "swapped_image_path": "output/9304e82a-6426-4623-85a8-e99e4d0793a5/swapped_3f5102d8f10248c2966120e355ee1100.png",
+          "original_image_path": "output/9304e82a-6426-4623-85a8-e99e4d0793a5/original_42b666ac17c641cda64d1fe3f60613bb.png"
+        },
+        "current_agent": "facial_compositing"
+      }
+    },
+    {
+      "agent": "export",
+      "snapshot": {
+        "export": {
+          "export_path": "output/9304e82a-6426-4623-85a8-e99e4d0793a5/export",
+          "export_format": "json+png"
+        },
+        "current_agent": "export"
+      }
+    }
+  ],
+  "agent_trace": [
+    {
+      "agent": "orchestrator",
+      "action": "start",
+      "timestamp": 1772110503.2492235,
+      "input_text": "A historically informed portrait of an Aztec scribe (tlacuilo) at work in a temple school or codex workshop. The figure should wear a cotton tilmatli (cloak) with modest ornamentation befitting a priestly-intellectual role. May be shown with writing implements \u2014 brushes, pigment pots, or an unfolded codex (amatl paper).",
+      "moderation": {
+        "passed": true,
+        "reason": null
+      },
+      "state_snapshot": {
+        "current_agent": "orchestrator"
+      }
+    },
+    {
+      "agent": "extraction",
+      "llm_cost": 0.0,
+      "extracted": {
+        "region": "Mesoamerica",
+        "attributes": {
+          "writing tools": "Brushes, pigment pots"
+        },
+        "birth_year": "c. 1200",
+        "death_year": "c. 1519",
+        "occupation": "Scribe",
+        "figure_name": "Aztec Scribe",
+        "time_period": "Post-Classic era",
+        "cultural_context": "Priestly-intellectual role, temple school or codex workshop",
+        "notable_features": "",
+        "alternative_names": [
+          "Tlacuilo"
+        ],
+        "associated_locations": [
+          "Tenochtitl\u00e1n",
+          "Texcoco"
+        ],
+        "historical_significance": "The Aztec scribe played a crucial role in the development of Mesoamerican writing systems and was responsible for recording important historical events and rituals. They were also known for their expertise in astronomy and mathematics."
+      },
+      "timestamp": 1772110511.1718438,
+      "state_snapshot": {
+        "extraction": {
+          "region": "Mesoamerica",
+          "birth_year": "c. 1200",
+          "death_year": "c. 1519",
+          "occupation": "Scribe",
+          "figure_name": "Aztec Scribe",
+          "time_period": "Post-Classic era",
+          "cultural_context": "Priestly-intellectual role, temple school or codex workshop",
+          "notable_features": "",
+          "alternative_names": [
+            "Tlacuilo"
+          ],
+          "associated_locations": [
+            "Tenochtitl\u00e1n",
+            "Texcoco"
+          ],
+          "extracted_attributes": {
+            "writing tools": "Brushes, pigment pots"
+          },
+          "historical_significance": "The Aztec scribe played a crucial role in the development of Mesoamerican writing systems and was responsible for recording important historical events and rituals. They were also known for their expertise in astronomy and mathematics."
+        },
+        "current_agent": "extraction"
+      }
+    },
+    {
+      "agent": "research",
+      "llm_cost": 0.0,
+      "cache_hit": false,
+      "timestamp": 1772110528.1866953,
+      "state_snapshot": {
+        "research": {
+          "clothing_details": "Aztec scribes wore simple yet dignified clothing made from cotton or linen fabrics in shades of white, beige, or blue. They would have worn loincloths or kilts, with a cloak or mantle draped over their shoulders. Their feet were likely bare or covered with sandals.\n\nIn terms of accessories, they may have worn a feathered headdress or a necklace made from jade or other precious stones. However, these details are not well-documented and should be treated with caution.",
+          "research_sources": [
+            "Bierhorst, John. The Codex Borgia: A Study of the Sacred Book of the Aztecs. University of Texas Press, 1993.\n\n"
+          ],
+          "historical_context": "Aztec scribes played a crucial role in the priestly-intellectual class of Mesoamerica during the Post-Classic era. They were responsible for recording and interpreting sacred texts, maintaining temple records, and creating codices. Their work was essential to the Aztecs' understanding of their history, mythology, and cosmology.\n\nAs scribes, they were part of a network of intellectuals who worked together to preserve and transmit knowledge. Their role was highly respected, and they were often considered to be among the most learned members of society.",
+          "research_cache_hit": false,
+          "art_style_reference": "Pre-Columbian Mesoamerican art, characterized by intricate codices and textiles.",
+          "physical_description": "Unfortunately, there are no recorded physical descriptions of Aztec scribes. However, based on the clothing and cultural context, we can make some educated guesses about their appearance.\n\nThey likely had a slender build, as was common among the Aztecs, and may have had dark skin tones due to their indigenous ancestry. Their hair would have been black or dark brown, possibly worn in a style that was considered dignified for an intellectual.\n\nIt is also possible that they wore some form of facial tattooing or body painting, although this is not well-documented and should be treated with caution."
+        },
+        "current_agent": "research"
+      }
+    },
+    {
+      "agent": "face_search",
+      "query": "Aztec Scribe historical portrait photograph",
+      "skipped": false,
+      "timestamp": 1772110529.9743772,
+      "local_path": "output/9304e82a-6426-4623-85a8-e99e4d0793a5/face_search_0ecb2c796ae44155abad082893d1abe9.jpg",
+      "source_url": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQqIaT-PyAL1rMvutGarp2H78AnylsrZA072w&s",
+      "state_snapshot": {
+        "face": {
+          "face_search_url": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQqIaT-PyAL1rMvutGarp2H78AnylsrZA072w&s",
+          "source_face_path": "output/9304e82a-6426-4623-85a8-e99e4d0793a5/face_search_0ecb2c796ae44155abad082893d1abe9.jpg",
+          "face_search_query": "Aztec Scribe historical portrait photograph",
+          "face_search_provider": "serpapi"
+        },
+        "current_agent": "face_search"
+      },
+      "candidates_tried": 100
+    },
+    {
+      "agent": "prompt_generation",
+      "llm_cost": 0.0,
+      "timestamp": 1772110536.2224402,
+      "state_snapshot": {
+        "prompt": {
+          "image_prompt": "photorealistic portrait,(masterpiece:1.2),(best quality:1.2),(ultra detailed face:1.3)\nskin texture with pores, facial bone structure, dark brown eye color, subtle wrinkles, natural skin imperfections\nloincloth made from white cotton fabric, draped over a simple beige cloak, sandals on feet, feathered headdress worn at an angle\nRembrandt lighting, soft key light, subtle fill light, catchlights in eyes:1.1, sharp facial features:1.2\n85mm lens, shallow depth of field, sharp focus on dark brown eyes, bokeh background with blurred details\nRAW photo, 8K, DSLR, detailed skin texture:1.2, film grain, realistic skin:1.3",
+          "negative_prompt": "painting, illustration, drawing, art, sketch, cartoon, anime, 3d render, cgi, digital art, plastic skin, smooth skin, airbrushed, mannequin, doll, wax figure, uncanny valley, asymmetric eyes, crossed eyes, deformed face, distorted face, bad anatomy, deformed, extra limbs, mutated hands, fused fingers, too many fingers, modern clothing, anachronistic elements, blurry, out of focus, watermark, text, logo, signature, low quality, jpeg artifacts, overexposed, underexposed, oversaturated",
+          "style_modifiers": [
+            "Pre-Columbian Mesoamerican art, characterized by intricate codices and textiles."
+          ]
+        },
+        "current_agent": "prompt_generation"
+      }
+    },
+    {
+      "agent": "image_generation",
+      "provider": "comfyui",
+      "file_path": "output/9304e82a-6426-4623-85a8-e99e4d0793a5/42b666ac17c641cda64d1fe3f60613bb.png",
+      "timestamp": 1772110642.2227018,
+      "state_snapshot": {
+        "image": {
+          "image_path": "output/9304e82a-6426-4623-85a8-e99e4d0793a5/42b666ac17c641cda64d1fe3f60613bb.png",
+          "image_provider": "comfyui",
+          "generation_params": {
+            "seed": 2978708474,
+            "model": "sdxl",
+            "width": 768,
+            "height": 768,
+            "prompt": "photorealistic portrait,(masterpiece:1.2),(best quality:1.2),(ultra detailed face:1.3)\nskin texture with pores, facial bone structure, dark brown eye color, subtle wrinkles, natural skin imperfections\nloincloth made from white cotton fabric, draped over a simple beige cloak, sandals on feet, feathered headdress worn at an angle\nRembrandt lighting, soft key light, subtle fill light, catchlights in eyes:1.1, sharp facial features:1.2\n85mm lens, shallow depth of field, sharp focus on dark brown eyes, bokeh background with blurred details\nRAW photo, 8K, DSLR, detailed skin texture:1.2, film grain, realistic skin:1.3"
+          }
+        },
+        "current_agent": "image_generation"
+      }
+    },
+    {
+      "agent": "validation",
+      "score": 76.25,
+      "passed": true,
+      "llm_cost": 0.0,
+      "timestamp": 1772110667.543236,
+      "state_snapshot": {
+        "validation": {
+          "rule_weights": {
+            "artistic_style": 0.25,
+            "clothing_accuracy": 0.25,
+            "cultural_accuracy": 0.25,
+            "temporal_accuracy": 0.25
+          },
+          "pass_threshold": 75.0,
+          "validation_score": 76.25,
+          "validation_passed": true,
+          "validation_results": [
+            {
+              "score": 20,
+              "passed": false,
+              "details": "Rembrandt lighting is a style typically associated with European art, particularly Dutch Masters like Rembrandt. While it's possible that an Aztec artist could have used this style, it's highly unlikely given the cultural context of Mesoamerica during the Post-Classic era.",
+              "category": "artistic_style",
+              "reasoning": "The use of Rembrandt lighting in the image prompt is a red flag for historical plausibility. It's more likely that an Aztec artist would have used their own unique artistic styles, which were influenced by their cultural and religious traditions.",
+              "rule_name": "use of Rembrandt lighting"
+            },
+            {
+              "score": 90,
+              "passed": true,
+              "details": "The use of cotton fabric for the loincloth is consistent with Aztec textile production. Sandals are also a common footwear choice in Mesoamerica during this time period.",
+              "category": "clothing_accuracy",
+              "reasoning": "The clothing described in the image prompt is generally consistent with what we know about Aztec attire. However, it's worth noting that the specific type of fabric and sandals used may have varied depending on social class and region.",
+              "rule_name": "cotton fabric and sandals"
+            },
+            {
+              "score": 95,
+              "passed": true,
+              "details": "The description of the Aztec scribe as a priestly figure, working in a temple school or codex workshop, is consistent with our understanding of their cultural context. This role was highly valued in Aztec society.",
+              "category": "cultural_accuracy",
+              "reasoning": "The image prompt accurately captures the cultural significance of the Aztec scribe's role in Mesoamerican society. The description of their work and social status is consistent with historical records.",
+              "rule_name": "priestly-intellectual role"
+            },
+            {
+              "score": 100,
+              "passed": true,
+              "details": "The life dates provided for the Aztec scribe are consistent with our understanding of the Post-Classic era. This time period is well-documented in historical records and matches the cultural context described.",
+              "category": "temporal_accuracy",
+              "reasoning": "The life dates provided for the Aztec scribe are a strong indicator of temporal accuracy. The Post-Classic era is a well-defined period in Mesoamerican history, and the dates provided align with this timeframe.",
+              "rule_name": "life dates"
+            }
+          ]
+        },
+        "current_agent": "validation"
+      }
+    },
+    {
+      "agent": "facial_compositing",
+      "skipped": false,
+      "timestamp": 1772110667.6718953,
+      "source_face": "output/9304e82a-6426-4623-85a8-e99e4d0793a5/face_search_0ecb2c796ae44155abad082893d1abe9.jpg",
+      "swapped_path": "output/9304e82a-6426-4623-85a8-e99e4d0793a5/swapped_3f5102d8f10248c2966120e355ee1100.png",
+      "original_path": "output/9304e82a-6426-4623-85a8-e99e4d0793a5/original_42b666ac17c641cda64d1fe3f60613bb.png",
+      "state_snapshot": {
+        "compositing": {
+          "swapped_image_path": "output/9304e82a-6426-4623-85a8-e99e4d0793a5/swapped_3f5102d8f10248c2966120e355ee1100.png",
+          "original_image_path": "output/9304e82a-6426-4623-85a8-e99e4d0793a5/original_42b666ac17c641cda64d1fe3f60613bb.png"
+        },
+        "current_agent": "facial_compositing"
+      }
+    },
+    {
+      "agent": "export",
+      "timestamp": 1772110667.6849442,
+      "export_path": "output/9304e82a-6426-4623-85a8-e99e4d0793a5/export",
+      "state_snapshot": {
+        "export": {
+          "export_path": "output/9304e82a-6426-4623-85a8-e99e4d0793a5/export",
+          "export_format": "json+png"
+        },
+        "current_agent": "export"
+      }
+    }
+  ]
+}

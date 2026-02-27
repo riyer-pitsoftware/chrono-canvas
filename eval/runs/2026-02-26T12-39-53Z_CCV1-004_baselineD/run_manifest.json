@@ -1,0 +1,39 @@
+{
+  "run_id": "2026-02-26T12-39-53Z_CCV1-004_baselineD",
+  "eval_version": "chronocanvas-evalset-v1",
+  "case_id": "CCV1-004",
+  "condition": "baselineD_full_pipeline",
+  "timestamp_utc": "2026-02-26T12:44:45.365339+00:00",
+  "git_commit": "a70544c",
+  "app_version": "0.1.0",
+  "config_profile": "eval-baselineD",
+  "llm_provider": null,
+  "llm_model": null,
+  "image_provider": "comfyui",
+  "image_model": "juggernautXL_v9.safetensors",
+  "face_pipeline_enabled": true,
+  "face_search_enabled": true,
+  "validation_retry_enabled": true,
+  "max_retries": 2,
+  "seed": 42,
+  "prompt_used": null,
+  "success": true,
+  "terminal_state": "completed",
+  "total_latency_ms": 291404.5,
+  "token_input_count": 0,
+  "token_output_count": 0,
+  "llm_cost_usd": 0,
+  "image_cost_usd": 0.0,
+  "total_cost_usd": 0,
+  "total_retries": 1,
+  "audit_event_count": 12,
+  "trace_complete": true,
+  "error_message": null,
+  "runtime_env": {
+    "api_url": "http://localhost:8000"
+  },
+  "heuristic_pass": false,
+  "heuristic_failures": [
+    "resolution_ok"
+  ]
+}

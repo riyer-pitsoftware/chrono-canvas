@@ -1,0 +1,21 @@
+{
+  "run_id": "2026-02-26T12-34-54Z_CCV1-003_baselineD",
+  "timestamp_utc": "2026-02-26T12:39:53.931353+00:00",
+  "checks": {
+    "file_valid": true,
+    "resolution_ok": false,
+    "resolution": [
+      768,
+      768
+    ],
+    "face_detected": null,
+    "face_count": null,
+    "audit_event_count": 12,
+    "retry_count": 1,
+    "latency_ms": 299443.7
+  },
+  "passed": false,
+  "failures": [
+    "resolution_ok"
+  ]
+}
