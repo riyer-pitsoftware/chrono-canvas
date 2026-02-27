@@ -2,9 +2,6 @@
 
 **An auditable multimodal agent pipeline — applied to historical portrait generation.**
 
-> **Commercial identity:** I design and harden auditable AI workflows in complex domains.  
-> **Artifact job:** ChronoCanvas proves I can architect and evaluate a non-trivial multimodal agent system with auditability end-to-end.
-
 ChronoCanvas is a focused case study in building traceable, evaluable AI systems. It orchestrates LLM research, image generation, and heuristic validation into a 9-node pipeline with full cost/latency observability, provider routing, and automated retry loops. The historical portrait domain is simply the testbed; the reusable patterns are inspection-friendly AI pipelines that you can trust in higher-stakes environments. Everything runs on your own hardware.
 
 ### See it working
