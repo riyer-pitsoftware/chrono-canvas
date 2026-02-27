@@ -1,8 +1,8 @@
 # ChronoCanvas EvalSet v1 - Case Definitions
-# 10-case pilot dataset. Expand to 30 for full eval.
+# 30-case full evaluation dataset.
 # See notes/eval_dump.md §6 for schema reference.
 
-evalset_version: "v1.0-pilot"
+evalset_version: "v1.0"
 
 cases:
   # ── Named Figures (3) ──────────────────────────────────────────────────────
@@ -524,6 +524,1066 @@ cases:
     reference_notes:
       - "Hokule'a reconstruction for canoe design"
       - "Early European contact-era descriptions of Tongan/Samoan culture"
+    scorable_dimensions:
+      - prompt_adherence
+      - visual_coherence
+      - face_usability
+      - period_plausibility
+      - anachronism_avoidance
+      - narrative_image_consistency
+      - uncertainty_signaling_quality
+      - audit_trace_completeness
+
+  # ══════════════════════════════════════════════════════════════════════════════
+  # Full Evaluation Expansion (CCV1-011 through CCV1-030)
+  # ══════════════════════════════════════════════════════════════════════════════
+
+  # ── Named Figures (7 additional) ─────────────────────────────────────────────
+
+  - id: CCV1-011
+    title: "Mansa Musa, Emperor of Mali"
+    subject_type: named_figure
+    region: "West Africa, Mali Empire"
+    time_period_label: "14th Century Mali Empire"
+    time_period_start: 1280
+    time_period_end: 1337
+    setting_context: "Royal court or pilgrimage caravan"
+    evidence_level: low
+    intended_output_type: portrait
+    prompt_brief: >
+      A historically informed portrait of Mansa Musa, ruler of the Mali Empire
+      and famed for the 1324 hajj pilgrimage. He should be depicted in West
+      African royal attire — flowing robes (boubou/grand boubou), gold jewelry,
+      and a royal cap or turban reflecting Islamic and Mande cultural fusion.
+    must_include:
+      - "flowing robes (boubou or similar West African garment)"
+      - "gold jewelry or regalia"
+      - "human face clearly visible"
+      - "royal headwear (cap or turban)"
+    must_not_include:
+      - "European crown or scepter"
+      - "Egyptian pharaonic imagery"
+      - "modern suit or military uniform"
+      - "East African Maasai elements"
+    style_guidance:
+      - "illustrative realism"
+      - "gold and earth-tone palette"
+      - "emphasis on wealth and imperial dignity"
+    anachronism_watchlist:
+      - "European medieval crown"
+      - "printed fabric (pre-dates period)"
+      - "modern gold coins or bars"
+      - "North African Berber attire conflated"
+    uncertainty_notes: >
+      No contemporary portrait survives. The Catalan Atlas (1375) contains a
+      stylized depiction by a European cartographer. Clothing and material culture
+      reconstructed from oral traditions, Arabic accounts (Ibn Battuta), and
+      archaeological evidence. Evaluate plausibility, not exact likeness.
+    reference_notes:
+      - "Catalan Atlas depiction (European interpretation)"
+      - "Ibn Battuta's accounts of Mali court"
+    scorable_dimensions:
+      - prompt_adherence
+      - visual_coherence
+      - face_usability
+      - period_plausibility
+      - anachronism_avoidance
+      - narrative_image_consistency
+      - uncertainty_signaling_quality
+      - audit_trace_completeness
+
+  - id: CCV1-012
+    title: "Empress Wu Zetian, Tang Dynasty China"
+    subject_type: named_figure
+    region: "Central China, Tang Dynasty"
+    time_period_label: "Tang Dynasty China"
+    time_period_start: 624
+    time_period_end: 705
+    setting_context: "Imperial palace throne room"
+    evidence_level: medium
+    intended_output_type: portrait
+    prompt_brief: >
+      A historically informed portrait of Wu Zetian, the only woman to hold the
+      title of Emperor of China. She should be depicted in formal Tang dynasty
+      court attire — a wide-sleeved silk robe with elaborate phoenix or floral
+      embroidery, high-waisted skirt, and a formal court headdress with phoenix
+      hairpins and gold ornaments.
+    must_include:
+      - "Tang dynasty silk court robe"
+      - "elaborate headdress with phoenix or gold ornaments"
+      - "human face clearly visible"
+      - "imperial setting elements"
+    must_not_include:
+      - "Qing dynasty Manchu robes or hairstyle"
+      - "Japanese kimono"
+      - "modern Chinese qipao"
+      - "European crown"
+    style_guidance:
+      - "illustrative realism"
+      - "rich jewel-tone palette (vermillion, gold, jade green)"
+      - "Tang dynasty painting influence"
+    anachronism_watchlist:
+      - "Qing dynasty queue or Manchu collar"
+      - "modern makeup styles"
+      - "Song/Ming dynasty clothing styles"
+      - "bound feet (not Tang dynasty practice)"
+    uncertainty_notes: >
+      Tang dynasty court painting traditions provide good references for clothing
+      and setting. Individual portrait accuracy is interpretive — later copies and
+      attributions exist but are idealized.
+    reference_notes:
+      - "Tang dynasty tomb paintings for court dress"
+      - "Traditional attributed portraits (later copies)"
+    scorable_dimensions:
+      - prompt_adherence
+      - visual_coherence
+      - face_usability
+      - period_plausibility
+      - anachronism_avoidance
+      - narrative_image_consistency
+      - uncertainty_signaling_quality
+      - audit_trace_completeness
+
+  - id: CCV1-013
+    title: "Pachacuti Inca Yupanqui, Inca Emperor"
+    subject_type: named_figure
+    region: "Andes, Inca Empire (modern Peru)"
+    time_period_label: "15th Century Inca Empire"
+    time_period_start: 1418
+    time_period_end: 1471
+    setting_context: "Cusco palace or mountain fortress"
+    evidence_level: low
+    intended_output_type: portrait
+    prompt_brief: >
+      A historically informed portrait of Pachacuti, the Inca emperor who
+      transformed Cusco and expanded the Tawantinsuyu. He should wear an
+      uncu (tunic) with geometric tocapu patterns, a llautu (royal headband)
+      with mascaipacha (royal fringe), and large gold ear spools (orejones).
+    must_include:
+      - "uncu tunic with tocapu geometric patterns"
+      - "llautu headband with mascaipacha fringe"
+      - "gold ear spools"
+      - "human face clearly visible"
+    must_not_include:
+      - "Aztec or Maya iconography"
+      - "European crown"
+      - "feathered headdress (Plains Native American style)"
+      - "modern textiles"
+    style_guidance:
+      - "illustrative realism"
+      - "Andean earth tones with gold accents"
+      - "emphasis on textile patterns"
+    anachronism_watchlist:
+      - "Spanish colonial elements"
+      - "steel weapons or armor"
+      - "printed or dyed fabric (vs woven)"
+      - "Aztec jade or obsidian motifs"
+    uncertainty_notes: >
+      No pre-conquest Inca portrait tradition existed. Colonial-era chronicles
+      (Guaman Poma, Garcilaso) provide descriptions and stylized illustrations.
+      Textile archaeology provides strong clothing references. Evaluate for
+      Andean cultural plausibility.
+    reference_notes:
+      - "Guaman Poma de Ayala's chronicle illustrations"
+      - "Inca textile archaeology for tocapu patterns"
+    scorable_dimensions:
+      - prompt_adherence
+      - visual_coherence
+      - face_usability
+      - period_plausibility
+      - anachronism_avoidance
+      - narrative_image_consistency
+      - uncertainty_signaling_quality
+      - audit_trace_completeness
+
+  - id: CCV1-014
+    title: "Sei Shonagon, Heian Court Writer"
+    subject_type: named_figure
+    region: "Japan"
+    time_period_label: "Heian Period Japan"
+    time_period_start: 966
+    time_period_end: 1025
+    setting_context: "Imperial court chambers"
+    evidence_level: medium
+    intended_output_type: portrait
+    prompt_brief: >
+      A historically informed portrait of Sei Shonagon, Heian-era court lady
+      and author of The Pillow Book. She should wear junihitoe (twelve-layer
+      robes) in the kasane color combination style, with floor-length black
+      hair and a fan. Setting should suggest elegant court interiors with
+      screens and tatami.
+    must_include:
+      - "junihitoe layered robes with visible color gradations"
+      - "long unbound black hair"
+      - "human face clearly visible"
+      - "writing implements or fan"
+    must_not_include:
+      - "geisha makeup (Edo period)"
+      - "samurai armor"
+      - "kimono with obi (later period)"
+      - "Chinese Tang dynasty court dress"
+    style_guidance:
+      - "illustrative realism"
+      - "Heian emaki scroll painting influence"
+      - "soft, layered color palette"
+    anachronism_watchlist:
+      - "Edo-period hairstyle with ornamental kanzashi"
+      - "printed fabric patterns (woodblock, too late)"
+      - "Western furniture"
+      - "Meiji-era elements"
+    uncertainty_notes: >
+      Heian emaki scrolls (e.g., Tale of Genji scrolls) provide strong
+      references for court dress and setting. Individual features are
+      conventionalized in Heian art — all women depicted similarly. Evaluate
+      period plausibility of clothing and setting.
+    reference_notes:
+      - "Genji Monogatari Emaki for Heian court dress"
+      - "Heian-period scroll paintings"
+    scorable_dimensions:
+      - prompt_adherence
+      - visual_coherence
+      - face_usability
+      - period_plausibility
+      - anachronism_avoidance
+      - narrative_image_consistency
+      - uncertainty_signaling_quality
+      - audit_trace_completeness
+
+  - id: CCV1-015
+    title: "Ramesses II, Egyptian Pharaoh"
+    subject_type: named_figure
+    region: "Egypt, New Kingdom"
+    time_period_label: "New Kingdom Egypt"
+    time_period_start: -1303
+    time_period_end: -1213
+    setting_context: "Temple or throne room at Abu Simbel or Pi-Ramesses"
+    evidence_level: high
+    intended_output_type: portrait
+    prompt_brief: >
+      A historically informed portrait of Ramesses II, one of Egypt's most
+      powerful pharaohs. He should wear the nemes headdress or double crown
+      (pschent), a broad usekh collar, and a shendyt kilt. Royal regalia
+      including crook and flail may be present. Setting should evoke New
+      Kingdom Egyptian architecture — massive columns, hieroglyphs.
+    must_include:
+      - "nemes headdress or double crown"
+      - "broad collar (usekh)"
+      - "human face clearly visible"
+      - "Egyptian architectural elements"
+    must_not_include:
+      - "Ptolemaic/Hellenistic Greek elements"
+      - "modern Egyptian clothing"
+      - "Mesopotamian cuneiform"
+      - "Roman-style toga"
+    style_guidance:
+      - "illustrative realism"
+      - "gold, lapis lazuli, and turquoise palette"
+      - "New Kingdom Egyptian art influence"
+    anachronism_watchlist:
+      - "Ptolemaic-era Hellenistic fusion style"
+      - "Cleopatra-era elements (1200 years too late)"
+      - "Christian or Islamic symbols"
+      - "iron weapons (Bronze Age)"
+    uncertainty_notes: >
+      Ramesses II is exceptionally well-documented — mummy, numerous statues,
+      temple reliefs, and Abu Simbel. Evidence level is high. His mummy provides
+      physical reference. Evaluate against strong archaeological evidence base.
+    reference_notes:
+      - "Abu Simbel statues and temple reliefs"
+      - "Mummy of Ramesses II (physical reference)"
+    scorable_dimensions:
+      - prompt_adherence
+      - visual_coherence
+      - face_usability
+      - period_plausibility
+      - anachronism_avoidance
+      - narrative_image_consistency
+      - uncertainty_signaling_quality
+      - audit_trace_completeness
+
+  - id: CCV1-016
+    title: "Suleiman the Magnificent, Ottoman Sultan"
+    subject_type: named_figure
+    region: "Ottoman Empire (modern Turkey)"
+    time_period_label: "16th Century Ottoman Empire"
+    time_period_start: 1494
+    time_period_end: 1566
+    setting_context: "Topkapi Palace or military camp"
+    evidence_level: high
+    intended_output_type: portrait
+    prompt_brief: >
+      A historically informed portrait of Suleiman the Magnificent during
+      his zenith of power. He should wear a kaftan with elaborate brocade
+      or silk, a large ottoman turban (kavuk) possibly with jeweled aigrette,
+      and ceremonial jewelry. Setting should suggest Ottoman imperial grandeur.
+    must_include:
+      - "Ottoman kaftan with brocade or silk"
+      - "large Ottoman turban (kavuk) with ornament"
+      - "human face clearly visible"
+      - "imperial jewelry or regalia"
+    must_not_include:
+      - "fez (19th century, too late)"
+      - "European Renaissance clothing"
+      - "modern suit"
+      - "Safavid Persian distinct headwear"
+    style_guidance:
+      - "illustrative realism"
+      - "Ottoman miniature painting influence"
+      - "rich brocade and jewel-tone palette"
+    anachronism_watchlist:
+      - "fez (Mahmud II reform, 1826)"
+      - "Western military uniform"
+      - "Atatürk-era elements"
+      - "machine-made textiles"
+    uncertainty_notes: >
+      Suleiman is well-documented through Ottoman miniature paintings and
+      European diplomatic portraits (Titian's workshop). Multiple period
+      depictions provide strong reference.
+    reference_notes:
+      - "Nakkas Osman's miniature portraits"
+      - "Titian workshop portrait"
+    scorable_dimensions:
+      - prompt_adherence
+      - visual_coherence
+      - face_usability
+      - period_plausibility
+      - anachronism_avoidance
+      - narrative_image_consistency
+      - uncertainty_signaling_quality
+      - audit_trace_completeness
+
+  - id: CCV1-017
+    title: "Hatshepsut, Female Pharaoh of Egypt"
+    subject_type: named_figure
+    region: "Egypt, New Kingdom"
+    time_period_label: "18th Dynasty Egypt"
+    time_period_start: -1507
+    time_period_end: -1458
+    setting_context: "Deir el-Bahari mortuary temple"
+    evidence_level: high
+    intended_output_type: portrait
+    prompt_brief: >
+      A historically informed portrait of Hatshepsut as pharaoh. In official
+      depictions she adopted full pharaonic regalia including false beard, nemes
+      headdress, and shendyt kilt — a deliberate choice to assert legitimacy.
+      The portrait may show her in either the official pharaonic guise or in
+      feminine court dress, but must reflect 18th Dynasty aesthetics.
+    must_include:
+      - "pharaonic regalia (nemes, false beard) OR feminine court dress"
+      - "18th Dynasty Egyptian styling"
+      - "human face clearly visible"
+      - "temple or palace setting"
+    must_not_include:
+      - "Ptolemaic/Greek-influenced style"
+      - "modern clothing"
+      - "Cleopatra-era aesthetics"
+      - "male body with female face (crude interpretation)"
+    style_guidance:
+      - "illustrative realism"
+      - "Egyptian art canon influence"
+      - "warm sandstone and gold palette"
+    anachronism_watchlist:
+      - "Ptolemaic-era elements (1000+ years too late)"
+      - "Roman or Greek architectural elements"
+      - "iron or steel objects"
+      - "glass vessels (rare in this period)"
+    uncertainty_notes: >
+      Hatshepsut's mortuary temple at Deir el-Bahari has surviving reliefs and
+      statues. She is depicted both as a woman and in pharaonic male guise.
+      The duality is historically significant and should be acknowledged.
+    reference_notes:
+      - "Deir el-Bahari temple reliefs and statues"
+      - "Metropolitan Museum Hatshepsut sphinx statue"
+    scorable_dimensions:
+      - prompt_adherence
+      - visual_coherence
+      - face_usability
+      - period_plausibility
+      - anachronism_avoidance
+      - narrative_image_consistency
+      - uncertainty_signaling_quality
+      - audit_trace_completeness
+
+  # ── Archetypes/Roles (6 additional) ──────────────────────────────────────────
+
+  - id: CCV1-018
+    title: "Byzantine Mosaic Artist"
+    subject_type: archetype
+    region: "Eastern Roman Empire (Constantinople)"
+    time_period_label: "Middle Byzantine Period"
+    time_period_start: 900
+    time_period_end: 1100
+    setting_context: "Church interior or workshop"
+    evidence_level: medium
+    intended_output_type: portrait
+    prompt_brief: >
+      A historically informed portrait of a mosaic artist working in a Byzantine
+      church. The figure should wear a dalmatic or tunica over trousers, with a
+      leather apron for work. Tools should include tesserae, plaster tools, and
+      possibly gold leaf. Setting should show partially completed mosaic on a
+      wall or dome with characteristic gold backgrounds.
+    must_include:
+      - "Byzantine-era working garments (tunica, apron)"
+      - "mosaic-making tools or materials"
+      - "human face clearly visible"
+      - "church interior or gold mosaic background"
+    must_not_include:
+      - "Western medieval peasant clothing"
+      - "modern power tools"
+      - "Renaissance-era clothing"
+      - "Islamic geometric patterns (distinct tradition)"
+    style_guidance:
+      - "illustrative realism"
+      - "gold and deep blue palette"
+      - "Byzantine art influence"
+    anachronism_watchlist:
+      - "Gothic pointed arches (Western, later)"
+      - "modern scaffolding"
+      - "oil paint (mosaic, not painting)"
+      - "Latin-rite clerical vestments"
+    uncertainty_notes: >
+      Byzantine artisans are known from church records and surviving mosaics
+      but individual portraits of craftsmen are extremely rare. Clothing
+      references from imperial and religious art. Evaluate period and cultural
+      plausibility of the workshop setting.
+    reference_notes:
+      - "Ravenna mosaics for period aesthetics"
+      - "Hagia Sophia and Daphni monastery mosaics"
+    scorable_dimensions:
+      - prompt_adherence
+      - visual_coherence
+      - face_usability
+      - period_plausibility
+      - anachronism_avoidance
+      - narrative_image_consistency
+      - uncertainty_signaling_quality
+      - audit_trace_completeness
+
+  - id: CCV1-019
+    title: "Khmer Temple Dancer, Angkor Period"
+    subject_type: archetype
+    region: "Southeast Asia, Khmer Empire (modern Cambodia)"
+    time_period_label: "Angkor Period"
+    time_period_start: 1100
+    time_period_end: 1300
+    setting_context: "Angkor Wat or Bayon temple courtyard"
+    evidence_level: medium
+    intended_output_type: portrait
+    prompt_brief: >
+      A historically informed portrait of a female temple dancer (apsara) at
+      the Angkor court. The figure should wear a sampot (wrapped lower garment)
+      with ornate gold belt, bare-shouldered with elaborate gold jewelry
+      (armlets, necklaces, tiara), and a distinctive tall Khmer crown or
+      headdress as seen in Angkor bas-reliefs.
+    must_include:
+      - "sampot wrapped garment"
+      - "elaborate gold jewelry and crown/tiara"
+      - "human face clearly visible"
+      - "Angkor-style architectural elements"
+    must_not_include:
+      - "Thai Rattanakosin-era costume (later period)"
+      - "Indian Bharatanatyam costume"
+      - "Balinese dance costume"
+      - "modern dance outfit"
+    style_guidance:
+      - "illustrative realism"
+      - "warm gold and sandstone palette"
+      - "Angkor bas-relief influence"
+    anachronism_watchlist:
+      - "post-Angkor Thai-influenced elements"
+      - "modern sequined costume"
+      - "Indian classical dance mudras (distinct tradition)"
+      - "colonial-era French elements"
+    uncertainty_notes: >
+      Angkor Wat and Bayon bas-reliefs provide extensive reference for apsara
+      dancers — costume, jewelry, headdress, and dance posture are well-attested.
+      Stress case for avoiding pan-Southeast Asian conflation.
+    reference_notes:
+      - "Angkor Wat apsara bas-reliefs"
+      - "Bayon temple dancer carvings"
+    scorable_dimensions:
+      - prompt_adherence
+      - visual_coherence
+      - face_usability
+      - period_plausibility
+      - anachronism_avoidance
+      - narrative_image_consistency
+      - uncertainty_signaling_quality
+      - audit_trace_completeness
+
+  - id: CCV1-020
+    title: "Persian Calligrapher, Safavid Era"
+    subject_type: archetype
+    region: "Persia (modern Iran)"
+    time_period_label: "Safavid Persia"
+    time_period_start: 1500
+    time_period_end: 1700
+    setting_context: "Royal library or scriptorium"
+    evidence_level: medium
+    intended_output_type: portrait
+    prompt_brief: >
+      A historically informed portrait of a Persian calligrapher in a Safavid-era
+      scriptorium. The figure should wear a belted robe with sash, and a Safavid
+      turban (taj) with the distinctive baton ornament. Writing tools — reed pen
+      (qalam), inkwell, and illuminated manuscript — should be visible. Setting
+      should include book niches, carpets, and geometric tilework.
+    must_include:
+      - "Safavid-era robe and turban (taj)"
+      - "calligraphy tools (qalam, inkwell)"
+      - "human face clearly visible"
+      - "library or scriptorium setting"
+    must_not_include:
+      - "Ottoman-style turban (distinct shape)"
+      - "modern pen or notebook"
+      - "Western-style desk and chair"
+      - "Indian Mughal court dress"
+    style_guidance:
+      - "illustrative realism"
+      - "Persian miniature painting influence"
+      - "lapis and gold palette"
+    anachronism_watchlist:
+      - "Qajar dynasty clothing (too late)"
+      - "modern eyeglasses"
+      - "printed book (vs manuscript)"
+      - "European Renaissance furniture"
+    uncertainty_notes: >
+      Safavid miniature paintings provide excellent references for clothing,
+      interior settings, and calligraphy practice. The court scribe tradition
+      is well-documented in Persian literary sources.
+    reference_notes:
+      - "Safavid miniature paintings of scholars and scribes"
+      - "Isfahan School manuscripts"
+    scorable_dimensions:
+      - prompt_adherence
+      - visual_coherence
+      - face_usability
+      - period_plausibility
+      - anachronism_avoidance
+      - narrative_image_consistency
+      - uncertainty_signaling_quality
+      - audit_trace_completeness
+
+  - id: CCV1-021
+    title: "Roman Legionary, Hadrianic Period"
+    subject_type: archetype
+    region: "Roman Empire (Britain/Rhine frontier)"
+    time_period_label: "High Roman Empire"
+    time_period_start: 117
+    time_period_end: 138
+    setting_context: "Hadrian's Wall or frontier fort"
+    evidence_level: high
+    intended_output_type: portrait
+    prompt_brief: >
+      A historically informed portrait of a Roman legionary soldier during
+      Hadrian's reign. He should wear lorica segmentata or lorica hamata
+      (chainmail), a military tunic, caligae (military sandals), and a
+      Gallic-type helmet. Equipment may include a scutum (rectangular shield)
+      and gladius (short sword). Setting should suggest a stone frontier fort.
+    must_include:
+      - "Roman military armor (segmentata or hamata)"
+      - "Gallic-type helmet"
+      - "human face clearly visible"
+      - "military equipment (sword, shield)"
+    must_not_include:
+      - "medieval knight armor"
+      - "Greek hoplite panoply"
+      - "modern military uniform"
+      - "gladiator equipment"
+    style_guidance:
+      - "illustrative realism"
+      - "iron, leather, and stone palette"
+      - "emphasis on military functionality"
+    anachronism_watchlist:
+      - "late Roman ridge helmet (too late)"
+      - "medieval chainmail coif"
+      - "stirrups (not used by Romans)"
+      - "crossbow (not standard legionary)"
+    uncertainty_notes: >
+      Roman military equipment is extremely well-documented through archaeology,
+      relief sculpture (Trajan's Column), and reconstructions. Hadrianic period
+      represents transition in armor styles. High evidence level.
+    reference_notes:
+      - "Trajan's Column military reliefs"
+      - "Vindolanda tablet finds for daily life"
+    scorable_dimensions:
+      - prompt_adherence
+      - visual_coherence
+      - face_usability
+      - period_plausibility
+      - anachronism_avoidance
+      - narrative_image_consistency
+      - uncertainty_signaling_quality
+      - audit_trace_completeness
+
+  - id: CCV1-022
+    title: "Ethiopian Orthodox Priest, Lalibela Era"
+    subject_type: archetype
+    region: "East Africa, Ethiopian Highlands"
+    time_period_label: "Zagwe Dynasty Ethiopia"
+    time_period_start: 1150
+    time_period_end: 1270
+    setting_context: "Rock-hewn church of Lalibela"
+    evidence_level: low
+    intended_output_type: portrait
+    prompt_brief: >
+      A historically informed portrait of an Ethiopian Orthodox priest in one
+      of the rock-hewn churches of Lalibela. The figure should wear a white
+      cotton shamma (wrapped garment), a netela head covering, and possibly
+      carry a prayer staff (mequamia) and hand cross. Setting should show the
+      carved stone interior of a Lalibela-style church.
+    must_include:
+      - "white cotton shamma or priestly robes"
+      - "prayer staff (mequamia) or hand cross"
+      - "human face clearly visible"
+      - "rock-hewn church interior elements"
+    must_not_include:
+      - "Roman Catholic vestments"
+      - "West African boubou"
+      - "modern clerical collar"
+      - "Egyptian Coptic-specific elements"
+    style_guidance:
+      - "illustrative realism"
+      - "warm stone and white cotton palette"
+      - "Ethiopian manuscript painting influence"
+    anachronism_watchlist:
+      - "printed or colorful modern textiles"
+      - "Western church architecture"
+      - "post-Solomonic dynasty regalia"
+      - "electric lighting"
+    uncertainty_notes: >
+      Lalibela rock churches survive and provide architectural reference.
+      Ethiopian priestly dress has continuity but specific 12th-13th century
+      details are partially speculative. Ethiopian manuscript painting
+      provides some visual reference. Stress case for East African specificity.
+    reference_notes:
+      - "Lalibela rock-hewn churches (standing structures)"
+      - "Ethiopian illuminated manuscripts"
+    scorable_dimensions:
+      - prompt_adherence
+      - visual_coherence
+      - face_usability
+      - period_plausibility
+      - anachronism_avoidance
+      - narrative_image_consistency
+      - uncertainty_signaling_quality
+      - audit_trace_completeness
+
+  - id: CCV1-023
+    title: "Joseon Scholar-Official (Yangban)"
+    subject_type: archetype
+    region: "Korea, Joseon Dynasty"
+    time_period_label: "Joseon Dynasty Korea"
+    time_period_start: 1400
+    time_period_end: 1600
+    setting_context: "Confucian academy or private study"
+    evidence_level: high
+    intended_output_type: portrait
+    prompt_brief: >
+      A historically informed portrait of a Joseon-era yangban (scholar-official)
+      in a study or academy setting. The figure should wear a dopo (scholar's
+      robe) over a jeogori jacket, with a gat (horsehair hat) and jade belt
+      ornaments. Setting should include books, inkstone, and calligraphy
+      brushes. Korean architectural elements — ondol floor, sliding doors.
+    must_include:
+      - "dopo scholar's robe"
+      - "gat horsehair hat"
+      - "human face clearly visible"
+      - "study setting with books and brush"
+    must_not_include:
+      - "Japanese samurai armor or kimono"
+      - "Chinese mandarin square (distinct system)"
+      - "modern Korean hanbok (later simplified form)"
+      - "Western furniture"
+    style_guidance:
+      - "illustrative realism"
+      - "restrained scholarly palette (white, indigo, muted tones)"
+      - "Korean genre painting influence"
+    anachronism_watchlist:
+      - "Japanese-style tatami (Korean uses ondol)"
+      - "Chinese Qing dynasty queue"
+      - "Meiji-era or colonial elements"
+      - "modern Korean hangeul typography (exists but different context)"
+    uncertainty_notes: >
+      Joseon dynasty portraiture tradition is one of the richest in East Asia —
+      numerous surviving formal portraits of officials. Clothing, setting, and
+      social roles are very well documented. High evidence level.
+    reference_notes:
+      - "Joseon dynasty formal portraits (chosang)"
+      - "Genre paintings of Kim Hong-do and Shin Yun-bok"
+    scorable_dimensions:
+      - prompt_adherence
+      - visual_coherence
+      - face_usability
+      - period_plausibility
+      - anachronism_avoidance
+      - narrative_image_consistency
+      - uncertainty_signaling_quality
+      - audit_trace_completeness
+
+  # ── Diversity/Stress Cases (7 additional) ────────────────────────────────────
+
+  - id: CCV1-024
+    title: "Inuit Hunter, Pre-Contact Arctic"
+    subject_type: role
+    region: "Arctic North America (Thule culture)"
+    time_period_label: "Late Thule Period"
+    time_period_start: 1300
+    time_period_end: 1600
+    setting_context: "Sea ice or coastal camp"
+    evidence_level: low
+    intended_output_type: portrait
+    prompt_brief: >
+      A historically informed portrait of an Inuit hunter during the Thule
+      period. The figure should wear a caribou-skin parka (amauti-style or
+      anorak), sealskin boots (kamik), and carry hunting implements — harpoon,
+      ulu knife, or bow. Setting should show Arctic sea ice, a snow shelter
+      (igloo), or a skin-covered boat (umiak/kayak).
+    must_include:
+      - "caribou or sealskin parka"
+      - "sealskin boots (kamik)"
+      - "human face clearly visible"
+      - "Arctic landscape or hunting implements"
+    must_not_include:
+      - "Plains Native American headdress"
+      - "modern Gore-Tex jacket"
+      - "Sub-Arctic woodland indigenous clothing"
+      - "Canadian flag or modern symbols"
+    style_guidance:
+      - "illustrative realism"
+      - "ice-white and warm fur palette"
+      - "emphasis on functional cold-weather design"
+    anachronism_watchlist:
+      - "metal tools (pre-contact — bone and stone)"
+      - "modern snowmobile or rifle"
+      - "European whaling ship"
+      - "store-bought fabric"
+    uncertainty_notes: >
+      Thule material culture is well-attested archaeologically (bone tools,
+      clothing fragments, house structures). Specific regional variation is
+      important — avoid pan-Arctic flattening. Evaluate functional plausibility
+      of cold-weather clothing.
+    reference_notes:
+      - "Thule archaeological sites for material culture"
+      - "Early European contact-era descriptions"
+    scorable_dimensions:
+      - prompt_adherence
+      - visual_coherence
+      - face_usability
+      - period_plausibility
+      - anachronism_avoidance
+      - narrative_image_consistency
+      - uncertainty_signaling_quality
+      - audit_trace_completeness
+
+  - id: CCV1-025
+    title: "Timbuktu Scholar, Songhai Empire"
+    subject_type: role
+    region: "West Africa, Songhai Empire (modern Mali)"
+    time_period_label: "Songhai Empire"
+    time_period_start: 1450
+    time_period_end: 1591
+    setting_context: "Sankore Mosque library or classroom"
+    evidence_level: low
+    intended_output_type: portrait
+    prompt_brief: >
+      A historically informed portrait of a scholar at the University of Sankore
+      in Timbuktu during the Songhai Empire. The figure should wear a flowing
+      robe (boubou) and turban or kufi cap, reflecting the Islamic scholarly
+      tradition of the Sahel. Setting should include manuscript books, an
+      adobe/mud-brick architectural interior, and writing materials.
+    must_include:
+      - "flowing robe (boubou or similar)"
+      - "turban or kufi cap"
+      - "human face clearly visible"
+      - "manuscripts or scholarly setting"
+    must_not_include:
+      - "East African clothing"
+      - "modern university setting"
+      - "European-style bound books"
+      - "Moroccan/Maghreb-specific architectural style"
+    style_guidance:
+      - "illustrative realism"
+      - "warm Sahel earth tones"
+      - "emphasis on intellectual dignity"
+    anachronism_watchlist:
+      - "printed books (pre-dates printing in region)"
+      - "modern eyeglasses"
+      - "colonial-era elements"
+      - "sub-Saharan non-Islamic cultural markers"
+    uncertainty_notes: >
+      Timbuktu manuscripts survive in significant numbers and attest to the
+      scholarly tradition. Architecture (Sankore Mosque) is extant. Specific
+      clothing references for 15th-16th century scholars are partially
+      reconstructed. Stress case for African intellectual tradition.
+    reference_notes:
+      - "Timbuktu Manuscripts Project for period references"
+      - "Sankore Mosque and University historical accounts"
+    scorable_dimensions:
+      - prompt_adherence
+      - visual_coherence
+      - face_usability
+      - period_plausibility
+      - anachronism_avoidance
+      - narrative_image_consistency
+      - uncertainty_signaling_quality
+      - audit_trace_completeness
+
+  - id: CCV1-026
+    title: "Mapuche Machi (Healer), Pre-Colonial Chile"
+    subject_type: role
+    region: "Southern Chile/Argentina, Mapuche territory"
+    time_period_label: "Pre-Colonial South America"
+    time_period_start: 1300
+    time_period_end: 1536
+    setting_context: "Ruka (traditional house) or ceremonial space"
+    evidence_level: low
+    intended_output_type: portrait
+    prompt_brief: >
+      A historically informed portrait of a Mapuche machi (spiritual healer).
+      The figure should wear a handwoven woolen poncho (makuñ) and silver
+      jewelry (trapelacucha pectoral, chaway earrings). A kultrún (ceremonial
+      drum) should be visible. Setting should suggest southern Chilean landscape
+      — araucaria trees, temperate forest.
+    must_include:
+      - "handwoven woolen poncho (makuñ)"
+      - "Mapuche silver jewelry (trapelacucha)"
+      - "human face clearly visible"
+      - "kultrún drum or ritual implements"
+    must_not_include:
+      - "Andean/Inca clothing"
+      - "Amazonian body paint or feathers"
+      - "Spanish colonial clothing"
+      - "modern Chilean clothing"
+    style_guidance:
+      - "illustrative realism"
+      - "deep green and silver palette"
+      - "temperate forest atmosphere"
+    anachronism_watchlist:
+      - "Inca tocapu patterns"
+      - "European-style silver work"
+      - "post-colonial elements (horses)"
+      - "modern dyed fabrics"
+    uncertainty_notes: >
+      Mapuche pre-colonial material culture is reconstructed from archaeology,
+      early colonial accounts, and continuity with living traditions. Silver
+      work may be post-contact (Spanish silver). Textiles have archaeological
+      attestation. Stress case for South American indigenous specificity.
+    reference_notes:
+      - "Mapuche archaeological textile finds"
+      - "Early Spanish accounts of Mapuche culture"
+    scorable_dimensions:
+      - prompt_adherence
+      - visual_coherence
+      - face_usability
+      - period_plausibility
+      - anachronism_avoidance
+      - narrative_image_consistency
+      - uncertainty_signaling_quality
+      - audit_trace_completeness
+
+  - id: CCV1-027
+    title: "Swahili Coast Merchant, Kilwa Sultanate"
+    subject_type: role
+    region: "East Africa, Swahili Coast (modern Tanzania)"
+    time_period_label: "Medieval Swahili Coast"
+    time_period_start: 1200
+    time_period_end: 1500
+    setting_context: "Coral-stone trading town or harbor"
+    evidence_level: low
+    intended_output_type: portrait
+    prompt_brief: >
+      A historically informed portrait of a prosperous Swahili merchant in
+      the trading city of Kilwa. The figure should wear a kanzu (long robe)
+      and kofia (cap), reflecting the Islamic-African fusion culture of the
+      coast. Setting should include coral-stone architecture, trade goods
+      (Chinese porcelain, gold, ivory), and Indian Ocean harbor elements.
+    must_include:
+      - "kanzu robe and kofia cap"
+      - "human face clearly visible"
+      - "coral-stone architectural elements"
+      - "Indian Ocean trade goods"
+    must_not_include:
+      - "West African clothing"
+      - "Arabian desert elements"
+      - "European colonial architecture"
+      - "modern clothing"
+    style_guidance:
+      - "illustrative realism"
+      - "coral white and ocean blue palette"
+      - "emphasis on cosmopolitan trading culture"
+    anachronism_watchlist:
+      - "Portuguese colonial elements (too late for early period)"
+      - "modern Zanzibari carved doors (later style)"
+      - "printed fabric"
+      - "European ships"
+    uncertainty_notes: >
+      Kilwa ruins and Chinese/Arabic accounts (Ibn Battuta, Zheng He era) attest
+      to the prosperity of the Swahili coast. Material culture reconstructed
+      from archaeology (Great Mosque of Kilwa, trade ceramics). Specific
+      clothing is partially speculative. Stress case for East African specificity.
+    reference_notes:
+      - "Great Mosque of Kilwa archaeological evidence"
+      - "Ibn Battuta's description of Kilwa"
+    scorable_dimensions:
+      - prompt_adherence
+      - visual_coherence
+      - face_usability
+      - period_plausibility
+      - anachronism_avoidance
+      - narrative_image_consistency
+      - uncertainty_signaling_quality
+      - audit_trace_completeness
+
+  - id: CCV1-028
+    title: "Mississippian Cahokia Chief"
+    subject_type: role
+    region: "North America, Mississippi River Valley"
+    time_period_label: "Mississippian Period"
+    time_period_start: 1050
+    time_period_end: 1250
+    setting_context: "Monks Mound summit or palisaded plaza"
+    evidence_level: low
+    intended_output_type: portrait
+    prompt_brief: >
+      A historically informed portrait of a Cahokia chief or paramount leader
+      at the height of the Mississippian civilization. The figure should wear a
+      shell gorget, copper ear ornaments, and a feathered cape or mantle. The
+      setting should suggest the monumental earthen mound complex — wooden
+      palisades, large plaza, or mound summit with temple structure.
+    must_include:
+      - "shell gorget (engraved)"
+      - "copper ornaments"
+      - "human face clearly visible"
+      - "earthen mound or palisade setting"
+    must_not_include:
+      - "Plains headdress (wrong culture/period)"
+      - "Pacific Northwest totem poles"
+      - "European contact-era clothing"
+      - "Mesoamerican pyramid architecture"
+    style_guidance:
+      - "illustrative realism"
+      - "earth, copper, and shell-white palette"
+      - "emphasis on monumental setting"
+    anachronism_watchlist:
+      - "metal tools (copper only, no iron)"
+      - "horses (pre-contact)"
+      - "European goods"
+      - "Aztec/Maya motifs"
+    uncertainty_notes: >
+      Cahokia archaeology provides mound structures, Ramey incised pottery,
+      marine shell artifacts, and burial goods. Birdman tablets and figurines
+      give some iconographic reference. Specific leadership attire is
+      reconstructed. Major stress case for pre-contact North America.
+    reference_notes:
+      - "Cahokia Mounds archaeological site"
+      - "Birdman tablets and Ramey incised pottery iconography"
+    scorable_dimensions:
+      - prompt_adherence
+      - visual_coherence
+      - face_usability
+      - period_plausibility
+      - anachronism_avoidance
+      - narrative_image_consistency
+      - uncertainty_signaling_quality
+      - audit_trace_completeness
+
+  - id: CCV1-029
+    title: "Tibetan Buddhist Nun, Early Medieval Tibet"
+    subject_type: role
+    region: "Central Tibet"
+    time_period_label: "Tibetan Empire and Phyi Dar Period"
+    time_period_start: 900
+    time_period_end: 1200
+    setting_context: "Mountain monastery or cave retreat"
+    evidence_level: low
+    intended_output_type: portrait
+    prompt_brief: >
+      A historically informed portrait of a Tibetan Buddhist nun during the
+      later diffusion of Buddhism in Tibet. The figure should wear maroon and
+      saffron monastic robes (chögu and namjar), with shaved head. Setting
+      should suggest a Himalayan monastery — whitewashed walls, prayer flags,
+      and mountain landscape. May include Buddhist objects — prayer beads,
+      butter lamps, or sacred texts.
+    must_include:
+      - "maroon and saffron monastic robes"
+      - "shaved head"
+      - "human face clearly visible"
+      - "Himalayan monastery or cave setting"
+    must_not_include:
+      - "Theravada Southeast Asian monastic dress"
+      - "Chinese Chan/Zen Buddhist dress"
+      - "Hindu religious elements"
+      - "modern Chinese clothing"
+    style_guidance:
+      - "illustrative realism"
+      - "mountain-sky blue and maroon palette"
+      - "Tibetan thangka painting influence"
+    anachronism_watchlist:
+      - "modern Chinese PRC elements"
+      - "Gelug school yellow hat (later development)"
+      - "electric butter lamps"
+      - "printed texts (woodblock arrived later)"
+    uncertainty_notes: >
+      Early medieval Tibetan monasticism is documented in Tibetan texts and
+      surviving early monasteries (Samye, etc.). Monastic dress has substantial
+      continuity. Nuns are documented but less frequently depicted in art.
+      Stress case for Tibetan specificity and gender representation.
+    reference_notes:
+      - "Samye Monastery for architectural reference"
+      - "Early Tibetan Buddhist art and thangka tradition"
+    scorable_dimensions:
+      - prompt_adherence
+      - visual_coherence
+      - face_usability
+      - period_plausibility
+      - anachronism_avoidance
+      - narrative_image_consistency
+      - uncertainty_signaling_quality
+      - audit_trace_completeness
+
+  - id: CCV1-030
+    title: "Ainu Elder, Pre-Meiji Hokkaido"
+    subject_type: role
+    region: "Hokkaido, Japan (Ainu Mosir)"
+    time_period_label: "Pre-Meiji Ainu"
+    time_period_start: 1600
+    time_period_end: 1868
+    setting_context: "Chise (traditional house) or riverside"
+    evidence_level: medium
+    intended_output_type: portrait
+    prompt_brief: >
+      A historically informed portrait of an Ainu elder in Hokkaido before the
+      Meiji-era assimilation policies. The figure should wear an attush (elm-bark
+      cloth robe) with distinctive curvilinear embroidery patterns, and have
+      traditional facial tattoos (women) or a full beard (men). Setting should
+      suggest a chise dwelling or salmon river with birch and alder forests.
+    must_include:
+      - "attush robe with curvilinear embroidery"
+      - "traditional physical presentation (beard or tattoo)"
+      - "human face clearly visible"
+      - "Hokkaido landscape elements"
+    must_not_include:
+      - "Japanese kimono (distinct culture)"
+      - "modern Japanese clothing"
+      - "Plains Native American elements"
+      - "Siberian Evenki or Nivkh clothing"
+    style_guidance:
+      - "illustrative realism"
+      - "forest green and bark-brown palette"
+      - "emphasis on textile artistry and natural setting"
+    anachronism_watchlist:
+      - "Meiji-era Japanese elements"
+      - "modern tools or equipment"
+      - "Western clothing (post-contact influence)"
+      - "Japanese Buddhist temple elements"
+    uncertainty_notes: >
+      Ainu material culture is documented through Edo-period Japanese accounts,
+      early photographs, and surviving objects (attush robes in museums).
+      Cultural continuity is strong but specific historical period details vary.
+      Stress case for indigenous specificity within Japan.
+    reference_notes:
+      - "British Museum and Smithsonian Ainu collections"
+      - "Edo-period Japanese depictions of Ainu (use critically)"
     scorable_dimensions:
       - prompt_adherence
       - visual_coherence
