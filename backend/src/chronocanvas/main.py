@@ -78,6 +78,12 @@ def create_app() -> FastAPI:
     app.mount("/output", StaticFiles(directory=settings.output_dir), name="output")
     app.mount("/uploads", StaticFiles(directory=settings.upload_dir), name="uploads")
 
+    # Eval run assets (images, etc.) — only mount if eval/runs exists
+    import os
+    eval_runs_dir = os.path.join(settings.eval_dir, "runs")
+    if os.path.isdir(eval_runs_dir):
+        app.mount("/eval-assets", StaticFiles(directory=eval_runs_dir), name="eval-assets")
+
     return app
 
 

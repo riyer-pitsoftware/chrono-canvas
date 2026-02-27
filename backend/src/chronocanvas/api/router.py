@@ -3,6 +3,7 @@ from fastapi import APIRouter
 from chronocanvas.api.routes import (
     admin,
     agents,
+    eval_viewer,
     export,
     faces,
     figures,
@@ -25,3 +26,4 @@ api_router.include_router(export.router)
 api_router.include_router(agents.router)
 api_router.include_router(admin.router)
 api_router.include_router(memory.router)
+api_router.include_router(eval_viewer.router)

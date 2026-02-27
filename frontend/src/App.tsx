@@ -12,6 +12,7 @@ import { AuditList } from "@/pages/AuditList";
 import { Memory } from "@/pages/Memory";
 import { Timeline } from "@/pages/Timeline";
 import { Review } from "@/pages/Review";
+import { EvalViewer } from "@/pages/EvalViewer";
 
 function getPage(path: string) {
   const qIdx = path.indexOf("?");
@@ -58,6 +59,8 @@ function getPage(path: string) {
       return <AuditList />;
     case "/memory":
       return <Memory />;
+    case "/eval":
+      return <EvalViewer />;
     default:
       return <Dashboard />;
   }

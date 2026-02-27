@@ -1,4 +1,4 @@
-import { BookOpen, Download, FileSearch, Image, LayoutDashboard, Settings, Shield, Users, Cpu, Scroll, Database, ChevronLeft, ChevronRight } from "lucide-react";
+import { BarChart3, BookOpen, Download, FileSearch, Image, LayoutDashboard, Settings, Shield, Users, Cpu, Scroll, Database, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
@@ -10,6 +10,7 @@ const navItems = [
   { label: "Audit", href: "/audit", icon: FileSearch },
   { label: "Memory", href: "/memory", icon: Database },
   { label: "Export", href: "/export", icon: Download },
+  { label: "Eval", href: "/eval", icon: BarChart3 },
   { label: "Admin", href: "/admin", icon: Settings },
 ];
 

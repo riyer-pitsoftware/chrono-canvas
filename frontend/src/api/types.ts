@@ -219,6 +219,49 @@ export interface AuditFeedbackListResponse {
   items: AuditFeedback[];
 }
 
+// ── Eval Viewer ──────────────────────────────────────────────────────────
+
+export interface EvalRunSummary {
+  run_id: string;
+  case_id: string;
+  condition: string;
+  success: boolean;
+  image_url: string | null;
+  title: string;
+  has_rating: boolean;
+}
+
+export interface EvalRunDetail extends EvalRunSummary {
+  manifest: Record<string, unknown>;
+  rating: Record<string, unknown> | null;
+  output_text: string | null;
+}
+
+export interface EvalCase {
+  case_id: string;
+  title: string;
+  subject_type: string;
+  region: string;
+  time_period_label: string;
+  runs: EvalRunSummary[];
+}
+
+export interface DimensionAggregate {
+  condition: string;
+  dimension: string;
+  mean: number;
+  median: number;
+  n: number;
+}
+
+export interface DashboardData {
+  conditions: Record<string, unknown>[];
+  dimension_scores: DimensionAggregate[];
+  failure_tags: { tag: string; count: number; category: string }[];
+  total_runs: number;
+  total_rated: number;
+}
+
 // ── Memory Cache ──────────────────────────────────────────────────────────
 
 export interface CacheEntry {

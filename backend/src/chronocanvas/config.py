@@ -56,6 +56,7 @@ class Settings(BaseSettings):
     # Storage
     upload_dir: str = "./uploads"
     output_dir: str = "./output"
+    eval_dir: str = "./eval"
 
     # Rate Limiting
     rate_limit_rpm: int = 60
