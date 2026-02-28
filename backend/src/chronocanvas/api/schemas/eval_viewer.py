@@ -13,6 +13,11 @@ class EvalRunSummary(BaseModel):
     image_url: str | None = None
     title: str
     has_rating: bool
+    rejected: bool = False
+
+
+class RejectRequest(BaseModel):
+    reason: str | None = None
 
 
 class EvalRunDetail(EvalRunSummary):

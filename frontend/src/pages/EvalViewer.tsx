@@ -7,6 +7,8 @@ import {
   useEvalRun,
   useEvalCases,
   useEvalDashboard,
+  useRejectEvalRun,
+  useUnrejectEvalRun,
 } from "@/api/hooks/useEval";
 import type { EvalRunDetail, EvalRunSummary, DimensionAggregate } from "@/api/types";
 
@@ -80,11 +82,13 @@ function ScoreBar({ value, max = 3 }: { value: number; max?: number }) {
 function GalleryTab() {
   const [conditionFilter, setConditionFilter] = useState<string>("");
   const [caseFilter, setCaseFilter] = useState<string>("");
+  const [showRejected, setShowRejected] = useState(false);
   const [selectedRun, setSelectedRun] = useState<string | undefined>();
 
   const { data: runs, isLoading } = useEvalRuns(
     conditionFilter || undefined,
-    caseFilter || undefined
+    caseFilter || undefined,
+    showRejected,
   );
   const { data: runDetail } = useEvalRun(selectedRun);
   const { data: cases } = useEvalCases();
@@ -107,7 +111,7 @@ function GalleryTab() {
   return (
     <div className="space-y-4">
       {/* Filters */}
-      <div className="flex gap-3 flex-wrap">
+      <div className="flex gap-3 flex-wrap items-center">
         <select
           value={conditionFilter}
           onChange={(e) => setConditionFilter(e.target.value)}
@@ -132,6 +136,15 @@ function GalleryTab() {
             </option>
           ))}
         </select>
+        <label className="flex items-center gap-1.5 text-sm cursor-pointer">
+          <input
+            type="checkbox"
+            checked={showRejected}
+            onChange={(e) => setShowRejected(e.target.checked)}
+            className="rounded border-[var(--border)]"
+          />
+          Show rejected
+        </label>
         {(conditionFilter || caseFilter) && (
           <Button
             variant="ghost"
@@ -166,7 +179,9 @@ function RunCard({ run, onClick }: { run: EvalRunSummary; onClick: () => void })
   return (
     <button
       onClick={onClick}
-      className="text-left rounded-lg border border-[var(--border)] bg-[var(--card)] overflow-hidden hover:border-[var(--primary)] transition-colors"
+      className={`text-left rounded-lg border border-[var(--border)] bg-[var(--card)] overflow-hidden hover:border-[var(--primary)] transition-colors ${
+        run.rejected ? "opacity-50" : ""
+      }`}
     >
       {run.image_url ? (
         <img
@@ -183,6 +198,11 @@ function RunCard({ run, onClick }: { run: EvalRunSummary; onClick: () => void })
         <p className="text-xs font-medium truncate">{run.title}</p>
         <div className="flex items-center gap-1.5 flex-wrap">
           {conditionBadge(run.condition)}
+          {run.rejected && (
+            <Badge variant="outline" className="text-red-400 border-red-500/30 bg-red-500/10 text-[10px]">
+              Rejected
+            </Badge>
+          )}
           {run.success ? (
             <Badge variant="outline" className="text-emerald-400 border-emerald-500/30 text-[10px]">
               OK
@@ -206,6 +226,10 @@ function RunDetailView({ run }: { run: EvalRunDetail }) {
   const manifest = (run.manifest ?? {}) as Record<string, unknown>;
   const rating = run.rating as Record<string, unknown> | null;
   const outputText = run.output_text as string | null;
+  const [rejectReason, setRejectReason] = useState("");
+  const [showRejectForm, setShowRejectForm] = useState(false);
+  const rejectMutation = useRejectEvalRun();
+  const unrejectMutation = useUnrejectEvalRun();
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -231,8 +255,62 @@ function RunDetailView({ run }: { run: EvalRunDetail }) {
           <div className="flex items-center gap-2 mt-1">
             {conditionBadge(run.condition)}
             <span className="text-sm text-[var(--muted-foreground)]">{run.case_id}</span>
+            {run.rejected && (
+              <Badge variant="outline" className="text-red-400 border-red-500/30 bg-red-500/10">
+                Rejected
+              </Badge>
+            )}
           </div>
         </div>
+
+        {/* Reject / Unreject actions */}
+        {run.rejected ? (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => unrejectMutation.mutate(run.run_id)}
+            disabled={unrejectMutation.isPending}
+          >
+            {unrejectMutation.isPending ? "Unrejecting..." : "Unreject"}
+          </Button>
+        ) : showRejectForm ? (
+          <div className="space-y-2 p-3 rounded-md border border-red-500/30 bg-red-500/5">
+            <textarea
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              placeholder="Reason for rejection (optional)"
+              className="w-full rounded-md border border-[var(--border)] bg-[var(--card)] px-3 py-2 text-sm resize-none"
+              rows={2}
+            />
+            <div className="flex gap-2">
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => {
+                  rejectMutation.mutate(
+                    { runId: run.run_id, reason: rejectReason || undefined },
+                    { onSuccess: () => setShowRejectForm(false) },
+                  );
+                }}
+                disabled={rejectMutation.isPending}
+              >
+                {rejectMutation.isPending ? "Rejecting..." : "Confirm Reject"}
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => setShowRejectForm(false)}>
+                Cancel
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-red-400 border-red-500/30 hover:bg-red-500/10"
+            onClick={() => setShowRejectForm(true)}
+          >
+            Reject Run
+          </Button>
+        )}
 
         {/* Manifest highlights */}
         <Card>
@@ -330,11 +408,11 @@ function ComparisonTab() {
 
   const selectedCase = cases?.find((c) => c.case_id === selectedCaseId);
 
-  // Group runs by condition
+  // Group runs by condition, skip rejected (keep latest non-rejected per condition)
   const runsByCondition: Record<string, EvalRunSummary> = {};
   if (selectedCase) {
     for (const run of selectedCase.runs) {
-      // Keep last run per condition (most recent)
+      if (run.rejected) continue;
       runsByCondition[run.condition] = run;
     }
   }

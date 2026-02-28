@@ -9,6 +9,7 @@ from chronocanvas.api.schemas.eval_viewer import (
     EvalCase,
     EvalRunDetail,
     EvalRunSummary,
+    RejectRequest,
 )
 from chronocanvas.services.eval_data import (
     get_case,
@@ -16,6 +17,8 @@ from chronocanvas.services.eval_data import (
     get_run,
     list_cases,
     list_runs,
+    reject_run,
+    unreject_run,
 )
 
 router = APIRouter(prefix="/eval", tags=["eval"])
@@ -25,9 +28,12 @@ router = APIRouter(prefix="/eval", tags=["eval"])
 async def get_eval_runs(
     condition: str | None = Query(None),
     case_id: str | None = Query(None),
+    include_rejected: bool = Query(False),
 ):
     """List eval runs, optionally filtered by condition or case."""
-    return list_runs(condition=condition, case_id=case_id)
+    return list_runs(
+        condition=condition, case_id=case_id, include_rejected=include_rejected
+    )
 
 
 @router.get("/runs/{run_id}", response_model=EvalRunDetail)
@@ -37,6 +43,23 @@ async def get_eval_run(run_id: str):
     if result is None:
         raise HTTPException(status_code=404, detail="Run not found")
     return result
+
+
+@router.post("/runs/{run_id}/reject")
+async def reject_eval_run(run_id: str, body: RejectRequest | None = None):
+    """Soft-reject an eval run."""
+    try:
+        reject_run(run_id, reason=body.reason if body else None)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Run not found")
+    return {"status": "rejected", "run_id": run_id}
+
+
+@router.post("/runs/{run_id}/unreject")
+async def unreject_eval_run(run_id: str):
+    """Remove soft-reject from an eval run."""
+    unreject_run(run_id)
+    return {"status": "unrejected", "run_id": run_id}
 
 
 @router.get("/cases", response_model=list[EvalCase])

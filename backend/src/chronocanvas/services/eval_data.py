@@ -218,6 +218,32 @@ def _image_url_for_run(run_id: str) -> str | None:
     return None
 
 
+def _is_rejected(run_id: str) -> bool:
+    """Check if a run has been soft-rejected."""
+    return (_runs_dir() / run_id / "rejected.json").exists()
+
+
+def reject_run(run_id: str, reason: str | None = None) -> None:
+    """Soft-reject a run by writing a rejected.json marker."""
+    import datetime
+
+    run_dir = _runs_dir() / run_id
+    if not run_dir.exists():
+        raise FileNotFoundError(f"Run directory not found: {run_id}")
+    marker = {
+        "rejected_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        "reason": reason,
+    }
+    (run_dir / "rejected.json").write_text(json.dumps(marker, indent=2))
+
+
+def unreject_run(run_id: str) -> None:
+    """Remove the soft-reject marker from a run."""
+    marker = _runs_dir() / run_id / "rejected.json"
+    if marker.exists():
+        marker.unlink()
+
+
 def _title_for_case(case_id: str, cases: dict[str, dict]) -> str:
     case = cases.get(case_id)
     if case:
@@ -226,7 +252,9 @@ def _title_for_case(case_id: str, cases: dict[str, dict]) -> str:
 
 
 def list_runs(
-    condition: str | None = None, case_id: str | None = None
+    condition: str | None = None,
+    case_id: str | None = None,
+    include_rejected: bool = False,
 ) -> list[dict]:
     """List all eval runs with summary info."""
     manifests = _load_all_manifests(_runs_dir())
@@ -243,6 +271,10 @@ def list_runs(
         if case_id and m_case_id != case_id:
             continue
 
+        rejected = _is_rejected(run_id)
+        if rejected and not include_rejected:
+            continue
+
         results.append(
             {
                 "run_id": run_id,
@@ -252,6 +284,7 @@ def list_runs(
                 "image_url": _image_url_for_run(run_id),
                 "title": _title_for_case(m_case_id, cases),
                 "has_rating": run_id in ratings_index,
+                "rejected": rejected,
             }
         )
 
@@ -295,6 +328,7 @@ def get_run(run_id: str) -> dict | None:
         "image_url": _image_url_for_run(run_id),
         "title": _title_for_case(case_id, cases),
         "has_rating": rating is not None,
+        "rejected": _is_rejected(run_id),
         "manifest": manifest,
         "rating": rating_clean,
         "output_text": output_text,

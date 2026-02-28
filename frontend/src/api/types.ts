@@ -229,6 +229,7 @@ export interface EvalRunSummary {
   image_url: string | null;
   title: string;
   has_rating: boolean;
+  rejected: boolean;
 }
 
 export interface EvalRunDetail extends EvalRunSummary {
