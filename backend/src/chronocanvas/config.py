@@ -1,4 +1,11 @@
+import logging
+
+from pydantic import model_validator
 from pydantic_settings import BaseSettings
+
+logger = logging.getLogger(__name__)
+
+_INSECURE_DEFAULT_KEY = "change-me-in-production"
 
 
 class Settings(BaseSettings):
@@ -46,7 +53,7 @@ class Settings(BaseSettings):
     cors_origins: list[str] = ["http://localhost:3000"]
 
     # Security
-    secret_key: str = "change-me-in-production"
+    secret_key: str = _INSECURE_DEFAULT_KEY
 
     # Content Moderation
     content_moderation_enabled: bool = True   # default-on keyword input validation
@@ -73,6 +80,19 @@ class Settings(BaseSettings):
 
     # Logging
     log_level: str = "INFO"
+
+    @model_validator(mode="after")
+    def _reject_insecure_secret_key(self) -> "Settings":
+        if self.secret_key == _INSECURE_DEFAULT_KEY:
+            if "sqlite" in self.database_url:
+                # Test/dev environment using SQLite — allow the default
+                logger.warning("Using insecure default SECRET_KEY (ok for testing)")
+            else:
+                raise ValueError(
+                    "SECRET_KEY is set to the insecure default. "
+                    "Set a strong, unique SECRET_KEY via environment variable or .env file."
+                )
+        return self
 
 
 settings = Settings()
