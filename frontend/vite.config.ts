@@ -18,6 +18,7 @@ export default defineConfig({
       "/api": apiTarget,
       "/output": apiTarget,
       "/uploads": apiTarget,
+      "/eval-assets": apiTarget,
       "/ws": {
         target: apiTarget.replace(/^http/, "ws"),
         ws: true,
