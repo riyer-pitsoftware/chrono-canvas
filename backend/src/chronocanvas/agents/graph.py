@@ -78,6 +78,6 @@ def recompile_graph():
     agent_graph = get_compiled_graph()
 
 
-# Singleton compiled graph — initially compiled with MemorySaver,
-# then recompiled with the durable checkpointer during startup.
+# Singleton compiled graph — compiled with MemorySaver at import time,
+# then recompiled with the durable Postgres checkpointer during startup.
 agent_graph = get_compiled_graph()

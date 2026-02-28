@@ -1,13 +1,14 @@
-"""LangGraph checkpointer — durable Postgres storage with MemorySaver fallback.
+"""LangGraph checkpointer — durable Postgres storage.
 
 In production the checkpointer is backed by PostgreSQL via
 ``langgraph-checkpoint-postgres``.  It is initialised asynchronously during
 application startup (see :func:`init_checkpointer`) and torn down on
 shutdown (see :func:`close_checkpointer`).
 
-In tests or when Postgres is unavailable the module falls back to the
-in-memory ``MemorySaver`` so that the graph can still be compiled at import
-time without a live database connection.
+At import time the module uses ``MemorySaver`` so the graph can be compiled
+without a live database connection, but ``init_checkpointer`` **must**
+succeed before any pipeline runs — it raises on failure to prevent silent
+data loss from in-memory fallback.
 """
 
 from __future__ import annotations
@@ -29,6 +30,10 @@ checkpointer: BaseCheckpointSaver = MemorySaver()
 
 # Hold a reference to the psycopg connection so it can be closed cleanly.
 _pg_conn: AsyncConnection | None = None
+
+
+class CheckpointerInitError(RuntimeError):
+    """Raised when the durable Postgres checkpointer fails to initialise."""
 
 
 def _pg_conninfo() -> str:
@@ -55,6 +60,10 @@ async def init_checkpointer() -> None:
     Call this once during application startup (lifespan or worker init).
     After this call, :data:`checkpointer` is an ``AsyncPostgresSaver`` backed
     by PostgreSQL and will survive process restarts.
+
+    Raises :class:`CheckpointerInitError` if the Postgres connection or
+    schema setup fails, preventing the app from starting with a silent
+    in-memory fallback that would lose pipeline state on restart.
     """
     global checkpointer, _pg_conn
 
@@ -73,13 +82,13 @@ async def init_checkpointer() -> None:
         _pg_conn = conn
         checkpointer = saver
         logger.info("Durable Postgres checkpointer initialised")
-    except Exception:
-        logger.warning(
-            "Failed to initialise Postgres checkpointer; "
-            "falling back to in-memory MemorySaver",
-            exc_info=True,
-        )
-        checkpointer = MemorySaver()
+    except Exception as exc:
+        raise CheckpointerInitError(
+            "Failed to initialise Postgres checkpointer. "
+            "Pipeline state will not survive restarts without a durable "
+            "checkpointer. Ensure PostgreSQL is reachable and "
+            "DATABASE_URL is correctly configured."
+        ) from exc
 
 
 async def close_checkpointer() -> None:
