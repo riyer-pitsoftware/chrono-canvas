@@ -21,14 +21,12 @@ ChronoCanvas is a focused case study in building traceable, evaluable AI systems
 
 </details>
 
-<!-- Optional: uncomment when a GIF is available
 <details>
 <summary>Pipeline run (GIF)</summary>
 
 ![Pipeline run showing real-time streaming](docs/images/pipeline-run.gif)
 
 </details>
--->
 
 ### Who this is for
 

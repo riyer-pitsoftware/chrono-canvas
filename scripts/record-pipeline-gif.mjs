@@ -28,9 +28,12 @@ async function main() {
   mkdirSync(OUTPUT_DIR, { recursive: true });
 
   console.log("Launching browser...");
-  const browser = await chromium.launch({ headless: true });
+  const headless = process.env.HEADLESS !== "false";
+  console.log(`Headless mode: ${headless}`);
+  const browser = await chromium.launch({ headless });
   const context = await browser.newContext({
     viewport: VIEWPORT,
+    colorScheme: "dark",
     recordVideo: {
       dir: VIDEO_PATH,
       size: VIEWPORT,
@@ -38,49 +41,58 @@ async function main() {
   });
   const page = await context.newPage();
 
-  // Navigate to home / generate page
-  console.log("Navigating to app...");
+  // Load the SPA at root (custom Zustand router, no URL-based routing)
+  console.log("Loading app...");
   await page.goto(FRONTEND_URL, { waitUntil: "networkidle" });
-  await page.waitForTimeout(1000);
+  await page.waitForTimeout(2000);
 
-  // Navigate to Generate page
+  // Click the "Generate" nav button in the sidebar
   console.log("Navigating to Generate page...");
-  const genLink = page.locator('a:has-text("Generate"), button:has-text("Generate"), [href="/generate"]').first();
-  await genLink.click().catch(() => {
-    // If no nav link, try direct URL
-    return page.goto(`${FRONTEND_URL}/generate`, { waitUntil: "networkidle" });
-  });
+  const navBtn = page.locator('nav button:has-text("Generate")');
+  await navBtn.waitFor({ state: "visible", timeout: 10000 });
+  await navBtn.click();
   await page.waitForTimeout(1000);
 
   // Look for the input and submit a prompt
   console.log("Starting generation...");
-  const input = page.locator('input[placeholder*="Describe"], input[placeholder*="historical"]').first();
+  const input = page.locator('input[placeholder*="Describe"]');
   await input.waitFor({ state: "visible", timeout: 10000 });
   await input.fill("Cleopatra VII, Last Pharaoh of Ptolemaic Egypt");
   await page.waitForTimeout(500);
 
-  // Click generate button
-  const generateBtn = page.locator('button:has-text("Generate")').first();
+  // Click the Generate button inside the Card (not the nav link)
+  const generateBtn = page.locator('button:has-text("Generate")').last();
   await generateBtn.click();
+  console.log("Clicked Generate button.");
 
-  // Wait for pipeline to start streaming — look for pipeline stepper or progress
+  // Wait for pipeline to start — look for "Generation Progress" card
   console.log("Waiting for pipeline progress...");
-  await page.waitForTimeout(2000);
+  try {
+    await page.locator('text=Generation Progress').waitFor({ state: "visible", timeout: 15000 });
+    console.log("  Pipeline started!");
+  } catch {
+    console.log("  Warning: Generation Progress card not found, continuing...");
+  }
 
-  // Wait for completion or a reasonable amount of time to capture the streaming UI
   // Poll for status changes — the pipeline typically runs 30-90 seconds
-  const maxWait = 120_000;
+  const maxWait = 150_000;
   const start = Date.now();
   let completed = false;
 
   while (Date.now() - start < maxWait) {
-    // Check if we see a "completed" or "failed" badge
-    const status = await page.locator('text=/completed|failed/i').first().isVisible().catch(() => false);
-    if (status) {
+    // Check for completed/failed badges within the Generation Progress card
+    const badge = page.locator('.inline-flex:has-text("completed"), .inline-flex:has-text("failed")');
+    const isVisible = await badge.first().isVisible().catch(() => false);
+    if (isVisible) {
+      const text = await badge.first().textContent().catch(() => "");
       completed = true;
-      console.log("Generation completed!");
-      await page.waitForTimeout(2000); // Capture final state
+      console.log(`Generation ${text}!`);
+      await page.waitForTimeout(3000); // Capture final state
       break;
+    }
+    const elapsed = Math.round((Date.now() - start) / 1000);
+    if (elapsed % 10 === 0) {
+      console.log(`  Waiting... ${elapsed}s elapsed`);
     }
     await page.waitForTimeout(1000);
   }
@@ -97,15 +109,15 @@ async function main() {
   console.log(`Video saved: ${videoPath}`);
 
   // Convert to GIF with ffmpeg
-  // Scale to 720px wide, 12fps, good quality palette
-  console.log("Converting to GIF...");
+  // Scale to 720px wide, 10fps, 3x speed-up (pipeline runs 60-90s, GIF should be ~20-30s)
+  console.log("Converting to GIF (3x speed-up)...");
   const palettePath = "/tmp/chronocanvas-palette.png";
   execSync(
-    `ffmpeg -y -i "${videoPath}" -vf "fps=12,scale=720:-1:flags=lanczos,palettegen=stats_mode=diff" "${palettePath}"`,
+    `ffmpeg -y -i "${videoPath}" -vf "setpts=0.33*PTS,fps=10,scale=720:-1:flags=lanczos,palettegen=stats_mode=diff" "${palettePath}"`,
     { stdio: "inherit" }
   );
   execSync(
-    `ffmpeg -y -i "${videoPath}" -i "${palettePath}" -lavfi "fps=12,scale=720:-1:flags=lanczos[x];[x][1:v]paletteuse=dither=bayer:bayer_scale=3" "${GIF_PATH}"`,
+    `ffmpeg -y -i "${videoPath}" -i "${palettePath}" -lavfi "setpts=0.33*PTS,fps=10,scale=720:-1:flags=lanczos[x];[x][1:v]paletteuse=dither=bayer:bayer_scale=3" "${GIF_PATH}"`,
     { stdio: "inherit" }
   );
 
@@ -115,14 +127,14 @@ async function main() {
   const sizeMB = stats.size / (1024 * 1024);
   console.log(`GIF size: ${sizeMB.toFixed(1)} MB`);
 
-  if (sizeMB > 10) {
-    console.log("GIF too large, re-encoding at 8fps with speed-up...");
+  if (sizeMB > 5) {
+    console.log("GIF too large, re-encoding at 6fps with more speed-up...");
     execSync(
-      `ffmpeg -y -i "${videoPath}" -vf "fps=8,scale=720:-1:flags=lanczos,setpts=0.5*PTS,palettegen=stats_mode=diff" "${palettePath}"`,
+      `ffmpeg -y -i "${videoPath}" -vf "setpts=0.2*PTS,fps=6,scale=640:-1:flags=lanczos,palettegen=stats_mode=diff" "${palettePath}"`,
       { stdio: "inherit" }
     );
     execSync(
-      `ffmpeg -y -i "${videoPath}" -i "${palettePath}" -lavfi "fps=8,scale=720:-1:flags=lanczos,setpts=0.5*PTS[x];[x][1:v]paletteuse=dither=bayer:bayer_scale=3" "${GIF_PATH}"`,
+      `ffmpeg -y -i "${videoPath}" -i "${palettePath}" -lavfi "setpts=0.2*PTS,fps=6,scale=640:-1:flags=lanczos[x];[x][1:v]paletteuse=dither=bayer:bayer_scale=3" "${GIF_PATH}"`,
       { stdio: "inherit" }
     );
     const newStats = statSync(GIF_PATH);
