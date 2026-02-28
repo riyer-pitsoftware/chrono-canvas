@@ -1,9 +1,10 @@
-"""Tests for agents.checkpointer — ensure Postgres init failure is fatal.
+"""Tests for agents.checkpointer — ensure Postgres init failure falls back gracefully.
 
 Run with:
     cd backend
     PYTHONPATH=src pytest tests/test_checkpointer.py -v
 """
+import logging
 import os
 
 import pytest
@@ -11,22 +12,13 @@ import pytest
 os.environ.setdefault("DATABASE_URL", "postgresql+asyncpg://x:x@localhost/x")
 os.environ.setdefault("REDIS_URL", "redis://localhost/0")
 
-from chronocanvas.agents.checkpointer import (  # noqa: E402
-    CheckpointerInitError,
-    init_checkpointer,
-)
+from chronocanvas.agents.checkpointer import init_checkpointer  # noqa: E402
 
 
 @pytest.mark.asyncio
-async def test_init_checkpointer_raises_on_failure():
-    """init_checkpointer must raise CheckpointerInitError when Postgres is unreachable."""
-    with pytest.raises(CheckpointerInitError, match="Failed to initialise Postgres checkpointer"):
+async def test_init_checkpointer_warns_on_failure(caplog):
+    """init_checkpointer must warn and fall back when Postgres is unreachable."""
+    with caplog.at_level(logging.WARNING):
         await init_checkpointer()
-
-
-@pytest.mark.asyncio
-async def test_init_checkpointer_error_chains_cause():
-    """The raised error should chain the original exception as __cause__."""
-    with pytest.raises(CheckpointerInitError) as exc_info:
-        await init_checkpointer()
-    assert exc_info.value.__cause__ is not None
+    assert "Failed to initialise Postgres checkpointer" in caplog.text
+    assert "falling back to MemorySaver" in caplog.text
