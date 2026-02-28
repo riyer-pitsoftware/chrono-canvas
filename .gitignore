@@ -75,3 +75,8 @@ notes/
 .aider*
 ai_docs/changes-log.md
 eval/runs/*
+!eval/runs/.gitkeep
+eval/ratings/ratings_*.csv
+!eval/ratings/ratings_template.csv
+eval/reports/*.csv
+eval/reports/*.md
