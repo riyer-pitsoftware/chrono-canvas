@@ -1,6 +1,6 @@
 import uuid
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from chronocanvas.db.models.validation import ValidationResult
@@ -19,3 +19,9 @@ class ValidationRepository(BaseRepository[ValidationResult]):
         )
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
+
+    async def delete_by_request(self, request_id: uuid.UUID) -> None:
+        stmt = delete(ValidationResult).where(
+            ValidationResult.request_id == request_id
+        )
+        await self.session.execute(stmt)

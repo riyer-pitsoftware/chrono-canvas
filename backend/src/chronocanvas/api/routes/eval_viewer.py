@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Body, HTTPException, Query
 
 from chronocanvas.api.schemas.eval_viewer import (
     DashboardData,
@@ -46,7 +46,7 @@ async def get_eval_run(run_id: str):
 
 
 @router.post("/runs/{run_id}/reject")
-async def reject_eval_run(run_id: str, body: RejectRequest | None = None):
+async def reject_eval_run(run_id: str, body: RejectRequest | None = Body(None)):
     """Soft-reject an eval run."""
     try:
         reject_run(run_id, reason=body.reason if body else None)

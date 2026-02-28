@@ -63,6 +63,15 @@ class GenerationRunner:
 
                     if current_agent == "validation":
                         self._recorder.on_validation(node_state)
+                        val_results = node_state.get("validation", {}).get(
+                            "validation_results"
+                        )
+                        if val_results:
+                            await save_validation_results(
+                                self._session,
+                                uuid.UUID(request_id),
+                                val_results,
+                            )
 
                     update_kwargs = self._projector.project(node_state, current_agent)
                     update_kwargs["agent_trace"] = self._projector.attach_snapshot(
@@ -94,7 +103,6 @@ class GenerationRunner:
                 ext = final_state.get("extraction", {})
                 res = final_state.get("research", {})
                 prompt_state = final_state.get("prompt", {})
-                val = final_state.get("validation", {})
                 update_data: dict[str, Any] = {
                     "status": RequestStatus.COMPLETED,
                     "extracted_data": {
@@ -119,14 +127,6 @@ class GenerationRunner:
 
                 await self._repo.update(request_id, **update_data)
                 await self._recorder.flush(self._session, request_id, final_state)
-
-                validation_results = val.get("validation_results")
-                if validation_results:
-                    await save_validation_results(
-                        self._session,
-                        uuid.UUID(request_id),
-                        validation_results,
-                    )
 
                 await self._session.commit()
 

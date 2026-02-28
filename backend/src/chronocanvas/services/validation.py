@@ -29,6 +29,7 @@ async def save_validation_results(
     results: list[dict],
 ) -> None:
     repo = ValidationRepository(session)
+    await repo.delete_by_request(request_id)
     for result in results:
         await repo.create(
             request_id=request_id,
