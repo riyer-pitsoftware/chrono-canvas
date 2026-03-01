@@ -49,6 +49,8 @@ class Settings(BaseSettings):
     facefusion_api_url: str = "http://localhost:7861"
     facefusion_source_path: str = ""
     facefusion_enabled: bool = False
+    portrait_width: int = 1024
+    portrait_height: int = 1024
 
     # Pipeline toggles (for eval conditions)
     # When False, validation still runs but never triggers regenerate

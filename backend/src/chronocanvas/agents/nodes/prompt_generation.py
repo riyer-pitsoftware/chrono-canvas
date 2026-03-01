@@ -27,15 +27,18 @@ Requirements:
 1. Write in natural language, NOT comma-separated tags. Imagen works best with descriptive prose.
 2. DO NOT use weight syntax like (feature:1.2) — Imagen ignores this.
 3. Describe the person as if directing a professional portrait photographer:
-   - Specify exact skin tone, texture, and any visible pores, wrinkles, or imperfections
-   - Describe eye color, shape, and expression in detail
+   - Specify exact skin tone, texture, and micro-level skin details: visible pores, fine lines, moles, subtle facial asymmetry, and natural imperfections
+   - Describe subsurface scattering: warm translucent skin with faintly visible blood vessels beneath the surface, especially around the temples, nose bridge, and under the eyes
+   - Describe eye color, shape, and expression in detail — include iris detail such as radial fiber patterns, a visible limbal ring, and sharp specular highlights on the cornea
    - Describe facial bone structure, nose shape, lip shape precisely
    - Specify exact hairstyle, hair texture, hair color
+   - Describe features authentic to the figure's ethnic heritage — avoid generic or Westernized features when depicting non-Western figures
+   - Avoid describing perfect bilateral symmetry — natural faces have subtle asymmetry between left and right sides
 4. Describe period-accurate clothing with specific fabrics, patterns, colors, and draping
 5. Specify lighting setup: e.g. "Rembrandt lighting with a soft key light from the upper left, subtle fill light, and natural catchlights in the eyes"
-6. Specify camera: "Shot on an 85mm portrait lens at f/2.8, shallow depth of field with sharp focus on the eyes, softly blurred background"
-7. End with: "Professional DSLR photograph, RAW quality, 8K resolution, natural skin texture, film grain"
-8. Keep it under 200 words
+6. Specify camera: "Shot on a 105mm portrait lens at f/2 on a medium format sensor, shallow depth of field with tack-sharp focus on the eyes, softly blurred background"
+7. End with: "Professional medium format photograph, RAW quality, 8K resolution, natural skin texture, film grain"
+8. Keep it under 250 words
 
 Return ONLY the prompt text, no explanations."""
 
@@ -82,7 +85,9 @@ NEGATIVE_PROMPT = (
     "mutated hands, fused fingers, too many fingers, "
     "modern clothing, anachronistic elements, blurry, out of focus, "
     "watermark, text, logo, signature, low quality, jpeg artifacts, "
-    "overexposed, underexposed, oversaturated"
+    "overexposed, underexposed, oversaturated, "
+    "perfect symmetry, overly smooth skin, porcelain skin, flat lighting, "
+    "beauty filter, glamour shot, stock photo, generic face"
 )
 
 

@@ -46,8 +46,8 @@ async def image_generation_node(state: AgentState) -> AgentState:
         result = await generator.generate(
             prompt=prompt_state.get("image_prompt", "historical portrait"),
             output_dir=output_dir,
-            width=768,
-            height=768,
+            width=settings.portrait_width,
+            height=settings.portrait_height,
             negative_prompt=prompt_state.get("negative_prompt", ""),
             on_progress=on_progress,
         )
