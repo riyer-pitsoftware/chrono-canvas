@@ -13,6 +13,7 @@ import { Memory } from "@/pages/Memory";
 import { Timeline } from "@/pages/Timeline";
 import { Review } from "@/pages/Review";
 import { EvalViewer } from "@/pages/EvalViewer";
+import { ModeSelector } from "@/pages/ModeSelector";
 
 function getPage(path: string) {
   const qIdx = path.indexOf("?");
@@ -42,7 +43,8 @@ function getPage(path: string) {
     case "/generate": {
       const params = new URLSearchParams(search);
       const figureId = params.get("figure_id") ?? undefined;
-      return <Generate figureId={figureId} />;
+      const mode = params.get("mode") ?? undefined;
+      return <Generate figureId={figureId} mode={mode} />;
     }
     case "/validate": {
       const params = new URLSearchParams(search);
@@ -61,8 +63,10 @@ function getPage(path: string) {
       return <Memory />;
     case "/eval":
       return <EvalViewer />;
-    default:
+    case "/dashboard":
       return <Dashboard />;
+    default:
+      return <ModeSelector />;
   }
 }
 

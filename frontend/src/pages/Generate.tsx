@@ -16,7 +16,12 @@ import { DAGVisualizer } from "@/components/generation/DAGVisualizer";
 import { StreamingText } from "@/components/generation/StreamingText";
 import { useNavigation } from "@/stores/navigation";
 
-export function Generate({ figureId }: { figureId?: string }) {
+const MODE_LABELS: Record<string, string> = {
+  creative_story: "Story Director",
+  portrait: "Historical Lens",
+};
+
+export function Generate({ figureId, mode }: { figureId?: string; mode?: string }) {
   const [inputText, setInputText] = useState("");
   const [activeRequestId, setActiveRequestId] = useState<string | null>(null);
   const [faceId, setFaceId] = useState<string | null>(null);
@@ -88,7 +93,16 @@ export function Generate({ figureId }: { figureId?: string }) {
 
   return (
     <div>
-      <h2 className="text-3xl font-bold mb-6">Generate Portrait</h2>
+      <div className="flex items-center gap-3 mb-6">
+        <h2 className="text-3xl font-bold">
+          {mode ? MODE_LABELS[mode] ?? "Generate" : "Generate Portrait"}
+        </h2>
+        {mode && (
+          <Badge variant="secondary">
+            {mode === "creative_story" ? "Creative" : "Portrait"}
+          </Badge>
+        )}
+      </div>
 
       <Card className="mb-6">
         <CardHeader>

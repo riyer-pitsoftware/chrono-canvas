@@ -5,6 +5,7 @@ from chronocanvas.config import settings
 from chronocanvas.llm.base import LLMProvider, LLMResponse, TaskType
 from chronocanvas.llm.cost_tracker import CostTracker
 from chronocanvas.llm.providers.claude import ClaudeProvider
+from chronocanvas.llm.providers.gemini import GeminiProvider
 from chronocanvas.llm.providers.ollama import OllamaProvider
 from chronocanvas.llm.providers.openai import OpenAIProvider
 from chronocanvas.llm.rate_limiter import RateLimiter
@@ -14,11 +15,11 @@ logger = logging.getLogger(__name__)
 
 # Default routing: which provider to prefer for each task type
 DEFAULT_ROUTING: dict[TaskType, str] = {
-    TaskType.EXTRACTION: "ollama",
+    TaskType.EXTRACTION: "gemini",
     TaskType.RESEARCH: "claude",
     TaskType.PROMPT_GENERATION: "claude",
     TaskType.VALIDATION: "claude",
-    TaskType.ORCHESTRATION: "ollama",
+    TaskType.ORCHESTRATION: "gemini",
     TaskType.GENERAL: "ollama",
 }
 
@@ -29,6 +30,7 @@ class LLMRouter:
             "ollama": OllamaProvider(),
             "claude": ClaudeProvider(),
             "openai": OpenAIProvider(),
+            "gemini": GeminiProvider(),
         }
         self.rate_limiter = RateLimiter(
             max_rpm=settings.rate_limit_rpm,

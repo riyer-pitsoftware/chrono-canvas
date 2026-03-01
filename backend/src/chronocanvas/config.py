@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     ollama_base_url: str = "http://localhost:11434"
     anthropic_api_key: str = ""
     openai_api_key: str = ""
+    google_api_key: str = ""
 
     # Web Search
     serpapi_key: str = ""
@@ -30,6 +31,7 @@ class Settings(BaseSettings):
     ollama_model: str = "llama3.1:8b"
     claude_model: str = "claude-sonnet-4-5-20250929"
     openai_model: str = "gpt-4o"
+    gemini_model: str = "gemini-2.0-flash"
 
     # Image Generation
     image_provider: str = "mock"
