@@ -13,6 +13,7 @@ class GenerationCreate(BaseModel):
     # (uuid4().hex).  This pattern rejects path-traversal strings before they
     # reach the filesystem.
     face_id: str | None = Field(None, pattern=r"^[0-9a-f]{32}$")
+    run_type: str = "portrait"
 
 
 class GenerationResponse(BaseModel):
@@ -21,6 +22,7 @@ class GenerationResponse(BaseModel):
     id: uuid.UUID
     figure_id: uuid.UUID | None = None
     input_text: str
+    run_type: str = "portrait"
     status: str
     current_agent: str | None = None
     extracted_data: dict | None = None
@@ -30,6 +32,7 @@ class GenerationResponse(BaseModel):
     agent_trace: list[dict[str, Any]] | None = None
     llm_calls: list[dict[str, Any]] | None = None
     llm_costs: dict | None = None
+    storyboard_data: dict | None = None
     created_at: datetime
     updated_at: datetime
 

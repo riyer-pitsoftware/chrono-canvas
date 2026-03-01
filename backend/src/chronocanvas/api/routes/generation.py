@@ -50,30 +50,37 @@ async def create_generation(
     gen_request = await repo.create(
         input_text=data.input_text,
         figure_id=data.figure_id,
+        run_type=data.run_type,
         status="pending",
     )
     await session.commit()
 
-    source_face_path: str | None = None
-    if data.face_id:
-        faces_base = Path(settings.upload_dir) / "faces"
-        matches = glob.glob(str(faces_base / f"{data.face_id}.*"))
-        safe_matches = []
-        for m in matches:
-            try:
-                confine_path(Path(m), faces_base)
-                safe_matches.append(m)
-            except PermissionError:
-                pass
-        if not safe_matches:
-            raise HTTPException(status_code=404, detail="Face not found")
-        source_face_path = safe_matches[0]
+    if data.run_type == "creative_story":
+        await request.app.state.arq_pool.enqueue_job(
+            "run_story_pipeline_task",
+            str(gen_request.id), data.input_text,
+        )
+    else:
+        source_face_path: str | None = None
+        if data.face_id:
+            faces_base = Path(settings.upload_dir) / "faces"
+            matches = glob.glob(str(faces_base / f"{data.face_id}.*"))
+            safe_matches = []
+            for m in matches:
+                try:
+                    confine_path(Path(m), faces_base)
+                    safe_matches.append(m)
+                except PermissionError:
+                    pass
+            if not safe_matches:
+                raise HTTPException(status_code=404, detail="Face not found")
+            source_face_path = safe_matches[0]
 
-    await request.app.state.arq_pool.enqueue_job(
-        "run_generation_pipeline_task",
-        str(gen_request.id), data.input_text,
-        source_face_path=source_face_path,
-    )
+        await request.app.state.arq_pool.enqueue_job(
+            "run_generation_pipeline_task",
+            str(gen_request.id), data.input_text,
+            source_face_path=source_face_path,
+        )
 
     return GenerationResponse.model_validate(gen_request)
 

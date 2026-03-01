@@ -5,6 +5,12 @@ export interface ImageProgress {
   total: number;
 }
 
+export interface SceneImageEvent {
+  scene_index: number;
+  total_scenes: number;
+  image_path: string;
+}
+
 /**
  * Connect to the generation WebSocket and surface real-time progress.
  *
@@ -16,6 +22,7 @@ export function useGenerationWS(requestId: string | null, enabled: boolean) {
   const [imageProgress, setImageProgress] = useState<ImageProgress | null>(null);
   const [streamingText, setStreamingText] = useState<string>("");
   const [streamingAgent, setStreamingAgent] = useState<string | null>(null);
+  const [sceneImages, setSceneImages] = useState<SceneImageEvent[]>([]);
   const wsRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
@@ -23,6 +30,7 @@ export function useGenerationWS(requestId: string | null, enabled: boolean) {
 
     setStreamingText("");
     setStreamingAgent(null);
+    setSceneImages([]);
 
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const ws = new WebSocket(
@@ -46,6 +54,15 @@ export function useGenerationWS(requestId: string | null, enabled: boolean) {
       } else if (data.type === "llm_stream_end") {
         // Keep text visible until the next agent starts
         setStreamingAgent(null);
+      } else if (data.type === "scene_image_complete") {
+        setSceneImages((prev) => [
+          ...prev,
+          {
+            scene_index: data.scene_index as number,
+            total_scenes: data.total_scenes as number,
+            image_path: data.image_path as string,
+          },
+        ]);
       } else if (data.type === "image_progress") {
         setImageProgress({
           step: data.step as number,
@@ -79,5 +96,5 @@ export function useGenerationWS(requestId: string | null, enabled: boolean) {
     };
   }, [requestId, enabled]);
 
-  return { imageProgress, streamingText, streamingAgent };
+  return { imageProgress, streamingText, streamingAgent, sceneImages };
 }

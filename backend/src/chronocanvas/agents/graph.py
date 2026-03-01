@@ -69,15 +69,19 @@ def get_compiled_graph():
 
 
 def recompile_graph():
-    """Recompile the singleton graph with the current checkpointer.
+    """Recompile the singleton graphs with the current checkpointer.
 
     Called after ``init_checkpointer`` upgrades from MemorySaver to
     AsyncPostgresSaver so that the running graph uses durable storage.
     """
-    global agent_graph
+    global agent_graph, story_graph
     agent_graph = get_compiled_graph()
+
+    from chronocanvas.agents.story.graph import get_compiled_story_graph
+    story_graph = get_compiled_story_graph()
 
 
 # Singleton compiled graph — compiled with MemorySaver at import time,
 # then recompiled with the durable Postgres checkpointer during startup.
 agent_graph = get_compiled_graph()
+story_graph = None  # Compiled lazily or during recompile_graph()

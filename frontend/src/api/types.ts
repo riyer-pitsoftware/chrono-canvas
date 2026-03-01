@@ -21,10 +21,30 @@ export interface FigureListResponse {
   limit: number;
 }
 
+export interface StoryboardPanel {
+  scene_index: number;
+  description: string;
+  characters: string[];
+  mood: string;
+  setting: string;
+  image_prompt: string;
+  image_path: string;
+  status: string;
+}
+
+export interface StoryboardData {
+  characters: Array<Record<string, unknown>>;
+  scenes: Array<Record<string, unknown>>;
+  panels: StoryboardPanel[];
+  total_scenes: number;
+  completed_scenes: number;
+}
+
 export interface GenerationRequest {
   id: string;
   figure_id: string | null;
   input_text: string;
+  run_type: string;
   status: string;
   current_agent: string | null;
   extracted_data: Record<string, unknown> | null;
@@ -34,6 +54,7 @@ export interface GenerationRequest {
   agent_trace: Array<Record<string, unknown>> | null;
   llm_calls: LLMCallDetail[] | null;
   llm_costs: Record<string, unknown> | null;
+  storyboard_data: StoryboardData | null;
   created_at: string;
   updated_at: string;
 }

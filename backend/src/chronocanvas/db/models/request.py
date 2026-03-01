@@ -34,6 +34,7 @@ class GenerationRequest(Base, UUIDMixin, TimestampMixin):
         UUID(as_uuid=True), ForeignKey("figures.id")
     )
     input_text: Mapped[str] = mapped_column(Text)
+    run_type: Mapped[str] = mapped_column(String(50), default="portrait")
     status: Mapped[str] = mapped_column(String(50), default=RequestStatus.PENDING, index=True)
     current_agent: Mapped[str | None] = mapped_column(String(100))
     extracted_data: Mapped[dict | None] = mapped_column(JSONB)
@@ -43,6 +44,9 @@ class GenerationRequest(Base, UUIDMixin, TimestampMixin):
     agent_trace: Mapped[dict | None] = mapped_column(JSONB, default=list)
     llm_costs: Mapped[dict | None] = mapped_column(JSONB, default=dict)
     llm_calls: Mapped[dict | None] = mapped_column(JSONB, default=list)
+
+    # Story mode storyboard output (characters, scenes, panels)
+    storyboard_data: Mapped[dict | None] = mapped_column(JSONB)
 
     # Human-in-the-loop review (set when a human overrides a failed validation)
     human_review_status: Mapped[str | None] = mapped_column(String(50))  # "accepted" | "rejected"

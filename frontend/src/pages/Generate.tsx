@@ -11,9 +11,11 @@ import {
 } from "@/api/hooks/useGeneration";
 import { useFigure } from "@/api/hooks/useFigures";
 import { useGenerationWS } from "@/api/hooks/useGenerationWS";
+import { Textarea } from "@/components/ui/textarea";
 import { PipelineStepper } from "@/components/generation/PipelineStepper";
 import { DAGVisualizer } from "@/components/generation/DAGVisualizer";
 import { StreamingText } from "@/components/generation/StreamingText";
+import { StoryboardView } from "@/components/generation/StoryboardView";
 import { useNavigation } from "@/stores/navigation";
 
 const MODE_LABELS: Record<string, string> = {
@@ -34,7 +36,8 @@ export function Generate({ figureId, mode }: { figureId?: string; mode?: string 
   const { data: figure } = useFigure(figureId ?? "");
   const activeRequest = useGeneration(activeRequestId ?? "");
   const isRunning = !!activeRequest.data && activeRequest.data.status !== "completed" && activeRequest.data.status !== "failed";
-  const { imageProgress, streamingText, streamingAgent } = useGenerationWS(activeRequestId, isRunning);
+  const { imageProgress, streamingText, streamingAgent, sceneImages } = useGenerationWS(activeRequestId, isRunning);
+  const isStoryMode = mode === "creative_story";
   const images = useGenerationImages(
     activeRequest.data?.status === "completed" ? (activeRequestId ?? "") : "",
   );
@@ -54,7 +57,12 @@ export function Generate({ figureId, mode }: { figureId?: string; mode?: string 
   const handleGenerate = () => {
     if (!inputText.trim()) return;
     startGeneration(
-      { input_text: inputText, ...(figureId ? { figure_id: figureId } : {}), ...(faceId ? { face_id: faceId } : {}) },
+      {
+        input_text: inputText,
+        ...(figureId ? { figure_id: figureId } : {}),
+        ...(faceId ? { face_id: faceId } : {}),
+        ...(isStoryMode ? { run_type: "creative_story" } : {}),
+      },
       {
         onSuccess: (data) => {
           setActiveRequestId(data.id);
@@ -109,49 +117,68 @@ export function Generate({ figureId, mode }: { figureId?: string; mode?: string 
           <CardTitle>New Generation</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex gap-3 mb-4">
-            <Input
-              placeholder="Describe a historical figure... (e.g., 'Cleopatra, Queen of Egypt')"
-              value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleGenerate()}
-              className="flex-1"
-            />
-            <Button onClick={handleGenerate} disabled={isCreating || !inputText.trim()}>
-              {isCreating ? "Starting..." : "Generate"}
-            </Button>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              onChange={handleFaceUpload}
-              className="hidden"
-            />
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploadFace.isPending}
-            >
-              {uploadFace.isPending ? "Uploading..." : "Upload Face"}
-            </Button>
-            {facePreview && (
-              <div className="flex items-center gap-2">
-                <img
-                  src={facePreview}
-                  alt="Face preview"
-                  className="w-8 h-8 rounded-full object-cover"
+          <div className={isStoryMode ? "mb-4 space-y-3" : "flex gap-3 mb-4"}>
+            {isStoryMode ? (
+              <>
+                <Textarea
+                  placeholder="Paste or write your story here..."
+                  value={inputText}
+                  onChange={(e) => setInputText(e.target.value)}
+                  rows={6}
+                  className="w-full"
                 />
-                {faceId && <Badge variant="outline">Uploaded</Badge>}
-                <Button variant="ghost" size="sm" onClick={clearFace}>
-                  Remove
+                <Button onClick={handleGenerate} disabled={isCreating || !inputText.trim()} className="w-full">
+                  {isCreating ? "Starting..." : "Generate Storyboard"}
                 </Button>
-              </div>
+              </>
+            ) : (
+              <>
+                <Input
+                  placeholder="Describe a historical figure... (e.g., 'Cleopatra, Queen of Egypt')"
+                  value={inputText}
+                  onChange={(e) => setInputText(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleGenerate()}
+                  className="flex-1"
+                />
+                <Button onClick={handleGenerate} disabled={isCreating || !inputText.trim()}>
+                  {isCreating ? "Starting..." : "Generate"}
+                </Button>
+              </>
             )}
           </div>
+
+          {!isStoryMode && (
+            <div className="flex items-center gap-3">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={handleFaceUpload}
+                className="hidden"
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploadFace.isPending}
+              >
+                {uploadFace.isPending ? "Uploading..." : "Upload Face"}
+              </Button>
+              {facePreview && (
+                <div className="flex items-center gap-2">
+                  <img
+                    src={facePreview}
+                    alt="Face preview"
+                    className="w-8 h-8 rounded-full object-cover"
+                  />
+                  {faceId && <Badge variant="outline">Uploaded</Badge>}
+                  <Button variant="ghost" size="sm" onClick={clearFace}>
+                    Remove
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -234,7 +261,20 @@ export function Generate({ figureId, mode }: { figureId?: string; mode?: string 
                 </div>
               )}
 
-              {images.data && images.data.length > 0 && (
+              {/* Storyboard view for story mode */}
+              {activeRequest.data.run_type === "creative_story" && activeRequest.data.storyboard_data && (
+                <div>
+                  <p className="text-sm text-[var(--muted-foreground)] mb-2">Storyboard</p>
+                  <StoryboardView
+                    storyboard={activeRequest.data.storyboard_data}
+                    requestId={activeRequestId!}
+                    sceneImages={sceneImages}
+                  />
+                </div>
+              )}
+
+              {/* Portrait mode images */}
+              {activeRequest.data.run_type !== "creative_story" && images.data && images.data.length > 0 && (
                 <div>
                   <p className="text-sm text-[var(--muted-foreground)] mb-2">Generated Images</p>
                   <div className="grid grid-cols-2 gap-4">

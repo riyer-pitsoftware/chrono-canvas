@@ -34,7 +34,7 @@ export function useGeneration(id: string) {
 export function useCreateGeneration() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: { input_text: string; figure_id?: string; face_id?: string }) =>
+    mutationFn: (data: { input_text: string; figure_id?: string; face_id?: string; run_type?: string }) =>
       api.post<GenerationRequest>("/generate", data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["generations"] }),
   });
