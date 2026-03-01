@@ -31,7 +31,7 @@ class Settings(BaseSettings):
     ollama_model: str = "llama3.1:8b"
     claude_model: str = "claude-sonnet-4-5-20250929"
     openai_model: str = "gpt-4o"
-    gemini_model: str = "gemini-2.0-flash"
+    gemini_model: str = "gemini-2.5-flash"
 
     # Image Generation
     image_provider: str = "mock"

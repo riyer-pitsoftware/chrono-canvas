@@ -38,7 +38,7 @@ async def character_extraction_node(state: StoryState) -> StoryState:
             "agent": "character_extraction",
             "timestamp": time.time(),
             "provider": "gemini",
-            "model": "gemini-2.0-flash",
+            "model": "gemini-2.5-flash",
             "input_tokens": 0,
             "output_tokens": 0,
             "cost": 0.0,

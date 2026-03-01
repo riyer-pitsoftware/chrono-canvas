@@ -7,6 +7,7 @@ from chronocanvas.config import settings
 from chronocanvas.llm.base import LLMProvider, LLMResponse
 
 GEMINI_PRICING = {
+    "gemini-2.5-flash": {"input": 0.15 / 1_000_000, "output": 0.60 / 1_000_000},
     "gemini-2.0-flash": {"input": 0.10 / 1_000_000, "output": 0.40 / 1_000_000},
     "gemini-2.0-flash-lite": {"input": 0.0 / 1_000_000, "output": 0.0 / 1_000_000},
     "gemini-1.5-flash": {"input": 0.075 / 1_000_000, "output": 0.30 / 1_000_000},
