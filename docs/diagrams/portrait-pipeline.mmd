@@ -1,0 +1,26 @@
+%%{init: {'theme': 'dark', 'themeVariables': {'primaryColor': '#4f46e5', 'primaryTextColor': '#e2e8f0', 'primaryBorderColor': '#6366f1', 'lineColor': '#94a3b8', 'secondaryColor': '#1e293b', 'tertiaryColor': '#0f172a', 'background': '#0f172a', 'mainBkg': '#1e293b', 'nodeBorder': '#6366f1', 'clusterBkg': '#1e293b', 'clusterBorder': '#334155', 'titleColor': '#e2e8f0', 'edgeLabelBackground': '#1e293b'}}}%%
+flowchart LR
+    INPUT(["Text Input<br/><i>'Aryabhata, 5th century CE'</i>"])
+
+    subgraph Pipeline["Portrait Pipeline — 9 Nodes"]
+        direction LR
+        ORCH["1. Orchestrator<br/><small>Ollama</small>"]
+        EXT["2. Extraction<br/><small>Ollama</small>"]
+        RES["3. Research<br/><small>Claude / Gemini</small>"]
+        FACE["4. Face Search<br/><small>SerpAPI</small>"]
+        PROMPT["5. Prompt Gen<br/><small>Claude / Gemini</small>"]
+        IMG["6. Image Gen<br/><small>Imagen / ComfyUI</small>"]
+        VAL{"7. Validation<br/><small>Ollama</small>"}
+        COMP["8. Compositing<br/><small>FaceFusion</small>"]
+        EXP["9. Export"]
+    end
+
+    OUTPUT(["Portrait +<br/>Audit Trail"])
+
+    INPUT --> ORCH --> EXT --> RES --> FACE --> PROMPT --> IMG --> VAL
+    VAL -->|"pass<br/>(score ≥ 70)"| COMP --> EXP --> OUTPUT
+    VAL -->|"retry ≤ 2x<br/>(score < 70)"| PROMPT
+
+    style VAL fill:#7c3aed,stroke:#a78bfa,color:#e2e8f0
+    style INPUT fill:#065f46,stroke:#34d399,color:#e2e8f0
+    style OUTPUT fill:#065f46,stroke:#34d399,color:#e2e8f0

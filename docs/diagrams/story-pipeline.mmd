@@ -1,0 +1,22 @@
+%%{init: {'theme': 'dark', 'themeVariables': {'primaryColor': '#4f46e5', 'primaryTextColor': '#e2e8f0', 'primaryBorderColor': '#6366f1', 'lineColor': '#94a3b8', 'secondaryColor': '#1e293b', 'tertiaryColor': '#0f172a', 'background': '#0f172a', 'mainBkg': '#1e293b', 'nodeBorder': '#6366f1', 'clusterBkg': '#1e293b', 'clusterBorder': '#334155', 'titleColor': '#e2e8f0', 'edgeLabelBackground': '#1e293b'}}}%%
+flowchart LR
+    INPUT(["Narrative Text"])
+
+    subgraph Pipeline["Story Pipeline — 7 Nodes"]
+        direction LR
+        ORCH["1. Story<br/>Orchestrator"]
+        CHAR["2. Character<br/>Extraction"]
+        SCENE["3. Scene<br/>Decomposition<br/><small>3–8 scenes</small>"]
+        PROMPT["4. Scene Prompt<br/>Generation<br/><small>parallel</small>"]
+        IMG["5. Scene Image<br/>Generation<br/><small>parallel</small>"]
+        COH["6. Storyboard<br/>Coherence<br/><small>Gemini multimodal</small>"]
+        EXP["7. Storyboard<br/>Export"]
+    end
+
+    OUTPUT(["Storyboard +<br/>Coherence Scores"])
+
+    INPUT --> ORCH --> CHAR --> SCENE --> PROMPT --> IMG --> COH --> EXP --> OUTPUT
+
+    style INPUT fill:#065f46,stroke:#34d399,color:#e2e8f0
+    style OUTPUT fill:#065f46,stroke:#34d399,color:#e2e8f0
+    style COH fill:#7c3aed,stroke:#a78bfa,color:#e2e8f0

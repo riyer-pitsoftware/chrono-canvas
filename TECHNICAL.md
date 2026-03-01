@@ -23,6 +23,18 @@ All components run as Docker services defined in `docker-compose.dev.yml`. The f
 
 The pipeline is a LangGraph state machine. Each agent node receives the full `AgentState` dict, does its work, and returns a partial state update. The orchestrator decides execution order; the validation agent can loop the pipeline back to prompt generation on failure.
 
+### Portrait pipeline
+
+![Portrait pipeline — 9 nodes](docs/images/portrait-pipeline.png)
+
+### Story pipeline
+
+![Story pipeline — 7 nodes](docs/images/story-pipeline.png)
+
+### Data model
+
+![Data model](docs/images/data-model.png)
+
 | # | Agent | Default LLM | What it does |
 |---|---|---|---|
 | 1 | **Orchestrator** | Ollama | Reads the input, creates an execution plan, delegates to downstream agents |

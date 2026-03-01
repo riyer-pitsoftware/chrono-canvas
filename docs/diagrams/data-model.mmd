@@ -1,0 +1,77 @@
+%%{init: {'theme': 'dark', 'themeVariables': {'primaryColor': '#4f46e5', 'primaryTextColor': '#e2e8f0', 'primaryBorderColor': '#6366f1', 'lineColor': '#94a3b8', 'secondaryColor': '#1e293b', 'tertiaryColor': '#0f172a', 'background': '#0f172a', 'mainBkg': '#1e293b', 'nodeBorder': '#6366f1'}}}%%
+erDiagram
+    FIGURE {
+        uuid id PK
+        string name
+        string era
+        string biography
+    }
+    PERIOD {
+        uuid id PK
+        int start_year
+        int end_year
+        string era_name
+    }
+    GENERATION_REQUEST {
+        uuid id PK
+        uuid figure_id FK
+        string input_text
+        string status
+        string run_type
+        json storyboard_data
+        string human_review_status
+        json llm_costs
+        timestamp created_at
+    }
+    GENERATED_IMAGE {
+        uuid id PK
+        uuid request_id FK
+        string file_path
+        string pipeline_step
+        string provider
+    }
+    VALIDATION_RESULT {
+        uuid id PK
+        uuid request_id FK
+        float overall_score
+        json category_scores
+        bool passed
+    }
+    AUDIT_LOG {
+        uuid id PK
+        uuid request_id FK
+        string node_name
+        string status
+        json llm_calls
+        json costs
+    }
+    AUDIT_FEEDBACK {
+        uuid id PK
+        uuid request_id FK
+        string step_name
+        string comment
+        string author
+    }
+    VALIDATION_RULE {
+        uuid id PK
+        string category
+        float weight
+        bool enabled
+    }
+    ADMIN_SETTING {
+        uuid id PK
+        string key
+        string value
+    }
+    RESEARCH_CACHE {
+        uuid id PK
+        string query
+        json result
+        vector embedding
+    }
+
+    FIGURE ||--o{ GENERATION_REQUEST : "generates"
+    GENERATION_REQUEST ||--o{ GENERATED_IMAGE : "produces"
+    GENERATION_REQUEST ||--o| VALIDATION_RESULT : "validated by"
+    GENERATION_REQUEST ||--o{ AUDIT_LOG : "traced in"
+    GENERATION_REQUEST ||--o{ AUDIT_FEEDBACK : "commented on"

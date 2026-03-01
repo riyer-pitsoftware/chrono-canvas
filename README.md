@@ -26,6 +26,16 @@ ChronoCanvas is a focused case study in building traceable, evaluable AI systems
 
 </details>
 
+<!-- Demo video — uncomment when uploaded -->
+<!-- <details>
+<summary>Demo video (~3 min)</summary>
+
+[![Demo video](docs/images/generated-portrait.png)](YOUR_VIDEO_URL_HERE)
+
+Record with: `node scripts/record-demo-video.mjs`
+
+</details> -->
+
 ---
 
 ## Quick start
@@ -114,6 +124,10 @@ Every LLM call is logged with prompts, tokens, cost, and latency — browsable i
 
 ## Architecture
 
+<p align="center">
+  <img src="docs/images/system-architecture.png" alt="System architecture diagram" width="720" />
+</p>
+
 | Component | Technology | Role |
 |---|---|---|
 | Frontend | React 18 + TypeScript + Vite + Tailwind | Web UI with timeline explorer, audit viewer, admin |
@@ -122,6 +136,8 @@ Every LLM call is logged with prompts, tokens, cost, and latency — browsable i
 | Cache/Queue | Redis 7 | Pub/sub streaming + ARQ job queue |
 | Image gen | Mock / ComfyUI / Imagen | Portrait generation backend |
 | CLI | Typer + Rich | Command-line automation |
+
+Architecture diagrams (Mermaid source + rendered PNGs) are versioned in [`docs/diagrams/`](docs/diagrams/) — system architecture, portrait pipeline, story pipeline, and data model.
 
 ---
 

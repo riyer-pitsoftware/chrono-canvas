@@ -1,0 +1,58 @@
+%%{init: {'theme': 'dark', 'themeVariables': {'primaryColor': '#4f46e5', 'primaryTextColor': '#e2e8f0', 'primaryBorderColor': '#6366f1', 'lineColor': '#94a3b8', 'secondaryColor': '#1e293b', 'tertiaryColor': '#0f172a', 'background': '#0f172a', 'mainBkg': '#1e293b', 'nodeBorder': '#6366f1', 'clusterBkg': '#1e293b', 'clusterBorder': '#334155', 'titleColor': '#e2e8f0', 'edgeLabelBackground': '#1e293b'}}}%%
+graph TB
+    subgraph Browser["Browser"]
+        FE["React SPA<br/><i>TypeScript + Vite + Tailwind</i>"]
+    end
+
+    subgraph DockerStack["Docker Compose Stack"]
+        subgraph Frontend["Frontend :3000"]
+            NGINX["nginx"]
+        end
+
+        subgraph Backend["API Server :8000"]
+            FASTAPI["FastAPI"]
+            WS["WebSocket<br/>Relay"]
+            ROUTES["REST API<br/><i>11 route groups</i>"]
+        end
+
+        subgraph Worker["ARQ Worker"]
+            PORTRAIT["Portrait Pipeline<br/><i>9-node LangGraph</i>"]
+            STORY["Story Pipeline<br/><i>7-node LangGraph</i>"]
+        end
+
+        subgraph Data["Data Layer"]
+            PG[("PostgreSQL 16<br/><i>pgvector</i>")]
+            REDIS[("Redis 7<br/><i>pub/sub + queue</i>")]
+        end
+
+        subgraph Optional["Optional Services"]
+            FF["FaceFusion<br/>:7861"]
+        end
+    end
+
+    subgraph LLMProviders["LLM Providers <i>(configurable per node)</i>"]
+        GEMINI["Gemini"]
+        CLAUDE["Claude"]
+        OPENAI["OpenAI"]
+        OLLAMA["Ollama<br/><i>local</i>"]
+    end
+
+    subgraph ImageProviders["Image Generation"]
+        IMAGEN["Google Imagen"]
+        COMFYUI["ComfyUI<br/><i>SDXL / FLUX</i>"]
+        MOCK["Mock<br/><i>dev mode</i>"]
+    end
+
+    FE <-->|"HTTP + WS"| NGINX
+    NGINX -->|"proxy /api/*"| FASTAPI
+    NGINX -->|"proxy /ws/*"| WS
+    FASTAPI --> ROUTES
+    ROUTES -->|"enqueue jobs"| REDIS
+    REDIS -->|"dequeue"| Worker
+    REDIS -->|"pub/sub progress"| WS
+    PORTRAIT --> PG
+    STORY --> PG
+    FASTAPI --> PG
+    Worker -->|"route per task"| LLMProviders
+    Worker -->|"generate images"| ImageProviders
+    Worker -->|"face swap"| FF
