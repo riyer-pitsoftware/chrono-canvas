@@ -1,10 +1,18 @@
 .PHONY: dev start up down stop restart build seed test lint migrate \
        frontend backend cli clean check-env \
        logs logs-api logs-worker logs-frontend \
-       status shell-api db-shell fresh health
+       status shell-api db-shell fresh health \
+       quickstart smoke-test
 
 COMPOSE_DEV = docker compose -f docker-compose.dev.yml
 API_CONTAINER = chrono-canvas-api-1
+
+# ── Quickstart (one command, cold start) ─────────────────────────────
+quickstart:
+	@bash scripts/quickstart.sh
+
+smoke-test:
+	@bash scripts/smoke-test.sh
 
 # ── Development ──────────────────────────────────────────────────────
 dev: up

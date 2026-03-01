@@ -2,9 +2,7 @@
 
 **An auditable multimodal agent pipeline — applied to historical portrait generation.**
 
-ChronoCanvas is a focused case study in building traceable, evaluable AI systems. It orchestrates LLM research, image generation, and heuristic validation into a 9-node pipeline with full cost/latency observability, provider routing, and automated retry loops. The historical portrait domain is simply the testbed; the reusable patterns are inspection-friendly AI pipelines that you can trust in higher-stakes environments. Everything runs on your own hardware.
-
-### See it working
+ChronoCanvas is a focused case study in building traceable, evaluable AI systems. It orchestrates LLM research, image generation, and heuristic validation into a 9-node pipeline with full cost/latency observability, provider routing, and automated retry loops. The historical portrait domain is simply the testbed; the reusable patterns are inspection-friendly AI pipelines that you can trust in higher-stakes environments.
 
 <p align="center">
   <img src="docs/images/generated-portrait.png" alt="Generated portrait with historical context" width="720" />
@@ -28,56 +26,45 @@ ChronoCanvas is a focused case study in building traceable, evaluable AI systems
 
 </details>
 
-### Who this is for
+---
 
-- Engineering leaders evaluating whether auditable agent workflows are feasible on current tooling
-- Staff-plus ICs who need a concrete reference implementation for LangGraph-based pipelines with validation and retries
-- Recruiters or hiring managers who need one glance proof of system-level thinking (skip directly to [Learn from this repo](#learn-from-this-repo))
+## Quick start
 
-> A serious prototype and engineering sandbox, not a historical source-of-truth engine. The majority of this codebase was built with [Claude Code](https://claude.ai/claude-code).
+**Prerequisites:** Docker and Docker Compose v2. No API keys required — runs fully offline with Ollama.
+
+```bash
+git clone https://github.com/riyer-pitsoftware/chrono-canvas.git
+cd chrono-canvas
+make quickstart
+```
+
+That's it. The script checks prerequisites, creates `.env` with safe defaults, builds all containers, runs migrations, loads seed data, and waits for health. When it finishes:
+
+| Service | URL |
+|---------|-----|
+| **UI** | [http://localhost:3000](http://localhost:3000) |
+| **API** | [http://localhost:8000/api/health](http://localhost:8000/api/health) |
+| **Swagger docs** | [http://localhost:8000/docs](http://localhost:8000/docs) |
+
+Verify the cold start with `make smoke-test` — runs 8 checks against the live stack.
+
+> **First run takes a few minutes** to download Docker images and build containers. Subsequent starts are fast thanks to Docker layer caching.
 
 ---
 
-## Project status
+## What it does
 
-**Maturity: prototype / research system**
-
-- The end-to-end pipeline works: text input → researched context → generated portrait → validation → export
-- Validation uses LLM-based heuristic scoring — it catches obvious anachronisms but does not guarantee historical fact-checking
-- Face compositing requires FaceFusion running separately (optional)
-- Image generation requires ComfyUI with SDXL/FLUX checkpoints, or runs in mock mode for development
-- Designed for local / trusted-network deployment — no authentication layer
-- Known rough edges: some seed data is placeholder-quality; offline mode coverage varies by provider
-
-### What works today
-
-- 9-node LangGraph pipeline with per-node LLM provider routing
-- Real-time progress streaming via WebSocket + Redis pub/sub
-- Full audit trail: every LLM call logged with prompts, tokens, cost, latency
-- Automated validation with configurable category weights and retry loops
-- 100+ seed figures across 12 historical periods
-- Timeline explorer, generation UI, audit viewer, admin dashboard
-- Docker Compose dev stack (PostgreSQL, Redis, API, frontend)
-
----
-
-## Why it exists
-
-Most AI demos hide what happened between input and output. ChronoCanvas was built to explore the opposite: what does it look like when every LLM call, every routing decision, every validation score, and every retry is logged and browsable? The historical portrait domain provides a natural test case — it requires multi-step reasoning (research → prompt crafting → generation → validation), spans multiple modalities (text → image), and has an inherent quality bar (does the output look plausible for the era?).
-
-The transferable patterns — agent orchestration with LangGraph, per-task LLM provider routing, cost/latency tracing, automated evaluation with retry loops, real-time progress streaming — apply to any domain where AI pipelines need to be inspectable rather than magical.
-
----
-
-## How it works
-
-**Input:** a text description — as simple as a name, or as detailed as a paragraph.
-
-> *"Aryabhata, Indian mathematician and astronomer, Gupta period, 5th century CE"*
-
-**Output:** a generated portrait with a full audit trail of every decision the system made, every source consulted, and every token spent.
-
-### Pipeline
+| # | Pipeline node | Default LLM | Role |
+|---|---|---|---|
+| 1 | Orchestrator | Ollama | Reads input, creates execution plan |
+| 2 | Extraction | Ollama | Parses free-text into structured figure data |
+| 3 | Research | Claude | Enriches with historical context (streaming) |
+| 4 | Face Search | SerpAPI | Finds a reference face image |
+| 5 | Prompt Generation | Claude | Builds a period-informed image prompt (streaming) |
+| 6 | Image Generation | ComfyUI/Mock | Produces the portrait |
+| 7 | Validation | Ollama | Scores 0-100 for historical plausibility; retries on failure |
+| 8 | Facial Compositing | FaceFusion | Composites uploaded face onto portrait |
+| 9 | Export | — | Packages final PNG + metadata |
 
 ```mermaid
 flowchart LR
@@ -94,7 +81,7 @@ flowchart LR
     J --> K([Portrait + audit trail])
 ```
 
-Nine pipeline nodes, each with a defined role and independently configurable LLM provider. See [TECHNICAL.md](TECHNICAL.md) for the full node reference.
+Every LLM call is logged with prompts, tokens, cost, and latency — browsable in the audit viewer.
 
 ---
 
@@ -102,41 +89,13 @@ Nine pipeline nodes, each with a defined role and independently configurable LLM
 
 - **Local-first** — image generation runs on your hardware; cloud LLMs are optional and replaceable with Ollama
 - **Historically informed** — a dedicated research node enriches every generation with contextual information before any image is produced
-- **Best-effort validation** — portraits are scored 0–100 against configurable criteria; low scores trigger automatic retry with a corrected prompt
+- **Best-effort validation** — portraits are scored 0-100 against configurable criteria; low scores trigger automatic retry with a corrected prompt
 - **Full audit trail** — every LLM call (prompt, tokens, cost, latency) is logged and browsable per generation
 - **Facial compositing** — upload a reference photo; FaceFusion composites the face while preserving the historical costume and setting
 - **Timeline explorer** — browse historical periods on an interactive slider with curated figures
 - **100+ seed figures** — curated across Ancient through Modern eras; add custom figures via the UI
-
----
-
-## Getting started
-
-**Prerequisites:** Docker, Docker Compose, 8 GB RAM minimum.
-
-```bash
-# Clone the repository
-git clone https://github.com/riyer-pitsoftware/chrono-canvas.git
-cd chrono-canvas
-
-# Configure environment
-cp .env.example .env
-# Edit .env — API keys are optional; Ollama-only mode works for all LLM tasks
-
-# Start all services
-make dev
-
-# Run database migrations and seed data
-make migrate
-make seed
-
-# Open the UI
-open http://localhost:3000
-```
-
-The first run downloads model weights and Docker images — allow a few minutes.
-
-> **No cloud required.** Set `DEFAULT_LLM_PROVIDER=ollama` in `.env` and run Ollama locally for fully offline LLM operation. Image generation requires ComfyUI running locally, or use `IMAGE_PROVIDER=mock` for development.
+- **Real-time streaming** — WebSocket + Redis pub/sub pushes node progress and LLM token streams to the UI live
+- **Admin dashboard** — configure validation weights, review queue for failed generations, system overview
 
 ---
 
@@ -146,10 +105,23 @@ The first run downloads model weights and Docker images — allow a few minutes.
 |---|---|---|---|---|
 | **Full cloud** | Claude + OpenAI | ComfyUI (local) | Yes (LLM APIs) | Best output quality; requires API keys |
 | **Hybrid** | Ollama (local) + Claude (research only) | ComfyUI (local) | Yes (Anthropic API) | Reduces cost; only research node uses cloud |
-| **Fully offline** | Ollama | ComfyUI (local) | No | All processing on your hardware; quality depends on local model |
+| **Fully offline** | Ollama | ComfyUI (local) | No | All processing on your hardware |
 | **Development** | Ollama or cloud | Mock (no GPU) | Optional | Fast iteration; generates placeholder images |
+| **Cloud Run** | Gemini | Imagen | Yes | Managed GCP deployment; ~$144/mo |
+| **GKE** | Configurable | Configurable | Yes | Kubernetes deployment with in-cluster Postgres |
 
-Face search (SerpAPI) requires internet regardless of mode. Facial compositing (FaceFusion) always runs locally.
+---
+
+## Architecture
+
+| Component | Technology | Role |
+|---|---|---|
+| Frontend | React 18 + TypeScript + Vite + Tailwind | Web UI with timeline explorer, audit viewer, admin |
+| Backend | FastAPI + LangGraph + SQLAlchemy (asyncpg) | API server + agent orchestration |
+| Database | PostgreSQL 16 (pgvector) | Persistent storage + research vector cache |
+| Cache/Queue | Redis 7 | Pub/sub streaming + ARQ job queue |
+| Image gen | Mock / ComfyUI / Imagen | Portrait generation backend |
+| CLI | Typer + Rich | Command-line automation |
 
 ---
 
@@ -158,26 +130,37 @@ Face search (SerpAPI) requires internet regardless of mode. Facial compositing (
 ChronoCanvas is designed to be readable as a systems case study. Here are good starting points depending on your interest:
 
 **Agent orchestration and LangGraph:**
-- [`backend/src/chronocanvas/agents/graph.py`](backend/src/chronocanvas/agents/graph.py) — graph definition, node wiring, conditional edges
-- [`backend/src/chronocanvas/agents/state.py`](backend/src/chronocanvas/agents/state.py) — the shared state schema flowing between nodes
-- [`backend/src/chronocanvas/agents/decisions.py`](backend/src/chronocanvas/agents/decisions.py) — conditional routing logic (validation retry loop)
+- [`agents/graph.py`](backend/src/chronocanvas/agents/graph.py) — graph definition, node wiring, conditional edges
+- [`agents/state.py`](backend/src/chronocanvas/agents/state.py) — the shared state schema flowing between nodes
+- [`agents/decisions.py`](backend/src/chronocanvas/agents/decisions.py) — conditional routing logic (validation retry loop)
 
 **LLM provider routing and cost tracking:**
-- [`backend/src/chronocanvas/llm/router.py`](backend/src/chronocanvas/llm/router.py) — per-task provider assignment with fallback chain
-- [`backend/src/chronocanvas/llm/providers/`](backend/src/chronocanvas/llm/providers/) — pluggable provider implementations (Ollama, Claude, OpenAI)
+- [`llm/router.py`](backend/src/chronocanvas/llm/router.py) — per-task provider assignment with fallback chain
+- [`llm/providers/`](backend/src/chronocanvas/llm/providers/) — pluggable provider implementations (Ollama, Claude, OpenAI, Gemini)
 
 **Audit trail and observability:**
-- [`backend/src/chronocanvas/services/runner.py`](backend/src/chronocanvas/services/runner.py) — pipeline execution with LLM call logging
-- [`backend/src/chronocanvas/api/routes/admin.py`](backend/src/chronocanvas/api/routes/admin.py) — validation rules, review queue
+- [`services/runner.py`](backend/src/chronocanvas/services/runner.py) — pipeline execution with LLM call logging
+- [`api/routes/admin.py`](backend/src/chronocanvas/api/routes/admin.py) — validation rules, review queue
 
 **Real-time streaming:**
-- [`backend/src/chronocanvas/services/progress.py`](backend/src/chronocanvas/services/progress.py) — Redis pub/sub progress publisher
-- [`frontend/src/api/hooks/`](frontend/src/api/hooks/) — WebSocket subscription and React Query integration
+- [`services/progress.py`](backend/src/chronocanvas/services/progress.py) — Redis pub/sub progress publisher
+- [`api/hooks/`](frontend/src/api/hooks/) — WebSocket subscription and React Query integration
 
-**Local deployment and Docker:**
-- [`docker-compose.dev.yml`](docker-compose.dev.yml) — full dev stack definition
-- [`docker/`](docker/) — service-specific Dockerfiles and configs
-- [`docs/architecture-invariants.md`](docs/architecture-invariants.md) — rules that keep the system coherent
+---
+
+## Project commands
+
+```bash
+make quickstart     # One-command cold start (build + migrate + seed + health check)
+make smoke-test     # Verify the running stack (8 checks)
+make dev            # Start services (if already built)
+make down           # Stop all services
+make fresh          # Full reset (wipe data + rebuild + reseed)
+make logs           # Stream all service logs
+make health         # Quick health check
+make test           # Run backend + CLI tests
+make lint           # Lint backend + frontend
+```
 
 ---
 
@@ -189,7 +172,18 @@ ChronoCanvas is designed to be readable as a systems case study. Here are good s
 | [docs/api.md](docs/api.md) | REST API and WebSocket reference |
 | [docs/development.md](docs/development.md) | Development setup, project structure, contribution guide |
 | [docs/architecture-invariants.md](docs/architecture-invariants.md) | Non-negotiable architectural rules |
-| [notes/artifact-positioning-template.md](notes/artifact-positioning-template.md) | Messaging template to keep artifacts focused on one job |
+| [deploy/cloudrun/README.md](deploy/cloudrun/README.md) | Cloud Run deployment guide |
+| [deploy/gke/README.md](deploy/gke/README.md) | GKE deployment guide |
+
+---
+
+## Who this is for
+
+- Engineering leaders evaluating whether auditable agent workflows are feasible on current tooling
+- Staff-plus ICs who need a concrete reference implementation for LangGraph-based pipelines with validation and retries
+- Recruiters or hiring managers who need one-glance proof of system-level thinking
+
+> A serious prototype and engineering sandbox, not a historical source-of-truth engine. The majority of this codebase was built with [Claude Code](https://claude.ai/claude-code).
 
 ---
 
@@ -199,7 +193,6 @@ ChronoCanvas is designed to be readable as a systems case study. Here are good s
 - **Validation is heuristic** — the scoring system uses LLM judgment, not ground-truth benchmarks. It catches obvious errors but has blind spots.
 - **No authentication** — designed for trusted local deployment only. Do not expose to the public internet without adding an auth layer.
 - **Provider-dependent quality** — output quality varies significantly between LLM and image generation providers.
-- **Limited offline testing** — Ollama-only mode works for LLM tasks but hasn't been exhaustively tested across all edge cases.
 
 ---
 
