@@ -1,7 +1,7 @@
 import logging
 import time
 
-from chronocanvas.agents.story.neo_adapter import llm_fn_for_neo
+from chronocanvas.agents.story.neo_adapter import NeoLLMBridge
 from chronocanvas.agents.story.state import StoryState
 
 logger = logging.getLogger(__name__)
@@ -18,8 +18,9 @@ async def character_extraction_node(state: StoryState) -> StoryState:
     try:
         from neo_modules.extraction import extract_characters
 
+        bridge = NeoLLMBridge()
         start = time.perf_counter()
-        result = await extract_characters(input_text, llm_fn=llm_fn_for_neo)
+        result = await extract_characters(input_text, llm_fn=bridge)
         elapsed_ms = (time.perf_counter() - start) * 1000
 
         characters = result.get("characters", [])
@@ -34,17 +35,18 @@ async def character_extraction_node(state: StoryState) -> StoryState:
             "character_names": [c.get("name", "?") for c in characters],
         })
 
+        resp = bridge.last_response
         llm_calls.append({
             "agent": "character_extraction",
             "timestamp": time.time(),
-            "provider": "gemini",
-            "model": "gemini-2.5-flash",
-            "input_tokens": 0,
-            "output_tokens": 0,
-            "cost": 0.0,
+            "provider": resp.provider if resp else "gemini",
+            "model": resp.model if resp else "unknown",
+            "input_tokens": resp.input_tokens if resp else 0,
+            "output_tokens": resp.output_tokens if resp else 0,
+            "cost": resp.cost if resp else 0.0,
             "duration_ms": elapsed_ms,
-            "requested_provider": "gemini",
-            "fallback": False,
+            "requested_provider": resp.requested_provider if resp else "gemini",
+            "fallback": resp.fallback if resp else False,
         })
 
         return {

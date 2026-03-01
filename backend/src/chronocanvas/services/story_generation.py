@@ -1,15 +1,23 @@
 """Story generation pipeline — runs the story LangGraph for creative_story mode."""
 
 import logging
+import uuid
 from typing import Any
 
 from chronocanvas.agents.story.state import StoryState
 from chronocanvas.db.engine import async_session as _default_session_factory
+from chronocanvas.db.models.image import GeneratedImage
 from chronocanvas.db.models.request import RequestStatus
 from chronocanvas.db.repositories.requests import RequestRepository
 from chronocanvas.services.progress import ProgressPublisher
 
 logger = logging.getLogger(__name__)
+
+# Keys excluded from per-node state snapshots (noisy, large, or redundant)
+_SNAPSHOT_EXCLUDE = frozenset({
+    "llm_calls", "agent_trace", "request_id", "error",
+    "input_text",
+})
 
 
 async def run_story_pipeline(
@@ -72,10 +80,27 @@ async def run_story_pipeline(
                         }
                         agent_status = status_map.get(current_agent, RequestStatus.EXTRACTING)
 
+                        # Attach state snapshot to the trace entry for this agent
+                        agent_trace = node_state.get("agent_trace")
+                        if agent_trace is not None:
+                            snapshot = {
+                                k: v for k, v in node_state.items()
+                                if k not in _SNAPSHOT_EXCLUDE
+                            }
+                            agent_trace = list(agent_trace)
+                            for entry in reversed(agent_trace):
+                                is_match = (
+                                    entry.get("agent") == current_agent
+                                    and "state_snapshot" not in entry
+                                )
+                                if is_match:
+                                    entry["state_snapshot"] = snapshot
+                                    break
+
                         update_kwargs: dict[str, Any] = {
                             "status": agent_status,
                             "current_agent": current_agent,
-                            "agent_trace": node_state.get("agent_trace"),
+                            "agent_trace": agent_trace,
                             "llm_calls": node_state.get("llm_calls"),
                         }
                         # Remove None values to avoid overwriting with nulls
@@ -139,13 +164,50 @@ async def run_story_pipeline(
                         "completed_scenes": full_state.get("completed_scenes", 0),
                     }
 
+                    # Attach snapshots to the final agent_trace as well
+                    final_trace = full_state.get("agent_trace", [])
+
+                    # Compute aggregated llm_costs summary
+                    final_calls = full_state.get("llm_calls", [])
+                    llm_costs: dict[str, Any] = {}
+                    for call in final_calls:
+                        provider = call.get("provider", "unknown")
+                        if provider not in llm_costs:
+                            llm_costs[provider] = {
+                                "total_cost": 0.0,
+                                "num_calls": 0,
+                                "total_tokens": 0,
+                            }
+                        llm_costs[provider]["total_cost"] += call.get("cost", 0.0)
+                        llm_costs[provider]["num_calls"] += 1
+                        in_tok = call.get("input_tokens", 0)
+                        out_tok = call.get("output_tokens", 0)
+                        llm_costs[provider]["total_tokens"] += in_tok + out_tok
+
                     await repo.update(
                         request_id,
                         status=RequestStatus.COMPLETED,
                         storyboard_data=storyboard_data,
-                        agent_trace=full_state.get("agent_trace", []),
-                        llm_calls=full_state.get("llm_calls", []),
+                        agent_trace=final_trace,
+                        llm_calls=final_calls,
+                        llm_costs=llm_costs,
                     )
+
+                    # Record completed panels as generated_images rows
+                    rid = uuid.UUID(request_id)
+                    for panel in full_state.get("panels", []):
+                        if panel.get("status") == "completed" and panel.get("image_path"):
+                            session.add(GeneratedImage(
+                                request_id=rid,
+                                figure_id=None,
+                                file_path=panel["image_path"],
+                                prompt_used=panel.get("image_prompt", ""),
+                                provider=panel.get("provider", "imagen"),
+                                width=panel.get("width", 768),
+                                height=panel.get("height", 768),
+                                validation_score=None,
+                            ))
+
                     await session.commit()
 
             except Exception:

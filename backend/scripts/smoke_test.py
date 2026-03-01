@@ -19,8 +19,8 @@ from __future__ import annotations
 import json
 import sys
 import time
+from urllib.error import HTTPError
 from urllib.request import Request, urlopen
-from urllib.error import HTTPError, URLError
 
 BASE_URL = "http://localhost:8000"
 TIMEOUT_SECONDS = 300  # 5 minutes
@@ -47,7 +47,7 @@ def main() -> int:
     print("1. Creating generation request...")
     try:
         resp = _request("POST", "/api/generate", {
-            "input_text": "A fictional Renaissance alchemist in a candle-lit workshop surrounded by mysterious potions",
+            "input_text": "Hatshepsut, the pharaoh of ancient Egypt",
             "run_type": "portrait",
         })
         request_id = resp["id"]
@@ -83,7 +83,8 @@ def main() -> int:
         _print_summary(results)
         return 1
     else:
-        results.append(("Pipeline completed", False, f"TIMEOUT after {TIMEOUT_SECONDS}s (status={status})"))
+        msg = f"TIMEOUT after {TIMEOUT_SECONDS}s (status={status})"
+        results.append(("Pipeline completed", False, msg))
         _print_summary(results)
         return 1
 
@@ -106,8 +107,7 @@ def main() -> int:
     try:
         audit = _request("GET", f"/api/generate/{request_id}/audit")
         llm_calls = len(audit.get("llm_calls", []))
-        costs = audit.get("llm_costs", {})
-        total_cost = sum(costs.values()) if isinstance(costs, dict) else 0
+        total_cost = audit.get("total_cost", 0.0)
         has_calls = llm_calls > 0
         results.append(("Audit: LLM calls", has_calls, f"{llm_calls} call(s)"))
         results.append(("Audit: costs tracked", total_cost > 0, f"${total_cost:.4f}"))

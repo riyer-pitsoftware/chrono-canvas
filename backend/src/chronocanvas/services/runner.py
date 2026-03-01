@@ -100,9 +100,32 @@ class GenerationRunner:
                     final_state = node_state
 
             if final_state:
-                ext = final_state.get("extraction", {})
-                res = final_state.get("research", {})
-                prompt_state = final_state.get("prompt", {})
+                # Fetch the full accumulated state from the graph checkpoint
+                # (final_state is only the last node's delta output and may be
+                # missing keys like llm_calls that earlier nodes produced).
+                snapshot = await self._graph.aget_state(config)
+                full = snapshot.values if snapshot else final_state
+                ext = full.get("extraction", {})
+                res = full.get("research", {})
+                prompt_state = full.get("prompt", {})
+                final_calls = full.get("llm_calls", [])
+
+                # Aggregate per-provider cost summary
+                llm_costs: dict[str, Any] = {}
+                for call in final_calls:
+                    provider = call.get("provider", "unknown")
+                    if provider not in llm_costs:
+                        llm_costs[provider] = {
+                            "total_cost": 0.0,
+                            "num_calls": 0,
+                            "total_tokens": 0,
+                        }
+                    llm_costs[provider]["total_cost"] += call.get("cost", 0.0)
+                    llm_costs[provider]["num_calls"] += 1
+                    in_tok = call.get("input_tokens", 0)
+                    out_tok = call.get("output_tokens", 0)
+                    llm_costs[provider]["total_tokens"] += in_tok + out_tok
+
                 update_data: dict[str, Any] = {
                     "status": RequestStatus.COMPLETED,
                     "extracted_data": {
@@ -117,16 +140,17 @@ class GenerationRunner:
                         "physical_description": res.get("physical_description"),
                     },
                     "generated_prompt": prompt_state.get("image_prompt"),
-                    "agent_trace": final_state.get("agent_trace", []),
-                    "llm_calls": final_state.get("llm_calls", []),
+                    "agent_trace": full.get("agent_trace", []),
+                    "llm_calls": final_calls,
+                    "llm_costs": llm_costs,
                 }
-                if final_state.get("error"):
+                if full.get("error"):
                     update_data["status"] = RequestStatus.FAILED
-                    update_data["error_message"] = final_state["error"]
+                    update_data["error_message"] = full["error"]
                     failed = True
 
                 await self._repo.update(request_id, **update_data)
-                await self._recorder.flush(self._session, request_id, final_state)
+                await self._recorder.flush(self._session, request_id, full)
 
                 await self._session.commit()
 
