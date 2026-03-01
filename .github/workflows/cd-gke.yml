@@ -95,6 +95,7 @@ jobs:
             --namespace=chronocanvas \
             --from-literal="DATABASE_URL=postgresql+asyncpg://chronocanvas:${{ secrets.DB_PASSWORD }}@postgres:5432/chronocanvas" \
             --from-literal="REDIS_URL=redis://redis:6379/0" \
+            --from-literal="GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }}" \
             --from-literal="ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}" \
             --from-literal="OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" \
             --from-literal="SERPAPI_KEY=${{ secrets.SERPAPI_KEY }}" \

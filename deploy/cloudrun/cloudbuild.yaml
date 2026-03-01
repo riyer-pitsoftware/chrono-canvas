@@ -1,0 +1,135 @@
+# Cloud Build configuration for ChronoCanvas Cloud Run deployment.
+#
+# Trigger this manually or via Cloud Build trigger:
+#   gcloud builds submit --config=deploy/cloudrun/cloudbuild.yaml .
+#
+# Required substitutions:
+#   _REGION: GCP region (default: us-central1)
+#   _DB_INSTANCE: Cloud SQL instance name
+#   _REDIS_HOST: Memorystore Redis host IP
+#   _REDIS_PORT: Memorystore Redis port
+#   _VPC_CONNECTOR: VPC connector name
+#   _SA_EMAIL: Cloud Run service account email
+
+substitutions:
+  _REGION: us-central1
+  _AR_REPO: chronocanvas
+  _DB_INSTANCE: chronocanvas-db
+  _REDIS_HOST: ""
+  _REDIS_PORT: "6379"
+  _VPC_CONNECTOR: chronocanvas-vpc
+  _SA_EMAIL: ""
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+  machineType: E2_HIGHCPU_8
+
+steps:
+  # ── Build API image ──────────────────────────────────────────────
+  - id: build-api
+    name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -f
+      - docker/Dockerfile.api
+      - -t
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/api:$SHORT_SHA
+      - -t
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/api:latest
+      - .
+
+  # ── Build Frontend image ─────────────────────────────────────────
+  - id: build-frontend
+    name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -f
+      - docker/Dockerfile.frontend
+      - -t
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/frontend:$SHORT_SHA
+      - -t
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/frontend:latest
+      - .
+
+  # ── Push images ──────────────────────────────────────────────────
+  - id: push-api
+    name: gcr.io/cloud-builders/docker
+    args: [push, --all-tags, "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/api"]
+    waitFor: [build-api]
+
+  - id: push-frontend
+    name: gcr.io/cloud-builders/docker
+    args: [push, --all-tags, "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/frontend"]
+    waitFor: [build-frontend]
+
+  # ── Deploy API to Cloud Run ──────────────────────────────────────
+  - id: deploy-api
+    name: gcr.io/cloud-builders/gcloud
+    args:
+      - run
+      - deploy
+      - chronocanvas-api
+      - --image=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/api:$SHORT_SHA
+      - --region=${_REGION}
+      - --platform=managed
+      - --service-account=${_SA_EMAIL}
+      - --set-cloudsql-instances=${_DB_INSTANCE}
+      - --vpc-connector=${_VPC_CONNECTOR}
+      - --vpc-egress=private-ranges-only
+      - --port=8000
+      - --cpu=2
+      - --memory=4Gi
+      - --min-instances=1
+      - --max-instances=4
+      - --timeout=300
+      - --allow-unauthenticated
+    waitFor: [push-api]
+
+  # ── Deploy Worker to Cloud Run ───────────────────────────────────
+  - id: deploy-worker
+    name: gcr.io/cloud-builders/gcloud
+    args:
+      - run
+      - deploy
+      - chronocanvas-worker
+      - --image=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/api:$SHORT_SHA
+      - --region=${_REGION}
+      - --platform=managed
+      - --service-account=${_SA_EMAIL}
+      - --set-cloudsql-instances=${_DB_INSTANCE}
+      - --vpc-connector=${_VPC_CONNECTOR}
+      - --vpc-egress=private-ranges-only
+      - --cpu=2
+      - --memory=4Gi
+      - --min-instances=1
+      - --max-instances=2
+      - --timeout=600
+      - --no-cpu-throttling
+      - --no-allow-unauthenticated
+      - --command=arq
+      - --args=chronocanvas.worker.WorkerSettings
+    waitFor: [push-api]
+
+  # ── Deploy Frontend to Cloud Run ─────────────────────────────────
+  - id: deploy-frontend
+    name: gcr.io/cloud-builders/gcloud
+    args:
+      - run
+      - deploy
+      - chronocanvas-frontend
+      - --image=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/frontend:$SHORT_SHA
+      - --region=${_REGION}
+      - --platform=managed
+      - --port=8080
+      - --cpu=1
+      - --memory=256Mi
+      - --min-instances=0
+      - --max-instances=4
+      - --allow-unauthenticated
+    waitFor: [push-frontend]
+
+images:
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/api:$SHORT_SHA
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/api:latest
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/frontend:$SHORT_SHA
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/frontend:latest

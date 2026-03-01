@@ -7,12 +7,13 @@ metadata:
     app.kubernetes.io/part-of: chronocanvas
 data:
   # ── LLM providers ──────────────────────────────────────────────────
-  DEFAULT_LLM_PROVIDER: "anthropic"
+  DEFAULT_LLM_PROVIDER: "gemini"
+  GEMINI_MODEL: "gemini-2.5-flash"
   CLAUDE_MODEL: "claude-sonnet-4-5-20250929"
   OPENAI_MODEL: "gpt-4o"
 
   # ── Image generation ───────────────────────────────────────────────
-  IMAGE_PROVIDER: "mock"
+  IMAGE_PROVIDER: "imagen"
   FACEFUSION_ENABLED: "false"
 
   # ── Pipeline settings ──────────────────────────────────────────────

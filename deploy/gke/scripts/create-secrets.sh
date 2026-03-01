@@ -15,6 +15,7 @@ set -euo pipefail
 NAMESPACE="chronocanvas"
 
 DB_PASSWORD="${DB_PASSWORD:?Set DB_PASSWORD}"
+GOOGLE_API_KEY="${GOOGLE_API_KEY:-}"
 ANTHROPIC_API_KEY="${ANTHROPIC_API_KEY:-}"
 OPENAI_API_KEY="${OPENAI_API_KEY:-}"
 SERPAPI_KEY="${SERPAPI_KEY:-}"
@@ -29,6 +30,7 @@ kubectl create secret generic chronocanvas-secrets \
   --namespace="${NAMESPACE}" \
   --from-literal="DATABASE_URL=${DATABASE_URL}" \
   --from-literal="REDIS_URL=${REDIS_URL}" \
+  --from-literal="GOOGLE_API_KEY=${GOOGLE_API_KEY}" \
   --from-literal="ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}" \
   --from-literal="OPENAI_API_KEY=${OPENAI_API_KEY}" \
   --from-literal="SERPAPI_KEY=${SERPAPI_KEY}" \

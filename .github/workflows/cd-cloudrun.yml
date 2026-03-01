@@ -1,0 +1,215 @@
+name: CD — Deploy to Cloud Run
+
+on:
+  workflow_dispatch:
+    inputs:
+      deploy_api:
+        description: "Deploy API service"
+        type: boolean
+        default: true
+      deploy_worker:
+        description: "Deploy Worker service"
+        type: boolean
+        default: true
+      deploy_frontend:
+        description: "Deploy Frontend service"
+        type: boolean
+        default: true
+
+concurrency:
+  group: deploy-cloudrun
+  cancel-in-progress: false
+
+env:
+  REGION: ${{ secrets.GCP_REGION || 'us-central1' }}
+  AR_REPO: chronocanvas
+  SA_EMAIL: chronocanvas-run@${{ secrets.GCP_PROJECT_ID }}.iam.gserviceaccount.com
+
+jobs:
+  # ── Build and push images ──────────────────────────────────────────
+  build-push:
+    name: Build & push images
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    outputs:
+      sha: ${{ steps.meta.outputs.sha }}
+      image_base: ${{ steps.meta.outputs.image_base }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: meta
+        run: |
+          echo "sha=${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
+          echo "image_base=${{ env.REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.AR_REPO }}" >> "$GITHUB_OUTPUT"
+
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker "${{ env.REGION }}-docker.pkg.dev" --quiet
+
+      - name: Build and push API image
+        run: |
+          TAG="${{ steps.meta.outputs.image_base }}/api"
+          docker build -f docker/Dockerfile.api \
+            -t "${TAG}:${{ steps.meta.outputs.sha }}" \
+            -t "${TAG}:latest" .
+          docker push "${TAG}:${{ steps.meta.outputs.sha }}"
+          docker push "${TAG}:latest"
+
+      - name: Build and push Frontend image
+        run: |
+          TAG="${{ steps.meta.outputs.image_base }}/frontend"
+          docker build -f docker/Dockerfile.frontend \
+            -t "${TAG}:${{ steps.meta.outputs.sha }}" \
+            -t "${TAG}:latest" .
+          docker push "${TAG}:${{ steps.meta.outputs.sha }}"
+          docker push "${TAG}:latest"
+
+  # ── Deploy to Cloud Run ────────────────────────────────────────────
+  deploy:
+    name: Deploy to Cloud Run
+    needs: build-push
+    runs-on: ubuntu-latest
+    environment: cloudrun-production
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      SHA: ${{ needs.build-push.outputs.sha }}
+      IMAGE_BASE: ${{ needs.build-push.outputs.image_base }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      # Resolve infrastructure
+      - name: Get infrastructure details
+        id: infra
+        run: |
+          DB_CONN=$(gcloud sql instances describe chronocanvas-db --format="value(connectionName)")
+          REDIS_HOST=$(gcloud redis instances describe chronocanvas-redis --region="${{ env.REGION }}" --format="value(host)")
+          REDIS_PORT=$(gcloud redis instances describe chronocanvas-redis --region="${{ env.REGION }}" --format="value(port)")
+          echo "db_connection=${DB_CONN}" >> "$GITHUB_OUTPUT"
+          echo "redis_host=${REDIS_HOST}" >> "$GITHUB_OUTPUT"
+          echo "redis_port=${REDIS_PORT}" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy API
+        if: ${{ inputs.deploy_api }}
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: chronocanvas-api
+          image: ${{ env.IMAGE_BASE }}/api:${{ env.SHA }}
+          region: ${{ env.REGION }}
+          flags: |
+            --service-account=${{ env.SA_EMAIL }}
+            --set-cloudsql-instances=${{ steps.infra.outputs.db_connection }}
+            --vpc-connector=chronocanvas-vpc
+            --vpc-egress=private-ranges-only
+            --port=8000
+            --cpu=2
+            --memory=4Gi
+            --min-instances=1
+            --max-instances=4
+            --timeout=300
+            --concurrency=40
+            --allow-unauthenticated
+          env_vars: |
+            DATABASE_URL=postgresql+asyncpg://chronocanvas@/chronocanvas?host=/cloudsql/${{ steps.infra.outputs.db_connection }}
+            REDIS_URL=redis://${{ steps.infra.outputs.redis_host }}:${{ steps.infra.outputs.redis_port }}/0
+            IMAGE_PROVIDER=imagen
+            DEFAULT_LLM_PROVIDER=gemini
+            GEMINI_MODEL=gemini-2.5-flash
+            CLAUDE_MODEL=claude-sonnet-4-5-20250929
+            CONTENT_MODERATION_ENABLED=true
+            RESEARCH_CACHE_ENABLED=true
+            VALIDATION_RETRY_ENABLED=true
+            FACE_SEARCH_ENABLED=true
+            FACEFUSION_ENABLED=false
+            OUTPUT_DIR=/app/output
+            UPLOAD_DIR=/app/uploads
+            RUN_MIGRATIONS=true
+            LOG_LEVEL=INFO
+          secrets: |
+            GOOGLE_API_KEY=chronocanvas-google-api-key:latest
+            ANTHROPIC_API_KEY=chronocanvas-anthropic-api-key:latest
+            SECRET_KEY=chronocanvas-secret-key:latest
+
+      - name: Deploy Worker
+        if: ${{ inputs.deploy_worker }}
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: chronocanvas-worker
+          image: ${{ env.IMAGE_BASE }}/api:${{ env.SHA }}
+          region: ${{ env.REGION }}
+          flags: |
+            --service-account=${{ env.SA_EMAIL }}
+            --set-cloudsql-instances=${{ steps.infra.outputs.db_connection }}
+            --vpc-connector=chronocanvas-vpc
+            --vpc-egress=private-ranges-only
+            --cpu=2
+            --memory=4Gi
+            --min-instances=1
+            --max-instances=2
+            --timeout=600
+            --no-cpu-throttling
+            --no-allow-unauthenticated
+            --command=arq
+            --args=chronocanvas.worker.WorkerSettings
+          env_vars: |
+            DATABASE_URL=postgresql+asyncpg://chronocanvas@/chronocanvas?host=/cloudsql/${{ steps.infra.outputs.db_connection }}
+            REDIS_URL=redis://${{ steps.infra.outputs.redis_host }}:${{ steps.infra.outputs.redis_port }}/0
+            IMAGE_PROVIDER=imagen
+            DEFAULT_LLM_PROVIDER=gemini
+            GEMINI_MODEL=gemini-2.5-flash
+            CLAUDE_MODEL=claude-sonnet-4-5-20250929
+            CONTENT_MODERATION_ENABLED=true
+            RESEARCH_CACHE_ENABLED=true
+            VALIDATION_RETRY_ENABLED=true
+            FACE_SEARCH_ENABLED=true
+            FACEFUSION_ENABLED=false
+            OUTPUT_DIR=/app/output
+            UPLOAD_DIR=/app/uploads
+            RUN_MIGRATIONS=false
+            LOG_LEVEL=INFO
+          secrets: |
+            GOOGLE_API_KEY=chronocanvas-google-api-key:latest
+            ANTHROPIC_API_KEY=chronocanvas-anthropic-api-key:latest
+            SECRET_KEY=chronocanvas-secret-key:latest
+
+      - name: Deploy Frontend
+        if: ${{ inputs.deploy_frontend }}
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: chronocanvas-frontend
+          image: ${{ env.IMAGE_BASE }}/frontend:${{ env.SHA }}
+          region: ${{ env.REGION }}
+          flags: |
+            --port=8080
+            --cpu=1
+            --memory=256Mi
+            --min-instances=0
+            --max-instances=4
+            --concurrency=100
+            --allow-unauthenticated
+
+      - name: Print service URLs
+        run: |
+          echo "=== Cloud Run Services ==="
+          gcloud run services list --region="${{ env.REGION }}" --filter="metadata.name~chronocanvas" --format="table(name,status.url)"
+          echo ""
+          API_URL=$(gcloud run services describe chronocanvas-api --region="${{ env.REGION }}" --format="value(status.url)")
+          echo "Health check: curl ${API_URL}/api/health"
