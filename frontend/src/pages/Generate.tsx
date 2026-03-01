@@ -244,6 +244,7 @@ export function Generate({ figureId, mode }: { figureId?: string; mode?: string 
                     currentAgent={activeRequest.data.current_agent}
                     status={activeRequest.data.status}
                     agentTrace={activeRequest.data.agent_trace ?? []}
+                    runType={activeRequest.data.run_type}
                   />
                 </div>
               )}
@@ -257,6 +258,7 @@ export function Generate({ figureId, mode }: { figureId?: string; mode?: string 
                     agentTrace={activeRequest.data.agent_trace}
                     llmCalls={activeRequest.data.llm_calls ?? undefined}
                     imageProgress={imageProgress}
+                    runType={activeRequest.data.run_type}
                   />
                 </div>
               )}

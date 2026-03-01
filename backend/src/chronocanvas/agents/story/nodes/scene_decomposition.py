@@ -80,6 +80,7 @@ async def scene_decomposition_node(state: StoryState) -> StoryState:
             temperature=0.5,
             max_tokens=4000,
             json_mode=True,
+            agent_name="scene_decomposition",
         )
 
         # Parse JSON from response

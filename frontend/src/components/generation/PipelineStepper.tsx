@@ -3,7 +3,7 @@ import { CheckCircle, Circle, Loader, XCircle } from "lucide-react";
 import type { LLMCallDetail } from "@/api/types";
 import type { ImageProgress } from "@/api/hooks/useGenerationWS";
 
-const PIPELINE_STAGES = [
+const PORTRAIT_STAGES = [
   { key: "extraction", label: "Extraction" },
   { key: "research", label: "Research" },
   { key: "face_search", label: "Face Search" },
@@ -14,12 +14,23 @@ const PIPELINE_STAGES = [
   { key: "export", label: "Export" },
 ] as const;
 
+const STORY_STAGES = [
+  { key: "story_orchestrator", label: "Orchestrator" },
+  { key: "character_extraction", label: "Character Extraction" },
+  { key: "scene_decomposition", label: "Scene Decomposition" },
+  { key: "scene_prompt_generation", label: "Prompt Generation" },
+  { key: "scene_image_generation", label: "Image Generation" },
+  { key: "storyboard_coherence", label: "Coherence Check" },
+  { key: "storyboard_export", label: "Export" },
+] as const;
+
 interface PipelineStepperProps {
   currentAgent: string | null;
   status: string;
   agentTrace: Array<Record<string, unknown>>;
   llmCalls?: LLMCallDetail[];
   imageProgress?: ImageProgress | null;
+  runType?: string;
 }
 
 function getStageStatus(
@@ -34,7 +45,8 @@ function getStageStatus(
   return "pending";
 }
 
-export function PipelineStepper({ currentAgent, status, agentTrace, llmCalls = [], imageProgress }: PipelineStepperProps) {
+export function PipelineStepper({ currentAgent, status, agentTrace, llmCalls = [], imageProgress, runType }: PipelineStepperProps) {
+  const stages = runType === "creative_story" ? STORY_STAGES : PORTRAIT_STAGES;
   const completedAgents = new Set(agentTrace.map((t) => String(t.agent)));
 
   const callsByAgent = new Map<string, LLMCallDetail[]>();
@@ -46,7 +58,7 @@ export function PipelineStepper({ currentAgent, status, agentTrace, llmCalls = [
 
   return (
     <div className="space-y-1">
-      {PIPELINE_STAGES.map((stage) => {
+      {stages.map((stage) => {
         const stageStatus = getStageStatus(stage.key, currentAgent, status, completedAgents);
         const calls = callsByAgent.get(stage.key) || [];
         const totalCost = calls.reduce((sum, c) => sum + c.cost, 0);

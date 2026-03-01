@@ -80,6 +80,7 @@ async def validation_node(state: AgentState) -> AgentState:
         task_type=TaskType.VALIDATION,
         temperature=0.3,
         json_mode=True,
+        agent_name="validation",
     )
 
     try:

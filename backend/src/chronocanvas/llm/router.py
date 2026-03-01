@@ -14,13 +14,14 @@ from chronocanvas.redis_client import publish_progress
 logger = logging.getLogger(__name__)
 
 # Default routing: which provider to prefer for each task type
+# For hackathon: default everything to Gemini (GCP-native)
 DEFAULT_ROUTING: dict[TaskType, str] = {
     TaskType.EXTRACTION: "gemini",
-    TaskType.RESEARCH: "claude",
-    TaskType.PROMPT_GENERATION: "claude",
-    TaskType.VALIDATION: "claude",
+    TaskType.RESEARCH: "gemini",
+    TaskType.PROMPT_GENERATION: "gemini",
+    TaskType.VALIDATION: "gemini",
     TaskType.ORCHESTRATION: "gemini",
-    TaskType.GENERAL: "ollama",
+    TaskType.GENERAL: "gemini",
 }
 
 
@@ -38,7 +39,16 @@ class LLMRouter:
         )
         self.cost_tracker = CostTracker()
 
-    def get_provider(self, task_type: TaskType = TaskType.GENERAL) -> LLMProvider:
+    def get_provider(
+        self,
+        task_type: TaskType = TaskType.GENERAL,
+        agent_name: str | None = None,
+    ) -> LLMProvider:
+        # Per-agent override takes precedence (from LLM_AGENT_ROUTING env var)
+        if agent_name and agent_name in settings.llm_agent_routing:
+            override = settings.llm_agent_routing[agent_name]
+            if override in self.providers:
+                return self.providers[override]
         preferred = DEFAULT_ROUTING.get(task_type, settings.default_llm_provider)
         if preferred in self.providers:
             return self.providers[preferred]
@@ -53,11 +63,12 @@ class LLMRouter:
         max_tokens: int = 2000,
         json_mode: bool = False,
         provider_override: str | None = None,
+        agent_name: str | None = None,
     ) -> LLMResponse:
         if provider_override and provider_override in self.providers:
             provider = self.providers[provider_override]
         else:
-            provider = self.get_provider(task_type)
+            provider = self.get_provider(task_type, agent_name=agent_name)
 
         # Fallback chain: preferred -> ollama -> any available
         requested_provider = provider.name
@@ -113,7 +124,7 @@ class LLMRouter:
         if provider_override and provider_override in self.providers:
             provider = self.providers[provider_override]
         else:
-            provider = self.get_provider(task_type)
+            provider = self.get_provider(task_type, agent_name=agent_name)
 
         requested_provider = provider.name
         fell_back = False

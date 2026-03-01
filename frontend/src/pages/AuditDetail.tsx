@@ -13,7 +13,7 @@ import { BookOpen, ChevronDown, ChevronLeft, ChevronRight, Copy, Download, Exter
 import type { AuditFeedback, GeneratedImage } from "@/api/types";
 import { MessageSquare, Send } from "lucide-react";
 
-const PIPELINE_STEPS = [
+const PORTRAIT_PIPELINE_STEPS = [
   { value: "orchestrator", label: "Orchestrator" },
   { value: "extraction", label: "Extraction" },
   { value: "research", label: "Research" },
@@ -23,6 +23,16 @@ const PIPELINE_STEPS = [
   { value: "validation", label: "Validation" },
   { value: "facial_compositing", label: "Facial Compositing" },
   { value: "export", label: "Export" },
+];
+
+const STORY_PIPELINE_STEPS = [
+  { value: "story_orchestrator", label: "Orchestrator" },
+  { value: "character_extraction", label: "Character Extraction" },
+  { value: "scene_decomposition", label: "Scene Decomposition" },
+  { value: "scene_prompt_generation", label: "Prompt Generation" },
+  { value: "scene_image_generation", label: "Image Generation" },
+  { value: "storyboard_coherence", label: "Coherence Check" },
+  { value: "storyboard_export", label: "Export" },
 ];
 
 export function AuditDetail({ requestId }: { requestId: string }) {
@@ -142,6 +152,7 @@ export function AuditDetail({ requestId }: { requestId: string }) {
             status={data.status}
             agentTrace={data.agent_trace ?? data.llm_calls.map((c) => ({ agent: c.agent, timestamp: c.timestamp }))}
             llmCalls={data.llm_calls}
+            runType={data.run_type}
           />
         </CardContent>
       </Card>
@@ -152,6 +163,7 @@ export function AuditDetail({ requestId }: { requestId: string }) {
         status={data.status}
         agentTrace={data.agent_trace ?? []}
         llmCalls={data.llm_calls}
+        runType={data.run_type}
       />
 
       {/* LLM Call Sections */}
@@ -340,7 +352,7 @@ export function AuditDetail({ requestId }: { requestId: string }) {
                 onChange={(e) => setRetryStep(e.target.value)}
                 className="flex-1 rounded-md border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm"
               >
-                {PIPELINE_STEPS.map((s) => (
+                {(data.run_type === "creative_story" ? STORY_PIPELINE_STEPS : PORTRAIT_PIPELINE_STEPS).map((s) => (
                   <option key={s.value} value={s.value}>{s.label}</option>
                 ))}
               </select>
@@ -606,11 +618,13 @@ function DAGCostCard({
   status,
   agentTrace,
   llmCalls,
+  runType,
 }: {
   currentAgent: string | null;
   status: string;
   agentTrace: Array<Record<string, unknown>>;
   llmCalls: import("@/api/types").LLMCallDetail[];
+  runType?: string;
 }) {
   const [activeTab, setActiveTab] = useState<DAGCostTab>("dag");
   const hasCost = llmCalls.length > 0;
@@ -660,6 +674,7 @@ function DAGCostCard({
             currentAgent={currentAgent}
             status={status}
             agentTrace={agentTrace}
+            runType={runType}
           />
         ) : (
           <CostTimeline llmCalls={llmCalls} />

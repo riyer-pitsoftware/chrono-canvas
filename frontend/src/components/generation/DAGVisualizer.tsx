@@ -78,9 +78,11 @@ interface DAGVisualizerProps {
   currentAgent: string | null;
   status: string;
   agentTrace: Array<Record<string, unknown>>;
+  runType?: string;
 }
 
-const AGENT_NODE_DEFS = [
+// Portrait pipeline nodes
+const PORTRAIT_NODE_DEFS = [
   { id: 'extraction', label: 'Extraction', x: 0, y: 60 },
   { id: 'research', label: 'Research', x: 155, y: 60 },
   { id: 'face_search', label: 'Face Search', x: 310, y: 60 },
@@ -91,7 +93,20 @@ const AGENT_NODE_DEFS = [
   { id: 'export', label: 'Export', x: 1080, y: 60 },
 ];
 
-const END_NODE_DEF = { id: 'END', x: 1225, y: 60 };
+const PORTRAIT_END_NODE = { id: 'END', x: 1225, y: 60 };
+
+// Story pipeline nodes
+const STORY_NODE_DEFS = [
+  { id: 'story_orchestrator', label: 'Orchestrator', x: 0, y: 60 },
+  { id: 'character_extraction', label: 'Characters', x: 165, y: 60 },
+  { id: 'scene_decomposition', label: 'Scenes', x: 310, y: 60 },
+  { id: 'scene_prompt_generation', label: 'Prompt Gen', x: 455, y: 60 },
+  { id: 'scene_image_generation', label: 'Image Gen', x: 610, y: 60 },
+  { id: 'storyboard_coherence', label: 'Coherence', x: 765, y: 60 },
+  { id: 'storyboard_export', label: 'Export', x: 910, y: 60 },
+];
+
+const STORY_END_NODE = { id: 'END', x: 1050, y: 60 };
 
 const GRAY_MARKER = { type: MarkerType.ArrowClosed, width: 10, height: 10 };
 const RED_MARKER = { type: MarkerType.ArrowClosed, width: 10, height: 10, color: '#ef4444' };
@@ -107,7 +122,7 @@ const LABEL_GRAY = { fontSize: 9, fill: '#6b7280' };
 const LABEL_RED = { fontSize: 9, fill: '#ef4444' };
 const LABEL_AMBER = { fontSize: 9, fill: '#d97706' };
 
-const STATIC_EDGES: Edge[] = [
+const PORTRAIT_EDGES: Edge[] = [
   // Direct happy-path edges
   { id: 'e-ex-re', source: 'extraction', target: 'research', style: EDGE_STYLE_DIRECT, markerEnd: GRAY_MARKER },
   { id: 'e-re-fsr', source: 'research', target: 'face_search', style: EDGE_STYLE_DIRECT, markerEnd: GRAY_MARKER },
@@ -178,14 +193,29 @@ const STATIC_EDGES: Edge[] = [
   },
 ];
 
-export function DAGVisualizer({ currentAgent, status, agentTrace }: DAGVisualizerProps) {
+const STORY_EDGES: Edge[] = [
+  { id: 's-orch-char', source: 'story_orchestrator', target: 'character_extraction', style: EDGE_STYLE_DIRECT, markerEnd: GRAY_MARKER },
+  { id: 's-char-scene', source: 'character_extraction', target: 'scene_decomposition', style: EDGE_STYLE_DIRECT, markerEnd: GRAY_MARKER },
+  { id: 's-scene-prompt', source: 'scene_decomposition', target: 'scene_prompt_generation', style: EDGE_STYLE_DIRECT, markerEnd: GRAY_MARKER },
+  { id: 's-prompt-img', source: 'scene_prompt_generation', target: 'scene_image_generation', style: EDGE_STYLE_DIRECT, markerEnd: GRAY_MARKER },
+  { id: 's-img-coh', source: 'scene_image_generation', target: 'storyboard_coherence', style: EDGE_STYLE_DIRECT, markerEnd: GRAY_MARKER },
+  { id: 's-coh-exp', source: 'storyboard_coherence', target: 'storyboard_export', style: EDGE_STYLE_DIRECT, markerEnd: GRAY_MARKER },
+  { id: 's-exp-end', source: 'storyboard_export', target: 'END', style: EDGE_STYLE_DIRECT, markerEnd: GRAY_MARKER },
+];
+
+export function DAGVisualizer({ currentAgent, status, agentTrace, runType }: DAGVisualizerProps) {
+  const isStory = runType === 'creative_story';
+  const nodeDefs = isStory ? STORY_NODE_DEFS : PORTRAIT_NODE_DEFS;
+  const endNodeDef = isStory ? STORY_END_NODE : PORTRAIT_END_NODE;
+  const edges = isStory ? STORY_EDGES : PORTRAIT_EDGES;
+
   const completedAgents = useMemo(
     () => new Set(agentTrace.map((t) => String(t.agent))),
     [agentTrace],
   );
 
   const nodes: Node[] = useMemo(() => {
-    const mainNodes = AGENT_NODE_DEFS.map((def) => ({
+    const mainNodes = nodeDefs.map((def) => ({
       id: def.id,
       type: 'pipeline' as const,
       position: { x: def.x, y: def.y },
@@ -198,20 +228,20 @@ export function DAGVisualizer({ currentAgent, status, agentTrace }: DAGVisualize
     const endNode: Node = {
       id: 'END',
       type: 'pipeline',
-      position: { x: END_NODE_DEF.x, y: END_NODE_DEF.y },
+      position: { x: endNodeDef.x, y: endNodeDef.y },
       data: { label: 'END', nodeStatus: endReached ? ('completed' as NodeStatus) : ('pending' as NodeStatus), isEnd: true },
       draggable: false,
       selectable: false,
     };
 
     return [...mainNodes, endNode];
-  }, [currentAgent, status, completedAgents]);
+  }, [currentAgent, status, completedAgents, nodeDefs, endNodeDef]);
 
   return (
     <div className="rounded-lg border border-[var(--border)] bg-white overflow-hidden" style={{ height: 260 }}>
       <ReactFlow
         nodes={nodes}
-        edges={STATIC_EDGES}
+        edges={edges}
         nodeTypes={nodeTypes}
         fitView
         fitViewOptions={{ padding: 0.18 }}

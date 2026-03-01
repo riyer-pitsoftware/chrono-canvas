@@ -4,6 +4,7 @@ import type { LLMCallDetail } from "@/api/types";
 // ── Color palette — one per agent ────────────────────────────────────────────
 
 const AGENT_COLORS: Record<string, string> = {
+  // Portrait pipeline
   orchestrator:     "#6366f1", // indigo
   extraction:       "#0ea5e9", // sky
   research:         "#10b981", // emerald
@@ -13,6 +14,14 @@ const AGENT_COLORS: Record<string, string> = {
   validation:       "#ef4444", // red
   facial_compositing: "#ec4899", // pink
   export:           "#8b5cf6", // violet
+  // Story pipeline
+  story_orchestrator:      "#6366f1", // indigo
+  character_extraction:    "#0ea5e9", // sky
+  scene_decomposition:     "#10b981", // emerald
+  scene_prompt_generation: "#f59e0b", // amber
+  scene_image_generation:  "#f97316", // orange
+  storyboard_coherence:    "#ef4444", // red
+  storyboard_export:       "#8b5cf6", // violet
 };
 
 const DEFAULT_COLOR = "#94a3b8";
@@ -55,7 +64,11 @@ function aggregate(calls: LLMCallDetail[]): AgentMetrics[] {
     }
   }
   // Return in pipeline order
-  const ORDER = ["orchestrator","extraction","research","face_search","prompt_generation","image_generation","validation","facial_compositing","export"];
+  const PORTRAIT_ORDER = ["orchestrator","extraction","research","face_search","prompt_generation","image_generation","validation","facial_compositing","export"];
+  const STORY_ORDER = ["story_orchestrator","character_extraction","scene_decomposition","scene_prompt_generation","scene_image_generation","storyboard_coherence","storyboard_export"];
+  // Auto-detect: if any story agent is present, use story order
+  const hasStoryAgent = [...map.keys()].some(k => STORY_ORDER.includes(k));
+  const ORDER = hasStoryAgent ? STORY_ORDER : PORTRAIT_ORDER;
   return [...map.values()].sort((a, b) => {
     const ai = ORDER.indexOf(a.agent);
     const bi = ORDER.indexOf(b.agent);
@@ -131,6 +144,13 @@ const AGENT_LABELS: Record<string, string> = {
   validation: "Validation",
   facial_compositing: "Facial Compositing",
   export: "Export",
+  story_orchestrator: "Orchestrator",
+  character_extraction: "Character Extraction",
+  scene_decomposition: "Scene Decomposition",
+  scene_prompt_generation: "Prompt Generation",
+  scene_image_generation: "Image Generation",
+  storyboard_coherence: "Coherence Check",
+  storyboard_export: "Export",
 };
 
 function MiniBar({ pct, color }: { pct: number; color: string }) {

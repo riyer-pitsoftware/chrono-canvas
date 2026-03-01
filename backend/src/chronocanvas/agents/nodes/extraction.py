@@ -39,6 +39,7 @@ async def extraction_node(state: AgentState) -> AgentState:
         task_type=TaskType.EXTRACTION,
         temperature=0.3,
         json_mode=True,
+        agent_name="extraction",
     )
 
     try:
@@ -58,6 +59,10 @@ async def extraction_node(state: AgentState) -> AgentState:
             "associated_locations": [],
             "attributes": {},
         }
+
+    # Ensure figure_name is never empty — fall back to raw input
+    if not data.get("figure_name"):
+        data["figure_name"] = input_text.strip() or "Unknown Figure"
 
     trace = state.get("agent_trace", [])
     trace.append({

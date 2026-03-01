@@ -27,7 +27,13 @@ class Settings(BaseSettings):
     serpapi_key: str = ""
 
     # LLM Routing
-    default_llm_provider: str = "ollama"
+    default_llm_provider: str = "gemini"
+    # Per-agent provider overrides (JSON): {"prompt_generation": "claude", "extraction": "gemini"}
+    # Agent names: orchestrator, extraction, research, face_search, prompt_generation,
+    #   image_generation, validation, story_orchestrator, character_extraction,
+    #   scene_decomposition, scene_prompt_generation, scene_image_generation,
+    #   storyboard_coherence, storyboard_export
+    llm_agent_routing: dict[str, str] = {}
     ollama_model: str = "llama3.1:8b"
     claude_model: str = "claude-sonnet-4-5-20250929"
     openai_model: str = "gpt-4o"

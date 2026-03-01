@@ -74,8 +74,10 @@ class ImagenGenerator(ImageGenerator):
             prompt,
         )
 
-        # Retry with exponential backoff for rate-limit errors (free tier: 2 img/min)
+        # Retry with exponential backoff for transient errors
+        # (rate limits on free tier + 503 service unavailable)
         max_retries = 3
+        _RETRYABLE = {"rate", "resource_exhausted", "429", "503", "unavailable"}
         for attempt in range(max_retries + 1):
             try:
                 response = await client.aio.models.generate_images(
@@ -89,14 +91,15 @@ class ImagenGenerator(ImageGenerator):
                 break
             except Exception as exc:
                 err_str = str(exc).lower()
-                if "rate" in err_str or "resource_exhausted" in err_str or "429" in err_str:
+                if any(tok in err_str for tok in _RETRYABLE):
                     if attempt < max_retries:
                         wait = 2 ** (attempt + 1)  # 2, 4, 8 seconds
                         logger.warning(
-                            "Imagen rate limited (attempt %d/%d), retrying in %ds",
+                            "Imagen transient error (attempt %d/%d), retrying in %ds: %s",
                             attempt + 1,
                             max_retries,
                             wait,
+                            exc,
                         )
                         await asyncio.sleep(wait)
                         continue

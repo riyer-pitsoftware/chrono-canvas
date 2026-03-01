@@ -3,12 +3,46 @@ import logging
 import time
 
 from chronocanvas.agents.state import AgentState, PromptState
+from chronocanvas.config import settings
 from chronocanvas.llm.base import TaskType
 from chronocanvas.llm.router import get_llm_router
 
 logger = logging.getLogger(__name__)
 
-PROMPT_GEN_TEMPLATE = """You are an expert at crafting Stable Diffusion XL prompts for photorealistic historical portraits.
+# ── Imagen prompt template (natural language, photorealistic focus) ───────────
+
+IMAGEN_PROMPT_TEMPLATE = """\
+You are an expert at writing image generation prompts for Google Imagen, which produces photorealistic images from natural-language descriptions.
+
+Based on the following research, write a vivid, detailed prompt for generating a photorealistic portrait photograph of this historical figure.
+
+Figure: {figure_name}
+Historical Context: {historical_context}
+Clothing: {clothing_details}
+Physical Description: {physical_description}
+Known Physical Traits: {notable_features}
+Art Style: {art_style_reference}
+
+Requirements:
+1. Write in natural language, NOT comma-separated tags. Imagen works best with descriptive prose.
+2. DO NOT use weight syntax like (feature:1.2) — Imagen ignores this.
+3. Describe the person as if directing a professional portrait photographer:
+   - Specify exact skin tone, texture, and any visible pores, wrinkles, or imperfections
+   - Describe eye color, shape, and expression in detail
+   - Describe facial bone structure, nose shape, lip shape precisely
+   - Specify exact hairstyle, hair texture, hair color
+4. Describe period-accurate clothing with specific fabrics, patterns, colors, and draping
+5. Specify lighting setup: e.g. "Rembrandt lighting with a soft key light from the upper left, subtle fill light, and natural catchlights in the eyes"
+6. Specify camera: "Shot on an 85mm portrait lens at f/2.8, shallow depth of field with sharp focus on the eyes, softly blurred background"
+7. End with: "Professional DSLR photograph, RAW quality, 8K resolution, natural skin texture, film grain"
+8. Keep it under 200 words
+
+Return ONLY the prompt text, no explanations."""
+
+# ── SDXL prompt template (weighted tag syntax for ComfyUI/SD) ────────────────
+
+SDXL_PROMPT_TEMPLATE = """\
+You are an expert at crafting Stable Diffusion XL prompts for photorealistic historical portraits.
 
 Based on the following research, create a detailed SDXL prompt for generating a highly realistic portrait photograph.
 
@@ -34,6 +68,12 @@ IMPORTANT: This is for SDXL with Juggernaut XL checkpoint which excels at photor
 
 Return ONLY the prompt text, no explanations."""
 
+def _get_prompt_template() -> str:
+    """Select prompt template based on configured image provider."""
+    if settings.image_provider == "imagen":
+        return IMAGEN_PROMPT_TEMPLATE
+    return SDXL_PROMPT_TEMPLATE
+
 NEGATIVE_PROMPT = (
     "painting, illustration, drawing, art, sketch, cartoon, anime, 3d render, "
     "cgi, digital art, plastic skin, smooth skin, airbrushed, mannequin, doll, "
@@ -53,7 +93,7 @@ async def prompt_generation_node(state: AgentState) -> AgentState:
     logger.info(f"Prompt generation agent: creating prompt for {figure_name}")
 
     response = await get_llm_router().generate_stream(
-        prompt=PROMPT_GEN_TEMPLATE.format(
+        prompt=_get_prompt_template().format(
             figure_name=figure_name,
             historical_context=res.get("historical_context", ""),
             clothing_details=res.get("clothing_details", ""),

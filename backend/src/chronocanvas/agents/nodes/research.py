@@ -96,8 +96,8 @@ async def research_node(state: AgentState) -> AgentState:
                 "sources": [],
             }
 
-        # Store in cache
-        if settings.research_cache_enabled:
+        # Store in cache (skip if figure_name is empty — NOT NULL constraint)
+        if settings.research_cache_enabled and figure_name:
             await _get_cache_service().store(
                 figure_name, time_period, region, data, response.cost
             )
