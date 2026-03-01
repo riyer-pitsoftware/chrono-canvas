@@ -6,6 +6,7 @@ from chronocanvas.agents.story.nodes.scene_decomposition import scene_decomposit
 from chronocanvas.agents.story.nodes.scene_image_generation import scene_image_generation_node
 from chronocanvas.agents.story.nodes.scene_prompt_generation import scene_prompt_generation_node
 from chronocanvas.agents.story.nodes.story_orchestrator import story_orchestrator_node
+from chronocanvas.agents.story.nodes.storyboard_coherence import storyboard_coherence_node
 from chronocanvas.agents.story.nodes.storyboard_export import storyboard_export_node
 from chronocanvas.agents.story.state import StoryState
 
@@ -24,6 +25,7 @@ def build_story_graph() -> StateGraph:
     graph.add_node("scene_decomposition", scene_decomposition_node)
     graph.add_node("scene_prompt_generation", scene_prompt_generation_node)
     graph.add_node("scene_image_generation", scene_image_generation_node)
+    graph.add_node("storyboard_coherence", storyboard_coherence_node)
     graph.add_node("storyboard_export", storyboard_export_node)
 
     graph.set_entry_point("story_orchestrator")
@@ -35,7 +37,8 @@ def build_story_graph() -> StateGraph:
     graph.add_edge("character_extraction", "scene_decomposition")
     graph.add_edge("scene_decomposition", "scene_prompt_generation")
     graph.add_edge("scene_prompt_generation", "scene_image_generation")
-    graph.add_edge("scene_image_generation", "storyboard_export")
+    graph.add_edge("scene_image_generation", "storyboard_coherence")
+    graph.add_edge("storyboard_coherence", "storyboard_export")
     graph.add_edge("storyboard_export", END)
 
     return graph

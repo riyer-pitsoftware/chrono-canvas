@@ -76,6 +76,7 @@ async def run_story_pipeline(
                             "scene_decomposition": RequestStatus.EXTRACTING,
                             "scene_prompt_generation": RequestStatus.GENERATING_PROMPT,
                             "scene_image_generation": RequestStatus.GENERATING_IMAGE,
+                            "storyboard_coherence": RequestStatus.GENERATING_IMAGE,
                             "storyboard_export": RequestStatus.COMPLETED,
                         }
                         agent_status = status_map.get(current_agent, RequestStatus.EXTRACTING)
@@ -157,6 +158,9 @@ async def run_story_pipeline(
                                 "image_prompt": p.get("image_prompt"),
                                 "image_path": p.get("image_path"),
                                 "status": p.get("status"),
+                                "coherence_score": p.get("coherence_score"),
+                                "coherence_issues": p.get("coherence_issues", []),
+                                "coherence_suggestion": p.get("coherence_suggestion", ""),
                             }
                             for p in full_state.get("panels", [])
                         ],

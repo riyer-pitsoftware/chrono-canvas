@@ -15,6 +15,10 @@ class StoryPanel(TypedDict, total=False):
     height: int
     status: str  # "pending" | "generating" | "completed" | "failed"
     error: str
+    # Coherence (populated by storyboard_coherence node)
+    coherence_score: float | None
+    coherence_issues: list[str]
+    coherence_suggestion: str
 
 
 class StoryState(TypedDict, total=False):

@@ -35,6 +35,9 @@ async def storyboard_export_node(state: StoryState) -> StoryState:
                 "image_prompt": p.get("image_prompt"),
                 "image_path": p.get("image_path"),
                 "status": p.get("status"),
+                "coherence_score": p.get("coherence_score"),
+                "coherence_issues": p.get("coherence_issues", []),
+                "coherence_suggestion": p.get("coherence_suggestion", ""),
             }
             for p in panels
         ],
