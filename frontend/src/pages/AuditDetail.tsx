@@ -8,6 +8,7 @@ import { PipelineStepper } from "@/components/generation/PipelineStepper";
 import { StateInspector } from "@/components/generation/StateInspector";
 import { CostTimeline } from "@/components/generation/CostTimeline";
 import { DAGVisualizer } from "@/components/generation/DAGVisualizer";
+import { StoryboardView } from "@/components/generation/StoryboardView";
 import { BookOpen, ChevronDown, ChevronLeft, ChevronRight, Copy, Download, ExternalLink, RotateCcw, ShieldCheck, Trash2, X } from "lucide-react";
 import type { AuditFeedback, GeneratedImage } from "@/api/types";
 import { MessageSquare, Send } from "lucide-react";
@@ -279,6 +280,23 @@ export function AuditDetail({ requestId }: { requestId: string }) {
                 {cat.reasoning && <p className="text-xs mt-1">{cat.reasoning}</p>}
               </div>
             ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Storyboard (story mode) */}
+      {data.storyboard_data && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">
+              Storyboard ({data.storyboard_data.completed_scenes} / {data.storyboard_data.total_scenes} scenes)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <StoryboardView
+              storyboard={data.storyboard_data}
+              requestId={requestId}
+            />
           </CardContent>
         </Card>
       )}

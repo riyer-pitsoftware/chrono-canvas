@@ -10,6 +10,9 @@ class StoryPanel(TypedDict, total=False):
     image_prompt: str
     negative_prompt: str
     image_path: str
+    provider: str
+    width: int
+    height: int
     status: str  # "pending" | "generating" | "completed" | "failed"
     error: str
 

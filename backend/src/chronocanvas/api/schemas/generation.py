@@ -120,3 +120,5 @@ class AuditDetailResponse(BaseModel):
     images: list[ImageResponse] = Field(default_factory=list)
     state_snapshots: list[StateSnapshot] = Field(default_factory=list)
     agent_trace: list[dict[str, Any]] = Field(default_factory=list)
+    storyboard_data: dict[str, Any] | None = None
+    run_type: str = "portrait"

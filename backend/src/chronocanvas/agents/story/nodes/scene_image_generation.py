@@ -66,6 +66,9 @@ async def scene_image_generation_node(state: StoryState) -> StoryState:
             )
 
             panel["image_path"] = result.file_path
+            panel["provider"] = result.provider
+            panel["width"] = result.width
+            panel["height"] = result.height
             panel["status"] = "completed"
             completed_scenes += 1
 

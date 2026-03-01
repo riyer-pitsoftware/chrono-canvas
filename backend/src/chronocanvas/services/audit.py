@@ -82,4 +82,6 @@ class AuditProjector:
             images=[ImageResponse.model_validate(img) for img in images],
             state_snapshots=state_snapshots,
             agent_trace=request.agent_trace or [],
+            storyboard_data=request.storyboard_data,
+            run_type=request.run_type or "portrait",
         )

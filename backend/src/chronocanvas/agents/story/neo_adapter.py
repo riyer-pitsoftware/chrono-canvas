@@ -20,8 +20,10 @@ class NeoLLMBridge:
 
     def __init__(self) -> None:
         self.last_response: LLMResponse | None = None
+        self.last_prompt: str | None = None
 
     async def __call__(self, prompt: str) -> str:
+        self.last_prompt = prompt
         router = get_llm_router()
         self.last_response = await router.generate(
             prompt=prompt,

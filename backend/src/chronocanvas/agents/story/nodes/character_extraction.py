@@ -39,6 +39,9 @@ async def character_extraction_node(state: StoryState) -> StoryState:
         llm_calls.append({
             "agent": "character_extraction",
             "timestamp": time.time(),
+            "user_prompt": bridge.last_prompt,
+            "raw_response": resp.content if resp else None,
+            "parsed_output": result,
             "provider": resp.provider if resp else "gemini",
             "model": resp.model if resp else "unknown",
             "input_tokens": resp.input_tokens if resp else 0,

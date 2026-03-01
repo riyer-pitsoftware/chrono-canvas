@@ -43,6 +43,7 @@ services:
       DATABASE_URL: postgresql+asyncpg://chronocanvas:chronocanvas@db:5432/chronocanvas
       REDIS_URL: redis://redis:6379/0
       COMFYUI_API_URL: http://host.docker.internal:8188
+      PYTHONPATH: /app/src:/app/neo-mumbai-noir
       RUN_MIGRATIONS: "true"
     ports:
       - "8000:8000"
@@ -59,6 +60,38 @@ services:
     volumes:
       - output:/app/output
       - uploads:/app/uploads
+      - ../neo-mumbai-noir:/app/neo-mumbai-noir
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    tmpfs:
+      - /tmp
+
+  worker:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.api
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://chronocanvas:chronocanvas@db:5432/chronocanvas
+      REDIS_URL: redis://redis:6379/0
+      PYTHONPATH: /app/src:/app/neo-mumbai-noir
+      RUN_MIGRATIONS: "false"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - db-net
+      - worker-net
+      - llm-net
+    volumes:
+      - output:/app/output
+      - uploads:/app/uploads
+      - ../neo-mumbai-noir:/app/neo-mumbai-noir
+    command: ["arq", "chronocanvas.worker.WorkerSettings"]
     security_opt:
       - no-new-privileges:true
     cap_drop:

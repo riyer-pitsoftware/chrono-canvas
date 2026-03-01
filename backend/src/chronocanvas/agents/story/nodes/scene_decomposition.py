@@ -107,6 +107,9 @@ async def scene_decomposition_node(state: StoryState) -> StoryState:
         llm_calls.append({
             "agent": "scene_decomposition",
             "timestamp": time.time(),
+            "user_prompt": prompt,
+            "raw_response": content,
+            "parsed_output": parsed,
             "provider": response.provider,
             "model": response.model,
             "input_tokens": response.input_tokens,

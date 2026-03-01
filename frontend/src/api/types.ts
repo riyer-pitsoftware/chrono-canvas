@@ -223,6 +223,8 @@ export interface AuditDetail {
   images: GeneratedImage[];
   state_snapshots: StateSnapshot[];
   agent_trace: Array<Record<string, unknown>>;
+  storyboard_data: StoryboardData | null;
+  run_type: string;
 }
 
 // ── Audit Feedback ────────────────────────────────────────────────────────
