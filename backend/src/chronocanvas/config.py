@@ -34,7 +34,8 @@ class Settings(BaseSettings):
     gemini_model: str = "gemini-2.5-flash"
 
     # Image Generation
-    image_provider: str = "mock"
+    image_provider: str = "imagen"
+    imagen_model: str = "imagen-4.0-fast-generate-001"
     sd_api_url: str = "http://localhost:7860"
     comfyui_api_url: str = "http://localhost:8188"
     comfyui_model: str = "sdxl"  # "sdxl" or "flux"

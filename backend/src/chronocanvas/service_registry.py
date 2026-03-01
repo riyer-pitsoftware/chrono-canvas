@@ -68,6 +68,7 @@ def init_registry() -> None:
     from chronocanvas.config import settings
     from chronocanvas.imaging.comfyui_client import ComfyUIClient
     from chronocanvas.imaging.facefusion_client import FaceFusionClient
+    from chronocanvas.imaging.imagen_client import ImagenGenerator
     from chronocanvas.imaging.mock_face_swap import MockFaceSwapClient
     from chronocanvas.imaging.mock_generator import MockImageGenerator
     from chronocanvas.imaging.sd_client import StableDiffusionClient
@@ -79,7 +80,10 @@ def init_registry() -> None:
             return StableDiffusionClient()
         if settings.image_provider == "comfyui":
             return ComfyUIClient()
-        return MockImageGenerator()
+        if settings.image_provider == "mock":
+            return MockImageGenerator()
+        # Default: Imagen (requires GOOGLE_API_KEY)
+        return ImagenGenerator()
 
     def _compositing_client_factory():
         if settings.facefusion_enabled:
