@@ -24,6 +24,7 @@ RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTr
 
 COPY backend/alembic/ alembic/
 COPY backend/alembic.ini .
+COPY backend/scripts/ scripts/
 COPY seed/ /app/seed/
 
 # Entrypoint scripts for dependency waiting

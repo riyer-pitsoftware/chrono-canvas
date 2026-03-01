@@ -47,7 +47,7 @@ def main() -> int:
     print("1. Creating generation request...")
     try:
         resp = _request("POST", "/api/generate", {
-            "input_text": "A Renaissance portrait of a scholar reading by candlelight",
+            "input_text": "A fictional Renaissance alchemist in a candle-lit workshop surrounded by mysterious potions",
             "run_type": "portrait",
         })
         request_id = resp["id"]
