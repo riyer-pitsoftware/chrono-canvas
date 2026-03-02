@@ -22,13 +22,16 @@ CHARACTERS IN SCENE: {characters}
 MOOD: {mood}
 SETTING: {setting}
 
-CHARACTER DETAILS:
+CHARACTER VISUAL ANCHORS (copy word-for-word into your prompt):
 {character_details}
 
 Requirements:
 - Write in natural, descriptive prose — NOT comma-separated tags or weight syntax like (feature:1.2)
-- Write 80-150 words describing exactly what a camera would capture in this moment
-- Describe each character's physical appearance in detail: exact skin tone, facial features, body type, expression, posture, clothing fabrics and colors
+- Write 100-200 words describing exactly what a camera would capture in this moment
+- You MUST include each character's Visual Anchor description word-for-word. Do not paraphrase.
+- Every character must maintain IDENTICAL physical proportions, skin tone, and facial features across all scenes
+- Describe character heights relative to each other — maintain these ratios
+- Use consistent camera distance and framing conventions for recurring characters
 - Specify the camera setup: lens focal length, angle (low/high/eye-level), framing (close-up/medium/wide), depth of field
 - Specify lighting precisely: direction, quality (hard/soft), color temperature, shadows
 - Describe the environment and atmosphere with sensory detail
@@ -80,26 +83,112 @@ def _get_scene_prompt_template() -> str:
     return SDXL_SCENE_PROMPT_TEMPLATE
 
 
+CHARACTER_ANCHOR_PROMPT = """\
+You are a character design consultant for a visual storyboard. Given the character data below, \
+produce a canonical Visual Anchor for each character — a precise 2-3 sentence physical description \
+that an image generator can reproduce identically across multiple scenes.
+
+For each character, specify:
+- Exact height descriptor relative to other characters (e.g. "noticeably taller than X", "same height as Y")
+- Body build (slim, stocky, muscular, etc.)
+- Exact skin tone (use specific descriptors like "deep brown", "pale olive", "warm tan")
+- Hair: style, length, color (be precise — "shoulder-length wavy auburn hair")
+- Distinguishing marks or features (scars, glasses, jewelry, tattoos)
+- Clothing (specific fabrics, colors, fit)
+
+CHARACTERS:
+{character_json}
+
+Output ONLY valid JSON — a list of objects:
+[
+  {{"name": "CharName", "visual_anchor": "2-3 sentence canonical description..."}}
+]"""
+
+
+async def _build_character_anchors(
+    characters: list[dict],
+    router,
+    request_id: str,
+) -> tuple[dict[str, str], dict | None]:
+    """Generate canonical visual anchor descriptions for all characters.
+
+    Returns (name→anchor mapping, llm_call_record or None).
+    """
+    if not characters:
+        return {}, None
+
+    char_json = json.dumps(
+        [{k: v for k, v in c.items() if k != "visual_anchor"} for c in characters],
+        indent=2,
+    )
+    prompt = CHARACTER_ANCHOR_PROMPT.format(character_json=char_json)
+
+    try:
+        response = await router.generate(
+            prompt=prompt,
+            task_type=TaskType.PROMPT_GENERATION,
+            temperature=0.3,
+            max_tokens=1500,
+            json_mode=True,
+            agent_name="character_anchor_generation",
+        )
+
+        content = response.content
+        json_start = content.find("[")
+        json_end = content.rfind("]") + 1
+        anchors_list = json.loads(content[json_start:json_end])
+
+        anchors = {a["name"]: a["visual_anchor"] for a in anchors_list if "name" in a}
+
+        llm_record = {
+            "agent": "character_anchor_generation",
+            "timestamp": time.time(),
+            "user_prompt": prompt,
+            "raw_response": content,
+            "parsed_output": anchors,
+            "provider": response.provider,
+            "model": response.model,
+            "input_tokens": response.input_tokens,
+            "output_tokens": response.output_tokens,
+            "cost": response.cost,
+            "duration_ms": response.duration_ms,
+            "requested_provider": response.requested_provider,
+            "fallback": response.fallback,
+        }
+        return anchors, llm_record
+
+    except Exception as e:
+        logger.warning(
+            "Character anchor generation failed [request_id=%s]: %s",
+            request_id, e,
+        )
+        return {}, None
+
+
 def _character_details(characters_in_scene: list[str], all_characters: list[dict]) -> str:
+    """Build character detail block, preferring visual_anchor if available."""
     char_map = {c.get("name", ""): c for c in all_characters}
     lines = []
     for name in characters_in_scene:
         char = char_map.get(name)
         if char:
-            parts = []
-            if char.get("age"):
-                parts.append(f"age: {char['age']}")
-            if char.get("ethnicity"):
-                parts.append(f"ethnicity: {char['ethnicity']}")
-            if char.get("gender"):
-                parts.append(f"gender: {char['gender']}")
-            if char.get("clothing"):
-                parts.append(f"clothing: {char['clothing']}")
-            if char.get("facial_features"):
-                features = char["facial_features"]
-                if isinstance(features, list):
-                    parts.append(f"features: {', '.join(features)}")
-            lines.append(f"- {name}: {', '.join(parts)}")
+            if char.get("visual_anchor"):
+                lines.append(f"- {name} [Visual Anchor]: {char['visual_anchor']}")
+            else:
+                parts = []
+                if char.get("age"):
+                    parts.append(f"age: {char['age']}")
+                if char.get("ethnicity"):
+                    parts.append(f"ethnicity: {char['ethnicity']}")
+                if char.get("gender"):
+                    parts.append(f"gender: {char['gender']}")
+                if char.get("clothing"):
+                    parts.append(f"clothing: {char['clothing']}")
+                if char.get("facial_features"):
+                    features = char["facial_features"]
+                    if isinstance(features, list):
+                        parts.append(f"features: {', '.join(features)}")
+                lines.append(f"- {name}: {', '.join(parts)}")
         else:
             lines.append(f"- {name}: (no details available)")
     return "\n".join(lines) if lines else "No specific character details."
@@ -204,18 +293,60 @@ async def scene_prompt_generation_node(state: StoryState) -> StoryState:
 
     router = get_llm_router()
 
+    # Build canonical visual anchors for all characters (one LLM call)
+    anchors, anchor_llm_record = await _build_character_anchors(
+        characters, router, request_id,
+    )
+    if anchor_llm_record:
+        llm_calls.append(anchor_llm_record)
+
+    # Inject visual anchors into character dicts
+    for char in characters:
+        name = char.get("name", "")
+        if name in anchors:
+            char["visual_anchor"] = anchors[name]
+
+    trace.append({
+        "agent": "character_anchor_generation",
+        "timestamp": time.time(),
+        "anchors_generated": len(anchors),
+        "character_names": list(anchors.keys()),
+    })
+
+    # Determine which scenes to generate (all, or only regen targets)
+    regen_scenes = state.get("regen_scenes", [])
+    if regen_scenes:
+        target_scenes = [s for s in scenes if s.get("scene_index") in regen_scenes]
+        logger.info(
+            "Regenerating prompts for %d scenes: %s [request_id=%s]",
+            len(target_scenes), regen_scenes, request_id,
+        )
+    else:
+        target_scenes = scenes
+
     # Generate all scene prompts concurrently
     results = await asyncio.gather(*(
         _generate_prompt_for_scene(scene, characters, router, request_id)
-        for scene in scenes
+        for scene in target_scenes
     ))
 
-    # Collect results in scene order
-    panels: list[StoryPanel] = []
+    # Collect results — merge with existing panels if regenerating
+    existing_panels = list(state.get("panels", []))
+    new_panels: list[StoryPanel] = []
     for panel, llm_record in results:
-        panels.append(panel)
+        new_panels.append(panel)
         if llm_record:
             llm_calls.append(llm_record)
+
+    if regen_scenes and existing_panels:
+        # Replace only the regenerated scenes in the existing panel list
+        regen_map = {p["scene_index"]: p for p in new_panels}
+        panels = [
+            regen_map.get(p.get("scene_index"), p)
+            for p in existing_panels
+        ]
+    else:
+        panels = new_panels
 
     trace.append({
         "agent": "scene_prompt_generation",
@@ -229,4 +360,5 @@ async def scene_prompt_generation_node(state: StoryState) -> StoryState:
         "panels": panels,
         "agent_trace": trace,
         "llm_calls": llm_calls,
+        "regen_scenes": [],  # clear after processing
     }

@@ -17,6 +17,13 @@ def _should_continue_after_orchestrator(state: StoryState) -> str:
     return "continue"
 
 
+def _should_regen_after_coherence(state: StoryState) -> str:
+    """Route to regen cycle if coherence flagged scenes, else export."""
+    if state.get("regen_scenes"):
+        return "regen"
+    return "export"
+
+
 def build_story_graph() -> StateGraph:
     graph = StateGraph(StoryState)
 
@@ -38,7 +45,11 @@ def build_story_graph() -> StateGraph:
     graph.add_edge("scene_decomposition", "scene_prompt_generation")
     graph.add_edge("scene_prompt_generation", "scene_image_generation")
     graph.add_edge("scene_image_generation", "storyboard_coherence")
-    graph.add_edge("storyboard_coherence", "storyboard_export")
+    graph.add_conditional_edges(
+        "storyboard_coherence",
+        _should_regen_after_coherence,
+        {"regen": "scene_prompt_generation", "export": "storyboard_export"},
+    )
     graph.add_edge("storyboard_export", END)
 
     return graph

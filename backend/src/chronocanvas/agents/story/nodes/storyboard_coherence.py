@@ -201,11 +201,31 @@ async def storyboard_coherence_node(state: StoryState) -> StoryState:
             "suggested_order": overall.get("suggested_order"),
         })
 
+        # Check if character consistency warrants regeneration
+        char_score = overall.get("character_consistency_score", 1.0)
+        retry_count = state.get("coherence_retry_count", 0)
+        regen_scenes: list[int] = []
+
+        if char_score < 0.6 and retry_count < 1:
+            # Identify worst-scoring scenes for regeneration
+            scored = [
+                (p.get("scene_index", i), p.get("coherence_score", 1.0))
+                for i, p in enumerate(coherence_data.get("panels", []))
+            ]
+            scored.sort(key=lambda x: x[1])
+            # Regen the bottom half (at least 1 scene)
+            n_regen = max(1, len(scored) // 2)
+            regen_scenes = [idx for idx, _score in scored[:n_regen]]
+            logger.info(
+                "Character consistency %.2f < 0.6 — flagging scenes %s for regen [request_id=%s]",
+                char_score, regen_scenes, request_id,
+            )
+
         logger.info(
             "Coherence review complete: flow=%.2f style=%.2f chars=%.2f [request_id=%s]",
             overall.get("narrative_flow_score", 0),
             overall.get("style_consistency_score", 0),
-            overall.get("character_consistency_score", 0),
+            char_score,
             request_id,
         )
 
@@ -215,6 +235,7 @@ async def storyboard_coherence_node(state: StoryState) -> StoryState:
             "Storyboard coherence check failed [request_id=%s]: %s",
             request_id, e,
         )
+        regen_scenes = []
         # Non-fatal: coherence is additive, don't fail the pipeline
         trace.append({
             "agent": "storyboard_coherence",
@@ -223,9 +244,15 @@ async def storyboard_coherence_node(state: StoryState) -> StoryState:
             "panels_reviewed": len(completed_panels),
         })
 
-    return {
+    result: dict = {
         "current_agent": "storyboard_coherence",
         "panels": panels,
         "agent_trace": trace,
         "llm_calls": llm_calls,
     }
+
+    if regen_scenes:
+        result["regen_scenes"] = regen_scenes
+        result["coherence_retry_count"] = state.get("coherence_retry_count", 0) + 1
+
+    return result

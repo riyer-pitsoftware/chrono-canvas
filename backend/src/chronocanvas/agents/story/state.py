@@ -41,6 +41,10 @@ class StoryState(TypedDict, total=False):
     agent_trace: list[dict[str, Any]]
     llm_calls: list[dict[str, Any]]
 
+    # Coherence regen
+    regen_scenes: list[int]  # scene indices to regenerate
+    coherence_retry_count: int  # caps regen cycles (max 1)
+
     # Control
     current_agent: str
     error: str | None
