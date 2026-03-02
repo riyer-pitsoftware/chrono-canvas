@@ -89,6 +89,12 @@ class Settings(BaseSettings):
     invariant_checks_enabled: bool = True    # run pre/postcondition checks on pipeline nodes
     invariant_strict: bool = False           # raise on violation (True) vs log warning (False)
 
+    # Hackathon mode
+    hackathon_mode: bool = False  # When True, UI defaults to Story Director
+
+    # Hackathon strict Gemini mode
+    hackathon_strict_gemini: bool = False  # When True, fail fast instead of falling back away from Gemini
+
     # Logging
     log_level: str = "INFO"
 

@@ -1,7 +1,8 @@
 import { BarChart3, BookOpen, Download, FileSearch, Home, Image, LayoutDashboard, Settings, Shield, Users, Cpu, Scroll, Database, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useHackathonMode } from "@/api/hooks/useConfig";
 
-const navItems = [
+const defaultNavItems = [
   { label: "Home", href: "/", icon: Home },
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Timeline", href: "/timeline", icon: Scroll },
@@ -11,6 +12,21 @@ const navItems = [
   { label: "Audit", href: "/audit", icon: FileSearch },
   { label: "Memory", href: "/memory", icon: Database },
   { label: "Export", href: "/export", icon: Download },
+  { label: "Eval", href: "/eval", icon: BarChart3 },
+  { label: "Admin", href: "/admin", icon: Settings },
+];
+
+// In hackathon mode, Story Director (Generate) is first, admin/eval items move to the end
+const hackathonNavItems = [
+  { label: "Story Director", href: "/generate?mode=creative_story", icon: Image },
+  { label: "Home", href: "/", icon: Home },
+  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { label: "Timeline", href: "/timeline", icon: Scroll },
+  { label: "Export", href: "/export", icon: Download },
+  { label: "Figures", href: "/figures", icon: Users },
+  { label: "Validate", href: "/validate", icon: Shield },
+  { label: "Memory", href: "/memory", icon: Database },
+  { label: "Audit", href: "/audit", icon: FileSearch },
   { label: "Eval", href: "/eval", icon: BarChart3 },
   { label: "Admin", href: "/admin", icon: Settings },
 ];
@@ -26,7 +42,13 @@ export function Sidebar({
   collapsed: boolean;
   onToggle: () => void;
 }) {
+  const hackathonMode = useHackathonMode();
+  const navItems = hackathonMode ? hackathonNavItems : defaultNavItems;
   const guideActive = currentPath === "/guide";
+
+  // For active-state matching, strip query params from both sides
+  const currentPathname = currentPath.split("?")[0];
+
   return (
     <aside
       className={cn(
@@ -69,7 +91,8 @@ export function Sidebar({
       <nav className={cn("flex-1 px-3", collapsed && "px-0 flex flex-col items-center")}>
         {navItems.map((item) => {
           const Icon = item.icon;
-          const active = currentPath === item.href;
+          const itemPathname = item.href.split("?")[0];
+          const active = currentPathname === itemPathname;
           return (
             <button
               key={item.href}

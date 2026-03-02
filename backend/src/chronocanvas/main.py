@@ -5,6 +5,7 @@ from arq import create_pool
 from arq.connections import RedisSettings
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
 
@@ -14,6 +15,7 @@ from chronocanvas.api.middleware import AuditLoggingMiddleware
 from chronocanvas.api.router import api_router
 from chronocanvas.api.websocket import generation_websocket
 from chronocanvas.config import settings
+from chronocanvas.llm.router import GeminiUnavailableError
 from chronocanvas.redis_client import close_redis
 from chronocanvas.service_registry import init_registry
 
@@ -67,6 +69,11 @@ def create_app() -> FastAPI:
     )
     app.add_middleware(AuditLoggingMiddleware)
     app.add_middleware(SecurityHeadersMiddleware)
+
+    # Exception handlers
+    @app.exception_handler(GeminiUnavailableError)
+    async def gemini_unavailable_handler(request: Request, exc: GeminiUnavailableError):
+        return JSONResponse(status_code=503, content={"detail": str(exc)})
 
     # API routes
     app.include_router(api_router)

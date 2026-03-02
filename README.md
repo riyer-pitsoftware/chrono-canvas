@@ -62,6 +62,38 @@ Verify the cold start with `make smoke-test` — runs 8 checks against the live 
 
 ---
 
+## Hackathon: Creative Storyteller with Gemini
+
+**Category:** Creative Storyteller with Gemini interleaved output
+
+ChronoCanvas uses **Gemini 2.5 Flash multimodal** to power an end-to-end story generation pipeline: research, narration, image generation, and storyboard coherence review — all orchestrated as a LangGraph agent with a full audit trail.
+
+### GCP services used
+
+| GCP Service | Role in ChronoCanvas |
+|---|---|
+| **Gemini** (via google-genai SDK) | All LLM calls in Story Director mode — scene narration, dialogue, panel layout |
+| **Imagen** (via google-genai SDK) | Image generation for every story panel and portrait |
+| **Gemini multimodal** | Storyboard coherence review — evaluates character consistency and art style across panels using images + text |
+| **Cloud Run** | Managed deployment of API, worker, and frontend services |
+| **Cloud SQL** (PostgreSQL) | Persistent storage for generations, audit logs, and validation results |
+| **Memorystore** (Redis) | Real-time streaming via pub/sub + ARQ job queue |
+
+### SDK usage
+
+All Gemini and Imagen calls go through the **`google-genai` Python SDK** (`google.genai.Client`). No REST wrappers — direct SDK integration in:
+- `backend/src/chronocanvas/llm/providers/gemini.py` — Gemini LLM provider
+- `backend/src/chronocanvas/imaging/imagen_client.py` — Imagen image generation
+- `backend/src/chronocanvas/agents/nodes/storyboard_coherence.py` — Gemini multimodal coherence check
+
+### Verify it yourself
+
+1. **Run a generation** and open the audit trail in the UI — every LLM call shows `provider: "gemini"` with token counts and cost.
+2. **Check the database directly:** `docker exec chrono-canvas-db-1 psql -U chronocanvas -c "SELECT provider, model, token_count, cost FROM audit_logs ORDER BY created_at DESC LIMIT 10;"` — confirms Gemini is the active provider.
+3. **Run the smoke test:** `make smoke-test` — verifies the full pipeline end-to-end including LLM calls, image generation, and audit logging.
+
+---
+
 ## What it does
 
 | # | Pipeline node | Default LLM | Role |

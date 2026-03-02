@@ -94,6 +94,25 @@ All configuration is via environment variables. Copy `.env.example` to `.env` to
 | `VALIDATION_RETRY_ENABLED` | When `false`, validation scores but never triggers the regenerate loop | `true` |
 | `FACE_SEARCH_ENABLED` | When `false`, face_search node is skipped entirely | `true` |
 
+### Hackathon flags
+
+| Variable | Description | Default |
+|---|---|---|
+| `HACKATHON_MODE` | When `true`, UI defaults to Story Director mode and reorders sidebar nav (story-first) | `false` |
+| `HACKATHON_STRICT_GEMINI` | When `true`, LLM router fails fast with 503 instead of falling back away from Gemini | `false` |
+
+These flags are independent — you can enable strict Gemini without hackathon mode and vice versa. The `/api/health` endpoint exposes `hackathon_mode` so the frontend can read it at startup.
+
+**Testing hackathon flags:**
+
+```bash
+# Run the hackathon flags test suite (7 checks, uses mocked settings)
+docker cp scripts/test_hackathon_flags.py chrono-canvas-api-1:/app/scripts/
+docker exec chrono-canvas-api-1 python /app/scripts/test_hackathon_flags.py
+```
+
+> Note: test #4 (fallback with strict OFF) makes a real LLM call, so this is not included in the automated smoke test suite.
+
 ### Database and cache
 
 | Variable | Description | Default |

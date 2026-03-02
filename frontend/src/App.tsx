@@ -1,5 +1,6 @@
 import { Layout } from "@/components/layout/Layout";
 import { useNavigation } from "@/stores/navigation";
+import { useHackathonMode } from "@/api/hooks/useConfig";
 import { Dashboard } from "@/pages/Dashboard";
 import { FigureLibrary } from "@/pages/FigureLibrary";
 import { Generate } from "@/pages/Generate";
@@ -15,7 +16,7 @@ import { Review } from "@/pages/Review";
 import { EvalViewer } from "@/pages/EvalViewer";
 import { ModeSelector } from "@/pages/ModeSelector";
 
-function getPage(path: string) {
+function getPage(path: string, hackathonMode: boolean) {
   const qIdx = path.indexOf("?");
   const pathname = qIdx === -1 ? path : path.slice(0, qIdx);
   const search = qIdx === -1 ? "" : path.slice(qIdx + 1);
@@ -66,16 +67,21 @@ function getPage(path: string) {
     case "/dashboard":
       return <Dashboard />;
     default:
+      // In hackathon mode, skip mode selector and go straight to Story Director
+      if (hackathonMode) {
+        return <Generate mode="creative_story" />;
+      }
       return <ModeSelector />;
   }
 }
 
 export default function App() {
   const { currentPath, navigate } = useNavigation();
+  const hackathonMode = useHackathonMode();
 
   return (
     <Layout currentPath={currentPath} onNavigate={navigate}>
-      {getPage(currentPath)}
+      {getPage(currentPath, hackathonMode)}
     </Layout>
   );
 }

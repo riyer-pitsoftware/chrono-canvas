@@ -13,6 +13,12 @@ from chronocanvas.redis_client import publish_progress
 
 logger = logging.getLogger(__name__)
 
+
+class GeminiUnavailableError(RuntimeError):
+    """Raised in strict Gemini mode when Gemini is unavailable and fallback is disabled."""
+    pass
+
+
 # Default routing: which provider to prefer for each task type
 # For hackathon: default everything to Gemini (GCP-native)
 DEFAULT_ROUTING: dict[TaskType, str] = {
@@ -74,6 +80,12 @@ class LLMRouter:
         requested_provider = provider.name
         fell_back = False
         if not await provider.is_available():
+            if settings.hackathon_strict_gemini and requested_provider == "gemini":
+                raise GeminiUnavailableError(
+                    "Gemini is currently unavailable. In hackathon strict mode, "
+                    "fallback to other providers is disabled. Please check your "
+                    "GOOGLE_API_KEY and Gemini API quota."
+                )
             for name, p in self.providers.items():
                 if name != provider.name and await p.is_available():
                     logger.warning(f"Falling back from {provider.name} to {name}")
@@ -129,6 +141,12 @@ class LLMRouter:
         requested_provider = provider.name
         fell_back = False
         if not await provider.is_available():
+            if settings.hackathon_strict_gemini and requested_provider == "gemini":
+                raise GeminiUnavailableError(
+                    "Gemini is currently unavailable. In hackathon strict mode, "
+                    "fallback to other providers is disabled. Please check your "
+                    "GOOGLE_API_KEY and Gemini API quota."
+                )
             for name, p in self.providers.items():
                 if name != provider.name and await p.is_available():
                     logger.warning(f"Falling back from {provider.name} to {name}")
