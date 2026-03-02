@@ -83,3 +83,7 @@ eval/ratings/ratings_*.csv
 !eval/ratings/ratings_template.csv
 eval/reports/*.csv
 eval/reports/*.md
+AGENTS.md
+
+# Archived feedback (processed into beads)
+archive/
