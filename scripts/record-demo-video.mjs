@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 /**
- * Record a <4 min demo video showing both ChronoCanvas modes end-to-end.
+ * Record a <4 min demo video showing ChronoCanvas UI end-to-end.
  *
  * Prerequisites:
  *   - Local stack running (make quickstart)
- *   - npx playwright install chromium
+ *   - cd frontend && npx playwright install chromium
  *   - ffmpeg installed
  *
  * Usage:
@@ -12,45 +12,81 @@
  *   HEADLESS=false node scripts/record-demo-video.mjs  # watch live
  *
  * Output:
- *   docs/videos/demo.mp4  (raw recording)
- *   docs/videos/demo-2x.mp4  (2x speed, <4 min target)
+ *   docs/videos/demo.webm   (raw Playwright recording)
+ *   docs/videos/demo.mp4    (re-encoded H.264, playable everywhere)
+ *   docs/videos/demo-2x.mp4 (2x speed for quick viewing)
  */
 import { chromium } from "../frontend/node_modules/playwright/index.mjs";
 import { execSync } from "child_process";
-import { mkdirSync } from "fs";
+import { mkdirSync, existsSync, renameSync, unlinkSync } from "fs";
 import path from "path";
 
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000";
 const OUTPUT_DIR = "docs/videos";
 const VIDEO_TMP = "/tmp/chronocanvas-demo";
 const VIEWPORT = { width: 1440, height: 900 };
+// How long to wait for generation progress before moving on (seconds)
+const GEN_WAIT = parseInt(process.env.GEN_WAIT || "30", 10);
 
-// Slow-type text for demo effect
-async function slowType(page, selector, text, delayMs = 40) {
-  const el = page.locator(selector);
-  await el.click();
+/** Click a sidebar nav button by its label text */
+async function clickNav(page, label) {
+  // Sidebar buttons contain a <span>{label}</span>
+  const btn = page.locator(`nav button[title="${label}"]`);
+  await btn.waitFor({ state: "visible", timeout: 5000 }).catch(() => {});
+  if (await btn.isVisible().catch(() => false)) {
+    await btn.click();
+    await page.waitForTimeout(1500);
+    return true;
+  }
+  console.log(`  ⚠ Nav button "${label}" not found, skipping`);
+  return false;
+}
+
+/** Slow-type into a currently-focused input */
+async function slowType(locator, text, delayMs = 30) {
+  await locator.click();
+  await locator.fill(""); // clear first
   for (const char of text) {
-    await el.pressSequentially(char, { delay: delayMs });
+    await locator.pressSequentially(char, { delay: delayMs });
   }
 }
 
-async function waitForGeneration(page, timeoutMs = 180_000) {
+/** Wait for generation to show progress, then wait a bit to capture it */
+async function waitForProgress(page, maxSeconds) {
+  console.log(`  Waiting up to ${maxSeconds}s for pipeline progress...`);
   const start = Date.now();
-  while (Date.now() - start < timeoutMs) {
-    const badge = page.locator(
-      '.inline-flex:has-text("completed"), .inline-flex:has-text("failed")'
-    );
-    const isVisible = await badge.first().isVisible().catch(() => false);
-    if (isVisible) {
-      const text = await badge.first().textContent().catch(() => "unknown");
+  let sawProgress = false;
+
+  while ((Date.now() - start) / 1000 < maxSeconds) {
+    // Check for any progress indicator
+    const progressCard = page.locator('text=Generation Progress, text=Pipeline');
+    const badge = page.locator('.inline-flex:has-text("completed"), .inline-flex:has-text("failed"), .inline-flex:has-text("running")');
+
+    if (await progressCard.first().isVisible().catch(() => false)) {
+      if (!sawProgress) {
+        console.log("  Pipeline progress visible!");
+        sawProgress = true;
+      }
+    }
+
+    // If completed or failed, capture and move on
+    const done = page.locator('.inline-flex:has-text("completed"), .inline-flex:has-text("failed")');
+    if (await done.first().isVisible().catch(() => false)) {
+      const text = await done.first().textContent().catch(() => "done");
       console.log(`  Generation ${text}`);
       await page.waitForTimeout(3000);
-      return text;
+      return;
     }
+
     await page.waitForTimeout(1000);
   }
-  console.log("  Generation timed out");
-  return "timeout";
+
+  if (sawProgress) {
+    console.log("  Captured some progress, moving on");
+    await page.waitForTimeout(2000);
+  } else {
+    console.log("  No progress seen, moving on");
+  }
 }
 
 async function main() {
@@ -61,7 +97,8 @@ async function main() {
 
   const headless = process.env.HEADLESS !== "false";
   console.log(`Headless: ${headless}`);
-  console.log(`Frontend: ${FRONTEND_URL}\n`);
+  console.log(`Frontend: ${FRONTEND_URL}`);
+  console.log(`Gen wait: ${GEN_WAIT}s\n`);
 
   const browser = await chromium.launch({ headless });
   const context = await browser.newContext({
@@ -71,146 +108,172 @@ async function main() {
   });
   const page = await context.newPage();
 
-  // ── Part 1: Landing page & mode selector ─────────────────────────
-  console.log("[1/7] Loading app...");
+  // ── Scene 1: Home / Mode Selector ────────────────────────────────
+  console.log("[1/8] Home — Mode Selector...");
   await page.goto(FRONTEND_URL, { waitUntil: "networkidle" });
   await page.waitForTimeout(3000);
 
-  // ── Part 2: Timeline explorer ────────────────────────────────────
-  console.log("[2/7] Timeline explorer...");
-  const timelineBtn = page.locator('nav button:has-text("Timeline"), nav a:has-text("Timeline")');
-  if (await timelineBtn.isVisible().catch(() => false)) {
-    await timelineBtn.click();
-    await page.waitForTimeout(3000);
-    // Interact with the timeline slider if visible
+  // ── Scene 2: Timeline explorer ───────────────────────────────────
+  console.log("[2/8] Timeline explorer...");
+  if (await clickNav(page, "Timeline")) {
+    await page.waitForTimeout(1500);
+    // Interact with slider if present
     const slider = page.locator('input[type="range"]');
     if (await slider.isVisible().catch(() => false)) {
       await slider.fill("1400");
-      await page.waitForTimeout(2000);
-      await slider.fill("500");
-      await page.waitForTimeout(2000);
+      await page.waitForTimeout(1500);
+      await slider.fill("800");
+      await page.waitForTimeout(1500);
+      await slider.fill("200");
+      await page.waitForTimeout(1500);
     }
   }
 
-  // ── Part 3: Portrait mode generation ─────────────────────────────
-  console.log("[3/7] Portrait mode — navigating to Generate...");
-  const genBtn = page.locator('nav button:has-text("Generate"), nav a:has-text("Generate")');
-  await genBtn.waitFor({ state: "visible", timeout: 10000 });
-  await genBtn.click();
-  await page.waitForTimeout(2000);
-
-  // Select portrait mode if mode selector is visible
-  const portraitCard = page.locator('text=Historical Lens').first();
-  if (await portraitCard.isVisible().catch(() => false)) {
-    await portraitCard.click();
+  // ── Scene 3: Figure Library ──────────────────────────────────────
+  console.log("[3/8] Figure Library...");
+  if (await clickNav(page, "Figures")) {
+    await page.waitForTimeout(2000);
+    // Scroll to show more figures
+    await page.evaluate(() => window.scrollTo(0, 400));
+    await page.waitForTimeout(1500);
+    await page.evaluate(() => window.scrollTo(0, 0));
     await page.waitForTimeout(1000);
   }
 
-  console.log("[3/7] Portrait mode — submitting prompt...");
-  const input = page.locator('input[placeholder*="Describe"], textarea[placeholder*="Describe"]');
-  await input.waitFor({ state: "visible", timeout: 10000 });
-  await slowType(page, 'input[placeholder*="Describe"], textarea[placeholder*="Describe"]',
-    "Aryabhata, Indian mathematician and astronomer, Gupta period, 5th century CE");
-  await page.waitForTimeout(500);
+  // ── Scene 4: Portrait mode generation ────────────────────────────
+  console.log("[4/8] Portrait mode — Generate...");
+  if (await clickNav(page, "Generate")) {
+    await page.waitForTimeout(1000);
 
-  const submitBtn = page.locator('button:has-text("Generate")').last();
-  await submitBtn.click();
-  console.log("[3/7] Portrait mode — waiting for pipeline...");
-  await waitForGeneration(page);
+    // If mode selector is showing, pick Historical Lens
+    const portraitCard = page.locator('text=Historical Lens').first();
+    if (await portraitCard.isVisible().catch(() => false)) {
+      await portraitCard.click();
+      await page.waitForTimeout(1500);
+    }
 
-  // ── Part 4: Audit trail ──────────────────────────────────────────
-  console.log("[4/7] Viewing audit trail...");
-  const auditBtn = page.locator('nav button:has-text("Audit"), nav a:has-text("Audit")');
-  if (await auditBtn.first().isVisible().catch(() => false)) {
-    await auditBtn.first().click();
+    // Type into the portrait input
+    const portraitInput = page.locator('input[placeholder*="Describe a historical figure"]');
+    if (await portraitInput.isVisible().catch(() => false)) {
+      await slowType(portraitInput, "Aryabhata, Indian mathematician, Gupta period, 5th century CE");
+      await page.waitForTimeout(500);
+
+      // Click Generate Portrait button
+      const genBtn = page.locator('button:has-text("Generate Portrait"), button:has-text("Generate")').last();
+      if (await genBtn.isVisible().catch(() => false)) {
+        await genBtn.click();
+        await waitForProgress(page, GEN_WAIT);
+      }
+    }
+  }
+
+  // ── Scene 5: Audit trail ─────────────────────────────────────────
+  console.log("[5/8] Audit list + detail...");
+  if (await clickNav(page, "Audit")) {
     await page.waitForTimeout(2000);
-    // Click the first audit entry
-    const firstRow = page.locator("table tbody tr, [class*='card']").first();
+    // Click first audit entry if table exists
+    const firstRow = page.locator("table tbody tr").first();
     if (await firstRow.isVisible().catch(() => false)) {
       await firstRow.click();
-      await page.waitForTimeout(3000);
-      // Scroll down to show LLM calls
-      await page.evaluate(() => window.scrollTo(0, 600));
+      await page.waitForTimeout(2000);
+      // Scroll to show LLM calls section
+      await page.evaluate(() => window.scrollTo(0, 500));
+      await page.waitForTimeout(2000);
+      await page.evaluate(() => window.scrollTo(0, 1000));
       await page.waitForTimeout(2000);
       await page.evaluate(() => window.scrollTo(0, 0));
+      await page.waitForTimeout(1000);
     }
   }
 
-  // ── Part 5: Admin dashboard ──────────────────────────────────────
-  console.log("[5/7] Admin dashboard...");
-  const adminBtn = page.locator('nav button:has-text("Admin"), nav a:has-text("Admin")');
-  if (await adminBtn.isVisible().catch(() => false)) {
-    await adminBtn.click();
+  // ── Scene 6: Admin dashboard ─────────────────────────────────────
+  console.log("[6/8] Admin dashboard...");
+  if (await clickNav(page, "Admin")) {
     await page.waitForTimeout(2000);
-    // Click validation rules tab if available
-    const rulesTab = page.locator('button:has-text("Validation Rules")');
-    if (await rulesTab.isVisible().catch(() => false)) {
-      await rulesTab.click();
-      await page.waitForTimeout(2000);
+    // Click through tabs
+    for (const tab of ["Validation Rules", "Review Queue"]) {
+      const tabBtn = page.locator(`button:has-text("${tab}")`);
+      if (await tabBtn.isVisible().catch(() => false)) {
+        await tabBtn.click();
+        await page.waitForTimeout(2000);
+      }
     }
   }
 
-  // ── Part 6: Story mode generation ────────────────────────────────
-  console.log("[6/7] Story mode — navigating...");
-  await genBtn.click();
-  await page.waitForTimeout(1000);
-
-  // Select story mode if mode selector appears
-  const storyCard = page.locator('text=Story Director').first();
-  if (await storyCard.isVisible().catch(() => false)) {
-    await storyCard.click();
+  // ── Scene 7: Story mode generation ───────────────────────────────
+  console.log("[7/8] Story mode — Generate...");
+  if (await clickNav(page, "Generate")) {
     await page.waitForTimeout(1000);
+
+    // If mode selector appears, pick Story Director
+    const storyCard = page.locator('text=Story Director').first();
+    if (await storyCard.isVisible().catch(() => false)) {
+      await storyCard.click();
+      await page.waitForTimeout(1500);
+    }
+
+    // Story mode uses a Textarea
+    const storyInput = page.locator('textarea[placeholder*="Paste or write your story"]');
+    if (await storyInput.isVisible().catch(() => false)) {
+      await slowType(
+        storyInput,
+        "The night market of 1920s Mumbai comes alive as a street vendor discovers a mysterious compass that points not north, but toward forgotten moments in time."
+      );
+      await page.waitForTimeout(500);
+
+      const storyBtn = page.locator('button:has-text("Generate Storyboard"), button:has-text("Generate")').last();
+      if (await storyBtn.isVisible().catch(() => false)) {
+        await storyBtn.click();
+        await waitForProgress(page, GEN_WAIT);
+      }
+    }
   }
 
-  const storyInput = page.locator('input[placeholder*="Describe"], textarea[placeholder*="Describe"]');
-  if (await storyInput.isVisible().catch(() => false)) {
-    await slowType(
-      page,
-      'input[placeholder*="Describe"], textarea[placeholder*="Describe"]',
-      "The night market of 1920s Mumbai comes alive as a street vendor discovers a mysterious compass"
-    );
-    await page.waitForTimeout(500);
-    const storySubmit = page.locator('button:has-text("Generate")').last();
-    await storySubmit.click();
-    console.log("[6/7] Story mode — waiting for pipeline...");
-    await waitForGeneration(page);
-  }
-
-  // ── Part 7: Final overview ───────────────────────────────────────
-  console.log("[7/7] Final overview — Dashboard...");
-  const dashBtn = page.locator('nav button:has-text("Dashboard"), nav a:has-text("Dashboard")');
-  if (await dashBtn.isVisible().catch(() => false)) {
-    await dashBtn.click();
+  // ── Scene 8: Dashboard overview ──────────────────────────────────
+  console.log("[8/8] Dashboard overview...");
+  if (await clickNav(page, "Dashboard")) {
     await page.waitForTimeout(3000);
   }
 
-  // Finalize
+  // ── Finalize recording ───────────────────────────────────────────
   const videoPath = await page.video().path();
   await context.close();
   await browser.close();
 
   console.log(`\nRaw video: ${videoPath}`);
 
-  // Speed up 2x and output final MP4
-  const rawOut = path.join(OUTPUT_DIR, "demo.mp4");
-  const speedOut = path.join(OUTPUT_DIR, "demo-2x.mp4");
+  // Playwright outputs .webm — save with correct extension
+  const rawWebm = path.join(OUTPUT_DIR, "demo.webm");
+  const rawMp4 = path.join(OUTPUT_DIR, "demo.mp4");
+  const speedMp4 = path.join(OUTPUT_DIR, "demo-2x.mp4");
 
-  console.log("Copying raw video...");
-  execSync(`cp "${videoPath}" "${rawOut}"`);
+  execSync(`cp "${videoPath}" "${rawWebm}"`);
+  console.log(`Saved raw: ${rawWebm}`);
 
+  // Convert webm → mp4 (H.264, universally playable)
+  console.log("Converting to MP4...");
+  execSync(
+    `ffmpeg -y -i "${rawWebm}" -c:v libx264 -preset fast -crf 23 -pix_fmt yuv420p -an "${rawMp4}"`,
+    { stdio: "inherit" }
+  );
+
+  // Create 2x speed version
   console.log("Creating 2x speed version...");
   execSync(
-    `ffmpeg -y -i "${rawOut}" -filter:v "setpts=0.5*PTS" -filter:a "atempo=2.0" -an "${speedOut}"`,
+    `ffmpeg -y -i "${rawMp4}" -filter:v "setpts=0.5*PTS" -an "${speedMp4}"`,
     { stdio: "inherit" }
   );
 
   const { statSync } = await import("fs");
-  const rawSize = (statSync(rawOut).size / (1024 * 1024)).toFixed(1);
-  const speedSize = (statSync(speedOut).size / (1024 * 1024)).toFixed(1);
+  const rawSize = (statSync(rawMp4).size / (1024 * 1024)).toFixed(1);
+  const speedSize = (statSync(speedMp4).size / (1024 * 1024)).toFixed(1);
+
+  // Clean up webm
+  unlinkSync(rawWebm);
 
   console.log(`\n=== Done ===`);
-  console.log(`Raw:   ${rawOut} (${rawSize} MB)`);
-  console.log(`2x:    ${speedOut} (${speedSize} MB)`);
+  console.log(`Raw MP4:  ${rawMp4} (${rawSize} MB)`);
+  console.log(`2x MP4:   ${speedMp4} (${speedSize} MB)`);
   console.log(`\nUpload the 2x version to YouTube/Loom and link from README.`);
 }
 

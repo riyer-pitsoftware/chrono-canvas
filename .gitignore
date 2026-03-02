@@ -63,6 +63,9 @@ dump.rdb
 # Security scan reports
 zap-reports/
 
+# Demo videos (host externally)
+docs/videos/
+
 # Blog drafts
 blog/
 
