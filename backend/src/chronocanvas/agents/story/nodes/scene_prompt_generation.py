@@ -29,6 +29,7 @@ Requirements:
 - Write in natural, descriptive prose — NOT comma-separated tags or weight syntax like (feature:1.2)
 - Write 100-200 words describing exactly what a camera would capture in this moment
 - You MUST include each character's Visual Anchor description word-for-word. Do not paraphrase.
+- The MOOD tag MUST be the primary driver of character expressions, body language, and lighting. For 'humorous': characters smile/laugh, bright warm lighting, playful composition. For 'tense': characters show worry, dramatic shadows, tight framing. For 'sad': downcast eyes, muted colors, soft diffused light. Map every mood to specific visual cues — expressions, posture, lighting quality, and color temperature.
 - Every character must maintain IDENTICAL physical proportions, skin tone, and facial features across all scenes
 - Describe character heights relative to each other — maintain these ratios
 - Use consistent camera distance and framing conventions for recurring characters
@@ -64,6 +65,7 @@ Requirements:
 - Write a single detailed paragraph (80-120 words) describing the visual scene
 - Include specific details about lighting, camera angle, composition
 - Include character appearances if they are in the scene
+- Match the mood tag to character expressions, lighting, and atmosphere
 - Style: cinematic, atmospheric, high detail, photorealistic
 - End with quality tags: masterpiece, best quality, highly detailed, 8k
 
@@ -94,7 +96,7 @@ For each character, specify:
 - Exact skin tone (use specific descriptors like "deep brown", "pale olive", "warm tan")
 - Hair: style, length, color (be precise — "shoulder-length wavy auburn hair")
 - Distinguishing marks or features (scars, glasses, jewelry, tattoos)
-- Clothing (specific fabrics, colors, fit)
+- Clothing: assign gender-appropriate clothing based on the character's gender, cultural context, and time period. Be specific about garment types (e.g., "fitted bodice with flowing skirt" vs "tailored waistcoat with trousers"). Include specific fabrics, colors, and fit.
 
 CHARACTERS:
 {character_json}

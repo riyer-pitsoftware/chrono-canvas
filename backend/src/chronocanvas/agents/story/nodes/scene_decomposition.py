@@ -24,6 +24,11 @@ STORY:
 CHARACTERS FOUND:
 {characters_summary}
 
+CHARACTER SELECTION RULES:
+- Include ONLY characters who are actively present or visible in each specific scene — do NOT list all known characters for every scene.
+- If the story mentions a specific subset of characters in a scene, only list those characters — not the full cast.
+- Pay attention to character counts — if the story says "two of the three pigs", list only those two.
+
 Output ONLY valid JSON in this exact format:
 {{
   "scenes": [
