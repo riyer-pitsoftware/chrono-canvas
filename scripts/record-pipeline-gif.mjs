@@ -60,15 +60,15 @@ async function main() {
   await input.fill("Cleopatra VII, Last Pharaoh of Ptolemaic Egypt");
   await page.waitForTimeout(500);
 
-  // Click the Generate button inside the Card (not the nav link)
-  const generateBtn = page.locator('button:has-text("Generate")').last();
+  // Click the Generate button inside the Card (not the sidebar nav button)
+  const generateBtn = page.locator('button:has-text("Generate"):not(nav button)').last();
   await generateBtn.click();
   console.log("Clicked Generate button.");
 
   // Wait for pipeline to start — look for "Generation Progress" card
   console.log("Waiting for pipeline progress...");
   try {
-    await page.locator('text=Generation Progress').waitFor({ state: "visible", timeout: 15000 });
+    await page.getByText("Generation Progress").waitFor({ state: "visible", timeout: 15000 });
     console.log("  Pipeline started!");
   } catch {
     console.log("  Warning: Generation Progress card not found, continuing...");

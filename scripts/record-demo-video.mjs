@@ -26,7 +26,7 @@ const OUTPUT_DIR = "docs/videos";
 const VIDEO_TMP = "/tmp/chronocanvas-demo";
 const VIEWPORT = { width: 1440, height: 900 };
 // How long to wait for generation progress before moving on (seconds)
-const GEN_WAIT = parseInt(process.env.GEN_WAIT || "30", 10);
+const GEN_WAIT = parseInt(process.env.GEN_WAIT || "120", 10);
 
 /** Click a sidebar nav button by its label text */
 async function clickNav(page, label) {
@@ -57,13 +57,20 @@ async function waitForProgress(page, maxSeconds) {
   const start = Date.now();
   let sawProgress = false;
 
-  while ((Date.now() - start) / 1000 < maxSeconds) {
-    // Check for any progress indicator
-    const progressCard = page.locator('text=Generation Progress, text=Pipeline');
-    const badge = page.locator('.inline-flex:has-text("completed"), .inline-flex:has-text("failed"), .inline-flex:has-text("running")');
+  // First wait for the "Generation Progress" card to appear (proves request was created)
+  try {
+    await page.getByText("Generation Progress").waitFor({ state: "visible", timeout: 15000 });
+    console.log("  Generation Progress card appeared");
+    sawProgress = true;
+  } catch {
+    console.log("  Warning: Generation Progress card not found after 15s");
+  }
 
-    if (await progressCard.first().isVisible().catch(() => false)) {
-      if (!sawProgress) {
+  while ((Date.now() - start) / 1000 < maxSeconds) {
+    // Check for running state indicators
+    if (!sawProgress) {
+      const progressCard = page.getByText("Generation Progress");
+      if (await progressCard.isVisible().catch(() => false)) {
         console.log("  Pipeline progress visible!");
         sawProgress = true;
       }
@@ -74,15 +81,21 @@ async function waitForProgress(page, maxSeconds) {
     if (await done.first().isVisible().catch(() => false)) {
       const text = await done.first().textContent().catch(() => "done");
       console.log(`  Generation ${text}`);
+      // Scroll down to show generated image if present
+      await page.evaluate(() => window.scrollTo(0, 400));
       await page.waitForTimeout(3000);
+      await page.evaluate(() => window.scrollTo(0, 0));
+      await page.waitForTimeout(1000);
       return;
     }
 
+    const elapsed = Math.round((Date.now() - start) / 1000);
+    if (elapsed % 15 === 0) console.log(`  Still waiting... ${elapsed}s`);
     await page.waitForTimeout(1000);
   }
 
   if (sawProgress) {
-    console.log("  Captured some progress, moving on");
+    console.log("  Captured some progress, moving on (timed out)");
     await page.waitForTimeout(2000);
   } else {
     console.log("  No progress seen, moving on");
@@ -142,28 +155,27 @@ async function main() {
 
   // ── Scene 4: Portrait mode generation ────────────────────────────
   console.log("[4/8] Portrait mode — Generate...");
-  if (await clickNav(page, "Generate")) {
+  // Use Home mode selector to get clean portrait mode entry
+  if (await clickNav(page, "Home")) {
     await page.waitForTimeout(1000);
-
-    // If mode selector is showing, pick Historical Lens
-    const portraitCard = page.locator('text=Historical Lens').first();
-    if (await portraitCard.isVisible().catch(() => false)) {
-      await portraitCard.click();
+    const startGen = page.locator('button:has-text("Start Generating")');
+    if (await startGen.isVisible().catch(() => false)) {
+      await startGen.click();
       await page.waitForTimeout(1500);
     }
+  }
 
-    // Type into the portrait input
-    const portraitInput = page.locator('input[placeholder*="Describe a historical figure"]');
-    if (await portraitInput.isVisible().catch(() => false)) {
-      await slowType(portraitInput, "Aryabhata, Indian mathematician, Gupta period, 5th century CE");
-      await page.waitForTimeout(500);
+  // Now on /generate with portrait mode — type and generate
+  const portraitInput = page.locator('input[placeholder*="Describe a historical figure"]');
+  if (await portraitInput.isVisible().catch(() => false)) {
+    await slowType(portraitInput, "Aryabhata, Indian mathematician, Gupta period, 5th century CE");
+    await page.waitForTimeout(500);
 
-      // Click Generate Portrait button
-      const genBtn = page.locator('button:has-text("Generate Portrait"), button:has-text("Generate")').last();
-      if (await genBtn.isVisible().catch(() => false)) {
-        await genBtn.click();
-        await waitForProgress(page, GEN_WAIT);
-      }
+    // Click Generate button (inside CardContent, not the sidebar nav)
+    const genBtn = page.locator('button:has-text("Generate"):not(nav button)').last();
+    if (await genBtn.isVisible().catch(() => false)) {
+      await genBtn.click();
+      await waitForProgress(page, GEN_WAIT);
     }
   }
 
@@ -202,30 +214,29 @@ async function main() {
 
   // ── Scene 7: Story mode generation ───────────────────────────────
   console.log("[7/8] Story mode — Generate...");
-  if (await clickNav(page, "Generate")) {
+  // Navigate via Home mode selector to get story mode
+  if (await clickNav(page, "Home")) {
     await page.waitForTimeout(1000);
-
-    // If mode selector appears, pick Story Director
-    const storyCard = page.locator('text=Story Director').first();
-    if (await storyCard.isVisible().catch(() => false)) {
-      await storyCard.click();
+    const startCreating = page.locator('button:has-text("Start Creating")');
+    if (await startCreating.isVisible().catch(() => false)) {
+      await startCreating.click();
       await page.waitForTimeout(1500);
     }
+  }
 
-    // Story mode uses a Textarea
-    const storyInput = page.locator('textarea[placeholder*="Paste or write your story"]');
-    if (await storyInput.isVisible().catch(() => false)) {
-      await slowType(
-        storyInput,
-        "The night market of 1920s Mumbai comes alive as a street vendor discovers a mysterious compass that points not north, but toward forgotten moments in time."
-      );
-      await page.waitForTimeout(500);
+  // Now on /generate?mode=creative_story — type and generate
+  const storyInput = page.locator('textarea[placeholder*="Paste or write your story"]');
+  if (await storyInput.isVisible().catch(() => false)) {
+    await slowType(
+      storyInput,
+      "The night market of 1920s Mumbai comes alive as a street vendor discovers a mysterious compass that points not north, but toward forgotten moments in time."
+    );
+    await page.waitForTimeout(500);
 
-      const storyBtn = page.locator('button:has-text("Generate Storyboard"), button:has-text("Generate")').last();
-      if (await storyBtn.isVisible().catch(() => false)) {
-        await storyBtn.click();
-        await waitForProgress(page, GEN_WAIT);
-      }
+    const storyBtn = page.locator('button:has-text("Generate Storyboard")');
+    if (await storyBtn.isVisible().catch(() => false)) {
+      await storyBtn.click();
+      await waitForProgress(page, GEN_WAIT);
     }
   }
 
