@@ -29,6 +29,13 @@ class StoryState(TypedDict, total=False):
     request_id: str
     input_text: str
 
+    # Optional image input (image-to-story, reference images)
+    reference_image_path: str  # uploaded image for image-to-story
+    reference_image_mime: str
+    story_concept: dict[str, Any]  # Gemini-extracted concept from image
+    reference_images: list[dict[str, Any]]  # style/location/character refs
+    reference_analysis: list[dict[str, Any]]  # Gemini analysis of refs
+
     # Extraction
     characters: list[dict[str, Any]]
 

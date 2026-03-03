@@ -26,7 +26,7 @@ class ProgressPublisher:
         self,
         channel: str,
         *,
-        artifact_type: Literal["image", "audio"],
+        artifact_type: Literal["image", "audio", "video", "scene_edit"],
         scene_index: int | None,
         total: int,
         completed: int,

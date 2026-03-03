@@ -24,6 +24,9 @@ async def run_story_pipeline(
     request_id: str,
     input_text: str,
     *,
+    ref_image_path: str | None = None,
+    ref_image_mime: str | None = None,
+    ref_images: list[dict] | None = None,
     session_factory=None,
     graph=None,
 ) -> None:
@@ -58,6 +61,12 @@ async def run_story_pipeline(
                 "completed_scenes": 0,
                 "error": None,
             }
+            # Optional image-to-story inputs
+            if ref_image_path:
+                initial_state["reference_image_path"] = ref_image_path
+                initial_state["reference_image_mime"] = ref_image_mime or "image/png"
+            if ref_images:
+                initial_state["reference_images"] = ref_images
 
             config = {"configurable": {"thread_id": f"story-{request_id}"}}
 
@@ -72,11 +81,16 @@ async def run_story_pipeline(
                         # Determine status from current agent
                         status_map = {
                             "story_orchestrator": RequestStatus.PENDING,
+                            "image_to_story": RequestStatus.EXTRACTING,
+                            "reference_image_analysis": RequestStatus.EXTRACTING,
                             "character_extraction": RequestStatus.EXTRACTING,
                             "scene_decomposition": RequestStatus.EXTRACTING,
                             "scene_prompt_generation": RequestStatus.GENERATING_PROMPT,
                             "scene_image_generation": RequestStatus.GENERATING_IMAGE,
                             "storyboard_coherence": RequestStatus.GENERATING_IMAGE,
+                            "narration_script": RequestStatus.GENERATING_IMAGE,
+                            "narration_audio": RequestStatus.GENERATING_IMAGE,
+                            "video_assembly": RequestStatus.GENERATING_IMAGE,
                             "storyboard_export": RequestStatus.COMPLETED,
                         }
                         agent_status = status_map.get(current_agent, RequestStatus.EXTRACTING)

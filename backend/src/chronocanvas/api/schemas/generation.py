@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 
 
 class GenerationCreate(BaseModel):
-    input_text: str
+    input_text: str = ""
     figure_id: uuid.UUID | None = None
     provider_override: str | None = None
     # face_id must be the 32-char lowercase hex produced by the upload endpoint
@@ -14,6 +14,10 @@ class GenerationCreate(BaseModel):
     # reach the filesystem.
     face_id: str | None = Field(None, pattern=r"^[0-9a-f]{32}$")
     run_type: str = "portrait"
+    # Optional reference image for image-to-story (32-char hex from upload endpoint)
+    ref_image_id: str | None = Field(None, pattern=r"^[0-9a-f]{32}$")
+    # Optional reference images for style/location/character refs
+    ref_image_ids: list[str] | None = None
 
 
 class GenerationResponse(BaseModel):

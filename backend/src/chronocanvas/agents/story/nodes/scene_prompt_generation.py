@@ -201,6 +201,7 @@ async def _generate_prompt_for_scene(
     characters: list[dict],
     router,
     request_id: str,
+    reference_context: str = "",
 ) -> tuple[StoryPanel, dict | None]:
     """Generate prompt for a single scene. Returns (panel, llm_call_record)."""
     scene_index = scene.get("scene_index", 0)
@@ -213,6 +214,8 @@ async def _generate_prompt_for_scene(
         setting=scene.get("setting", ""),
         character_details=_character_details(scene_chars, characters),
     )
+    if reference_context:
+        prompt += reference_context
 
     try:
         response = await router.generate(
@@ -281,10 +284,29 @@ async def _generate_prompt_for_scene(
         return panel, None
 
 
+def _build_reference_context(reference_analysis: list[dict]) -> str:
+    """Build a reference image context block for scene prompt generation."""
+    if not reference_analysis:
+        return ""
+    lines = ["\nREFERENCE IMAGE ANALYSIS (match these visual qualities):"]
+    for analysis in reference_analysis:
+        style = analysis.get("visual_style", "")
+        palette = ", ".join(analysis.get("color_palette", []))
+        integration = analysis.get("suggested_integration", "")
+        if style:
+            lines.append(f"- Visual style: {style}")
+        if palette:
+            lines.append(f"- Color palette: {palette}")
+        if integration:
+            lines.append(f"- Integration: {integration}")
+    return "\n".join(lines)
+
+
 async def scene_prompt_generation_node(state: StoryState) -> StoryState:
     request_id = state.get("request_id", "unknown")
     scenes = state.get("scenes", [])
     characters = state.get("characters", [])
+    reference_analysis = state.get("reference_analysis", [])
     logger.info(
         "Scene prompt generation: creating prompts for %d scenes in parallel [request_id=%s]",
         len(scenes), request_id,
@@ -326,9 +348,12 @@ async def scene_prompt_generation_node(state: StoryState) -> StoryState:
     else:
         target_scenes = scenes
 
+    # Build reference context from analysis (if any)
+    ref_context = _build_reference_context(reference_analysis)
+
     # Generate all scene prompts concurrently
     results = await asyncio.gather(*(
-        _generate_prompt_for_scene(scene, characters, router, request_id)
+        _generate_prompt_for_scene(scene, characters, router, request_id, ref_context)
         for scene in target_scenes
     ))
 

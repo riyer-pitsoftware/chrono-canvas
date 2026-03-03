@@ -94,6 +94,14 @@ class Settings(BaseSettings):
     tts_model: str = "gemini-2.5-flash-preview-tts"
     tts_voice: str = "Kore"
 
+    # Multimodal interactivity
+    image_to_story_enabled: bool = True
+    vision_narration_enabled: bool = True
+    voice_input_enabled: bool = True
+    video_assembly_enabled: bool = True
+    scene_editing_enabled: bool = True
+    conversation_mode_enabled: bool = False  # off until stable
+
     # Hackathon mode
     hackathon_mode: bool = False  # When True, UI defaults to Story Director
 

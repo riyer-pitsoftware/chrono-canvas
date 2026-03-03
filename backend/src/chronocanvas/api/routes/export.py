@@ -55,6 +55,23 @@ async def download_audio(request_id: uuid.UUID, scene_index: int):
     )
 
 
+@router.get("/{request_id}/video")
+async def download_video(request_id: uuid.UUID):
+    video_path = Path(settings.output_dir) / str(request_id) / "export" / "storyboard.mp4"
+    try:
+        video_path = confine_path(video_path, Path(settings.output_dir))
+    except PermissionError:
+        raise HTTPException(status_code=403, detail="Access denied")
+    if not video_path.exists():
+        raise HTTPException(status_code=404, detail="Video not yet available")
+
+    return FileResponse(
+        path=str(video_path),
+        media_type="video/mp4",
+        filename=f"storyboard_{request_id}.mp4",
+    )
+
+
 @router.get("/{request_id}/metadata")
 async def get_export_metadata(request_id: uuid.UUID):
     export_dir = Path(settings.output_dir) / str(request_id) / "export"

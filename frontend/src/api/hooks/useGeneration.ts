@@ -34,9 +34,33 @@ export function useGeneration(id: string) {
 export function useCreateGeneration() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: { input_text: string; figure_id?: string; face_id?: string; run_type?: string }) =>
+    mutationFn: (data: {
+      input_text: string;
+      figure_id?: string;
+      face_id?: string;
+      run_type?: string;
+      ref_image_id?: string;
+      ref_image_ids?: string[];
+    }) =>
       api.post<GenerationRequest>("/generate", data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["generations"] }),
+  });
+}
+
+export function useUploadReferenceImage() {
+  return useMutation({
+    mutationFn: (params: { file: File; refType?: string; description?: string }) => {
+      const formData = new FormData();
+      formData.append("file", params.file);
+      const queryParams = new URLSearchParams();
+      if (params.refType) queryParams.set("ref_type", params.refType);
+      if (params.description) queryParams.set("description", params.description);
+      const qs = queryParams.toString();
+      return api.upload<{ ref_id: string; file_path: string; mime_type: string }>(
+        `/reference-images/upload${qs ? `?${qs}` : ""}`,
+        formData,
+      );
+    },
   });
 }
 

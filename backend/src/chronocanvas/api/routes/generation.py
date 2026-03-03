@@ -42,9 +42,15 @@ async def create_generation(
     request: Request,
     session: AsyncSession = Depends(get_session),
 ):
-    is_safe, reason = check_input(data.input_text)
-    if not is_safe:
-        raise HTTPException(status_code=422, detail=reason)
+    # For image-to-story, text is optional (Gemini extracts from image)
+    if data.input_text:
+        is_safe, reason = check_input(data.input_text)
+        if not is_safe:
+            raise HTTPException(status_code=422, detail=reason)
+
+    # Require either text or image input
+    if not data.input_text.strip() and not data.ref_image_id:
+        raise HTTPException(status_code=422, detail="Provide either text or an image")
 
     repo = RequestRepository(session)
     gen_request = await repo.create(
@@ -56,9 +62,52 @@ async def create_generation(
     await session.commit()
 
     if data.run_type == "creative_story":
+        # Resolve optional reference image for image-to-story
+        ref_image_path: str | None = None
+        ref_image_mime: str | None = None
+        if data.ref_image_id:
+            refs_base = Path(settings.upload_dir) / "references"
+            matches = glob.glob(str(refs_base / f"{data.ref_image_id}.*"))
+            safe_matches = []
+            for m in matches:
+                try:
+                    confine_path(Path(m), refs_base)
+                    safe_matches.append(m)
+                except PermissionError:
+                    pass
+            if not safe_matches:
+                raise HTTPException(status_code=404, detail="Reference image not found")
+            ref_image_path = safe_matches[0]
+            ext = Path(ref_image_path).suffix.lower()
+            mime_map = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".webp": "image/webp"}
+            ref_image_mime = mime_map.get(ext, "image/png")
+
+        # Resolve optional reference images for style/location refs
+        ref_images_data: list[dict] | None = None
+        if data.ref_image_ids:
+            ref_images_data = []
+            refs_base = Path(settings.upload_dir) / "references"
+            for rid in data.ref_image_ids[:5]:  # max 5
+                matches = glob.glob(str(refs_base / f"{rid}.*"))
+                for m in matches:
+                    try:
+                        confine_path(Path(m), refs_base)
+                        ext = Path(m).suffix.lower()
+                        mime_map = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".webp": "image/webp"}
+                        ref_images_data.append({
+                            "file_path": m,
+                            "mime_type": mime_map.get(ext, "image/png"),
+                            "ref_type": "style_reference",
+                        })
+                    except PermissionError:
+                        pass
+
         await request.app.state.arq_pool.enqueue_job(
             "run_story_pipeline_task",
             str(gen_request.id), data.input_text,
+            ref_image_path=ref_image_path,
+            ref_image_mime=ref_image_mime,
+            ref_images=ref_images_data,
         )
     else:
         source_face_path: str | None = None
@@ -183,6 +232,34 @@ async def get_generation_images(
     repo = ImageRepository(session)
     images = await repo.list_by_request(request_id)
     return [ImageResponse.model_validate(img) for img in images]
+
+
+@router.post("/{request_id}/scenes/{scene_index}/edit", status_code=202)
+async def edit_scene(
+    request_id: uuid.UUID,
+    scene_index: int,
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+    instruction: str = "",
+):
+    if not settings.scene_editing_enabled:
+        raise HTTPException(status_code=503, detail="Scene editing is disabled")
+    if not instruction.strip():
+        raise HTTPException(status_code=422, detail="Edit instruction is required")
+
+    repo = RequestRepository(session)
+    gen_request = await repo.get(request_id)
+    if not gen_request:
+        raise HTTPException(status_code=404, detail="Generation request not found")
+
+    if gen_request.run_type != "creative_story":
+        raise HTTPException(status_code=422, detail="Scene editing only available for story mode")
+
+    await request.app.state.arq_pool.enqueue_job(
+        "edit_scene_task",
+        str(request_id), scene_index, instruction,
+    )
+    return {"status": "editing", "scene_index": scene_index}
 
 
 @router.post("/{request_id}/retry", response_model=GenerationResponse, status_code=202)

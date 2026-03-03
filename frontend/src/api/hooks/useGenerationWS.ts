@@ -12,7 +12,7 @@ export interface SceneImageEvent {
 }
 
 export interface ArtifactEvent {
-  artifact_type: "image" | "audio";
+  artifact_type: "image" | "audio" | "video" | "scene_edit";
   scene_index: number | null;
   total: number;
   completed: number;
@@ -79,7 +79,7 @@ export function useGenerationWS(requestId: string | null, enabled: boolean) {
         setArtifacts((prev) => [
           ...prev,
           {
-            artifact_type: data.artifact_type as "image" | "audio",
+            artifact_type: data.artifact_type as "image" | "audio" | "video" | "scene_edit",
             scene_index: data.scene_index as number | null,
             total: data.total as number,
             completed: data.completed as number,
