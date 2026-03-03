@@ -38,6 +38,23 @@ async def download_image(
     )
 
 
+@router.get("/{request_id}/audio/{scene_index}")
+async def download_audio(request_id: uuid.UUID, scene_index: int):
+    audio_path = Path(settings.output_dir) / str(request_id) / "audio" / f"scene_{scene_index}.wav"
+    try:
+        audio_path = confine_path(audio_path, Path(settings.output_dir))
+    except PermissionError:
+        raise HTTPException(status_code=403, detail="Access denied")
+    if not audio_path.exists():
+        raise HTTPException(status_code=404, detail="Audio file not found")
+
+    return FileResponse(
+        path=str(audio_path),
+        media_type="audio/wav",
+        filename=audio_path.name,
+    )
+
+
 @router.get("/{request_id}/metadata")
 async def get_export_metadata(request_id: uuid.UUID):
     export_dir = Path(settings.output_dir) / str(request_id) / "export"

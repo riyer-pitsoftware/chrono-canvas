@@ -30,6 +30,8 @@ export interface StoryboardPanel {
   image_prompt: string;
   image_path: string;
   status: string;
+  narration_text?: string;
+  narration_audio_path?: string;
 }
 
 export interface StoryboardData {

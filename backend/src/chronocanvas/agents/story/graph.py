@@ -2,6 +2,8 @@ from langgraph.graph import END, StateGraph
 
 import chronocanvas.agents.checkpointer as _ckpt
 from chronocanvas.agents.story.nodes.character_extraction import character_extraction_node
+from chronocanvas.agents.story.nodes.narration_audio import narration_audio_node
+from chronocanvas.agents.story.nodes.narration_script import narration_script_node
 from chronocanvas.agents.story.nodes.scene_decomposition import scene_decomposition_node
 from chronocanvas.agents.story.nodes.scene_image_generation import scene_image_generation_node
 from chronocanvas.agents.story.nodes.scene_prompt_generation import scene_prompt_generation_node
@@ -9,6 +11,7 @@ from chronocanvas.agents.story.nodes.story_orchestrator import story_orchestrato
 from chronocanvas.agents.story.nodes.storyboard_coherence import storyboard_coherence_node
 from chronocanvas.agents.story.nodes.storyboard_export import storyboard_export_node
 from chronocanvas.agents.story.state import StoryState
+from chronocanvas.config import settings
 
 
 def _should_continue_after_orchestrator(state: StoryState) -> str:
@@ -18,9 +21,11 @@ def _should_continue_after_orchestrator(state: StoryState) -> str:
 
 
 def _should_regen_after_coherence(state: StoryState) -> str:
-    """Route to regen cycle if coherence flagged scenes, else export."""
+    """Route to regen cycle if coherence flagged scenes, else narration or export."""
     if state.get("regen_scenes"):
         return "regen"
+    if settings.tts_enabled:
+        return "narration"
     return "export"
 
 
@@ -33,6 +38,8 @@ def build_story_graph() -> StateGraph:
     graph.add_node("scene_prompt_generation", scene_prompt_generation_node)
     graph.add_node("scene_image_generation", scene_image_generation_node)
     graph.add_node("storyboard_coherence", storyboard_coherence_node)
+    graph.add_node("narration_script", narration_script_node)
+    graph.add_node("narration_audio", narration_audio_node)
     graph.add_node("storyboard_export", storyboard_export_node)
 
     graph.set_entry_point("story_orchestrator")
@@ -48,8 +55,14 @@ def build_story_graph() -> StateGraph:
     graph.add_conditional_edges(
         "storyboard_coherence",
         _should_regen_after_coherence,
-        {"regen": "scene_prompt_generation", "export": "storyboard_export"},
+        {
+            "regen": "scene_prompt_generation",
+            "narration": "narration_script",
+            "export": "storyboard_export",
+        },
     )
+    graph.add_edge("narration_script", "narration_audio")
+    graph.add_edge("narration_audio", "storyboard_export")
     graph.add_edge("storyboard_export", END)
 
     return graph

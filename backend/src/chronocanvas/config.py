@@ -89,6 +89,11 @@ class Settings(BaseSettings):
     invariant_checks_enabled: bool = True    # run pre/postcondition checks on pipeline nodes
     invariant_strict: bool = False           # raise on violation (True) vs log warning (False)
 
+    # TTS (narration audio via Gemini TTS)
+    tts_enabled: bool = True
+    tts_model: str = "gemini-2.5-flash-preview-tts"
+    tts_voice: str = "Kore"
+
     # Hackathon mode
     hackathon_mode: bool = False  # When True, UI defaults to Story Director
 

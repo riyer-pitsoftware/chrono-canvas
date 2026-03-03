@@ -19,6 +19,9 @@ class StoryPanel(TypedDict, total=False):
     coherence_score: float | None
     coherence_issues: list[str]
     coherence_suggestion: str
+    # Narration (populated by narration_script / narration_audio nodes)
+    narration_text: str
+    narration_audio_path: str
 
 
 class StoryState(TypedDict, total=False):
@@ -44,6 +47,9 @@ class StoryState(TypedDict, total=False):
     # Coherence regen
     regen_scenes: list[int]  # scene indices to regenerate
     coherence_retry_count: int  # caps regen cycles (max 1)
+
+    # Narration audio
+    narration_audio_paths: list[str]
 
     # Control
     current_agent: str

@@ -89,6 +89,26 @@ export function StoryboardView({ storyboard, requestId, sceneImages = [] }: Stor
                   </div>
                 )}
 
+                {/* Narration audio player */}
+                {panel.narration_audio_path && (
+                  <div className="mb-2">
+                    <audio
+                      controls
+                      className="w-full h-8"
+                      src={`/api/export/${requestId}/audio/${panel.scene_index}`}
+                    >
+                      Your browser does not support audio playback.
+                    </audio>
+                  </div>
+                )}
+
+                {/* Narration text */}
+                {panel.narration_text && (
+                  <p className="text-sm italic text-[var(--muted-foreground)] mb-2">
+                    &ldquo;{panel.narration_text}&rdquo;
+                  </p>
+                )}
+
                 {/* Scene description */}
                 <p className="text-sm mb-2">{panel.description}</p>
 

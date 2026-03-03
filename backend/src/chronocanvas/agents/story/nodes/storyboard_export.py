@@ -38,6 +38,8 @@ async def storyboard_export_node(state: StoryState) -> StoryState:
                 "coherence_score": p.get("coherence_score"),
                 "coherence_issues": p.get("coherence_issues", []),
                 "coherence_suggestion": p.get("coherence_suggestion", ""),
+                "narration_text": p.get("narration_text", ""),
+                "narration_audio_path": p.get("narration_audio_path", ""),
             }
             for p in panels
         ],
