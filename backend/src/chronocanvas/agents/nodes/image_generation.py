@@ -6,6 +6,7 @@ from chronocanvas.agents.state import AgentState, ImageState
 from chronocanvas.config import settings
 from chronocanvas.redis_client import publish_progress
 from chronocanvas.service_registry import get_registry
+from chronocanvas.services.progress import ProgressPublisher
 
 logger = logging.getLogger(__name__)
 
@@ -50,6 +51,18 @@ async def image_generation_node(state: AgentState) -> AgentState:
             height=settings.portrait_height,
             negative_prompt=prompt_state.get("negative_prompt", ""),
             on_progress=on_progress,
+        )
+
+        # Emit artifact_ready for portrait image
+        progress = ProgressPublisher()
+        await progress.publish_artifact(
+            channel,
+            artifact_type="image",
+            scene_index=None,
+            total=1,
+            completed=1,
+            url=f"/output/{request_id}/{Path(result.file_path).name}",
+            mime_type="image/png",
         )
 
         trace = state.get("agent_trace", [])

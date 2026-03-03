@@ -11,11 +11,21 @@ export interface SceneImageEvent {
   image_path: string;
 }
 
+export interface ArtifactEvent {
+  artifact_type: "image" | "audio";
+  scene_index: number | null;
+  total: number;
+  completed: number;
+  url: string;
+  mime_type: string;
+}
+
 /**
  * Connect to the generation WebSocket and surface real-time progress.
  *
  * - Returns `imageProgress` with step/total during the image_generation phase.
  * - Returns `streamingText` + `streamingAgent` for live LLM token output.
+ * - Returns `artifacts` for uniform artifact_ready events (images + audio).
  * - Automatically disconnects when the generation completes or fails.
  */
 export function useGenerationWS(requestId: string | null, enabled: boolean) {
@@ -23,6 +33,7 @@ export function useGenerationWS(requestId: string | null, enabled: boolean) {
   const [streamingText, setStreamingText] = useState<string>("");
   const [streamingAgent, setStreamingAgent] = useState<string | null>(null);
   const [sceneImages, setSceneImages] = useState<SceneImageEvent[]>([]);
+  const [artifacts, setArtifacts] = useState<ArtifactEvent[]>([]);
   const wsRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
@@ -31,6 +42,7 @@ export function useGenerationWS(requestId: string | null, enabled: boolean) {
     setStreamingText("");
     setStreamingAgent(null);
     setSceneImages([]);
+    setArtifacts([]);
 
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const ws = new WebSocket(
@@ -61,6 +73,18 @@ export function useGenerationWS(requestId: string | null, enabled: boolean) {
             scene_index: data.scene_index as number,
             total_scenes: data.total_scenes as number,
             image_path: data.image_path as string,
+          },
+        ]);
+      } else if (data.type === "artifact_ready") {
+        setArtifacts((prev) => [
+          ...prev,
+          {
+            artifact_type: data.artifact_type as "image" | "audio",
+            scene_index: data.scene_index as number | null,
+            total: data.total as number,
+            completed: data.completed as number,
+            url: data.url as string,
+            mime_type: data.mime_type as string,
           },
         ]);
       } else if (data.type === "image_progress") {
@@ -96,5 +120,5 @@ export function useGenerationWS(requestId: string | null, enabled: boolean) {
     };
   }, [requestId, enabled]);
 
-  return { imageProgress, streamingText, streamingAgent, sceneImages };
+  return { imageProgress, streamingText, streamingAgent, sceneImages, artifacts };
 }

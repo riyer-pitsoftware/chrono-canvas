@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Literal
 
 from chronocanvas.redis_client import publish_progress
 
@@ -20,4 +20,25 @@ class ProgressPublisher:
         await self.publish(channel, {
             "status": "failed" if failed else "completed",
             "message": "Generation complete",
+        })
+
+    async def publish_artifact(
+        self,
+        channel: str,
+        *,
+        artifact_type: Literal["image", "audio"],
+        scene_index: int | None,
+        total: int,
+        completed: int,
+        url: str,
+        mime_type: str,
+    ) -> None:
+        await self.publish(channel, {
+            "type": "artifact_ready",
+            "artifact_type": artifact_type,
+            "scene_index": scene_index,
+            "total": total,
+            "completed": completed,
+            "url": url,
+            "mime_type": mime_type,
         })

@@ -1,22 +1,32 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import type { StoryboardData } from "@/api/types";
-import type { SceneImageEvent } from "@/api/hooks/useGenerationWS";
+import type { ArtifactEvent, SceneImageEvent } from "@/api/hooks/useGenerationWS";
 
 interface StoryboardViewProps {
   storyboard: StoryboardData;
   requestId: string;
   /** Incremental scene images arriving via WebSocket */
   sceneImages?: SceneImageEvent[];
+  /** Uniform artifact events (images + audio) arriving via WebSocket */
+  artifacts?: ArtifactEvent[];
 }
 
-export function StoryboardView({ storyboard, requestId, sceneImages = [] }: StoryboardViewProps) {
+export function StoryboardView({ storyboard, requestId, sceneImages = [], artifacts = [] }: StoryboardViewProps) {
   const { characters, panels, total_scenes, completed_scenes } = storyboard;
 
   // Build a map of scene_index -> image_path from WS events (for live updates)
   const wsImageMap = new Map<number, string>();
   for (const evt of sceneImages) {
     wsImageMap.set(evt.scene_index, evt.image_path);
+  }
+
+  // Build a map of scene_index -> audio URL from artifact events
+  const wsAudioMap = new Map<number, string>();
+  for (const evt of artifacts) {
+    if (evt.artifact_type === "audio" && evt.scene_index != null) {
+      wsAudioMap.set(evt.scene_index, evt.url);
+    }
   }
 
   return (
@@ -89,18 +99,22 @@ export function StoryboardView({ storyboard, requestId, sceneImages = [] }: Stor
                   </div>
                 )}
 
-                {/* Narration audio player */}
-                {panel.narration_audio_path && (
+                {/* Narration audio player — use WS artifact URL if available, else REST */}
+                {(wsAudioMap.has(panel.scene_index) || panel.narration_audio_path) ? (
                   <div className="mb-2">
                     <audio
                       controls
                       className="w-full h-8"
-                      src={`/api/export/${requestId}/audio/${panel.scene_index}`}
+                      src={wsAudioMap.get(panel.scene_index) ?? `/api/export/${requestId}/audio/${panel.scene_index}`}
                     >
                       Your browser does not support audio playback.
                     </audio>
                   </div>
-                )}
+                ) : isCompleted && panel.narration_text ? (
+                  <div className="mb-2 text-xs text-[var(--muted-foreground)] animate-pulse">
+                    Generating audio...
+                  </div>
+                ) : null}
 
                 {/* Narration text */}
                 {panel.narration_text && (

@@ -7,6 +7,7 @@ from chronocanvas.agents.story.state import StoryState
 from chronocanvas.config import settings
 from chronocanvas.redis_client import publish_progress
 from chronocanvas.service_registry import get_registry
+from chronocanvas.services.progress import ProgressPublisher
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +27,7 @@ async def _generate_scene(
     request_id: str,
     total_scenes: int,
     channel: str,
+    completed_counter: list[int] | None = None,
 ) -> bool:
     """Generate image for a single scene panel. Returns True on success."""
     if panel.get("status") == "failed":
@@ -70,6 +72,21 @@ async def _generate_scene(
             "total_scenes": total_scenes,
             "image_path": result.file_path,
         })
+
+        # Emit uniform artifact_ready event
+        if completed_counter is not None:
+            completed_counter[0] += 1
+            progress = ProgressPublisher()
+            await progress.publish_artifact(
+                channel,
+                artifact_type="image",
+                scene_index=scene_index,
+                total=total_scenes,
+                completed=completed_counter[0],
+                url=f"/output/{request_id}/scene_{scene_index}/{Path(result.file_path).name}",
+                mime_type="image/png",
+            )
+
         return True
 
     except Exception as e:
@@ -96,8 +113,9 @@ async def scene_image_generation_node(state: StoryState) -> StoryState:
     generator = _get_generator()
 
     # Generate all scene images concurrently
+    completed_counter = [0]  # mutable counter (safe: asyncio is single-threaded)
     results = await asyncio.gather(*(
-        _generate_scene(panel, i, generator, request_id, total_scenes, channel)
+        _generate_scene(panel, i, generator, request_id, total_scenes, channel, completed_counter)
         for i, panel in enumerate(panels)
     ))
 

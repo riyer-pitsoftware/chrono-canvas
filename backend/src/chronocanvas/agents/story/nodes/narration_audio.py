@@ -18,6 +18,7 @@ from google.genai import types
 
 from chronocanvas.agents.story.state import StoryState
 from chronocanvas.config import settings
+from chronocanvas.services.progress import ProgressPublisher
 
 logger = logging.getLogger(__name__)
 
@@ -86,6 +87,9 @@ async def narration_audio_node(state: StoryState) -> StoryState:
 
     audio_paths: list[str] = []
     synthesized_count = 0
+    channel = f"generation:{request_id}"
+    progress = ProgressPublisher()
+    total_audio = len(panels_with_text)
 
     for idx, panel in panels_with_text:
         scene_idx = panel.get("scene_index", idx)
@@ -138,6 +142,16 @@ async def narration_audio_node(state: StoryState) -> StoryState:
             panel["narration_audio_path"] = str(wav_path)
             audio_paths.append(str(wav_path))
             synthesized_count += 1
+
+            await progress.publish_artifact(
+                channel,
+                artifact_type="audio",
+                scene_index=scene_idx,
+                total=total_audio,
+                completed=synthesized_count,
+                url=f"/output/{request_id}/audio/scene_{scene_idx}.wav",
+                mime_type="audio/wav",
+            )
 
             # Record LLM call for cost tracking
             input_tokens = 0
