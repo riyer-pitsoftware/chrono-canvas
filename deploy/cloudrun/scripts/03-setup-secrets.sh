@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+# Step 3: Create Secret Manager secrets.
+# Creates placeholder secrets. You must add real values for API keys.
+#
+# Safe to re-run — skips secrets that already exist.
+#
+# Usage:
+#   source deploy/cloudrun/scripts/00-env.sh
+#   bash deploy/cloudrun/scripts/03-setup-secrets.sh
+set -euo pipefail
+source "$(dirname "$0")/00-env.sh"
+
+create_secret() {
+  local name="$1"
+  local value="$2"
+  if gcloud secrets describe "${name}" --project="${GCP_PROJECT_ID}" &>/dev/null; then
+    echo "  ✓ ${name} (already exists)"
+  else
+    echo -n "${value}" | gcloud secrets create "${name}" \
+      --data-file=- \
+      --project="${GCP_PROJECT_ID}"
+    echo "  + ${name} created"
+  fi
+}
+
+echo "=== Creating Secret Manager secrets ==="
+create_secret "chronocanvas-secret-key" "$(openssl rand -hex 32)"
+create_secret "chronocanvas-google-api-key" "REPLACE_ME"
+create_secret "chronocanvas-anthropic-api-key" "REPLACE_ME"
+# chronocanvas-db-password is created by 02-create-infra.sh
+
+echo ""
+echo "============================================================"
+echo "  Secrets created!"
+echo "============================================================"
+echo ""
+echo "  ⚠️  You MUST set real API key values:"
+echo ""
+echo "  echo -n 'YOUR_GOOGLE_API_KEY' | \\"
+echo "    gcloud secrets versions add chronocanvas-google-api-key --data-file=-"
+echo ""
+echo "  echo -n 'YOUR_ANTHROPIC_API_KEY' | \\"
+echo "    gcloud secrets versions add chronocanvas-anthropic-api-key --data-file=-"
+echo ""
+echo "  Next: bash deploy/cloudrun/scripts/04-build-push.sh"

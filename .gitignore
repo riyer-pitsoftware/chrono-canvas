@@ -87,3 +87,6 @@ AGENTS.md
 
 # Archived feedback (processed into beads)
 archive/
+
+# Deploy docs (local only)
+deploy/cloudrun/README.md
