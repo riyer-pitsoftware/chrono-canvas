@@ -48,7 +48,10 @@ OUTPUT_DIR=/app/output,\
 UPLOAD_DIR=/app/uploads,\
 LOG_LEVEL=INFO,\
 HACKATHON_MODE=true,\
-HACKATHON_STRICT_GEMINI=true"
+HACKATHON_STRICT_GEMINI=true,\
+ENABLE_ADMIN_API=false,\
+ENABLE_AUDIT_UI=false,\
+ENABLE_FACE_UPLOAD=false"
 
 COMMON_SECRETS="\
 GOOGLE_API_KEY=chronocanvas-google-api-key:latest,\
@@ -100,8 +103,9 @@ gcloud run deploy chronocanvas-worker \
   --timeout=600 \
   --no-cpu-throttling \
   --no-allow-unauthenticated \
-  --command="arq" \
-  --args="chronocanvas.worker.WorkerSettings" \
+  --command="/app/entrypoint.sh" \
+  --args="python,-m,chronocanvas.worker_main" \
+  --port=8080 \
   --set-env-vars="${COMMON_ENV},RUN_MIGRATIONS=false" \
   --set-secrets="${COMMON_SECRETS}" \
   --project="${GCP_PROJECT_ID}"

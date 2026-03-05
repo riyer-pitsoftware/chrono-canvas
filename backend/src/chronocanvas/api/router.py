@@ -16,18 +16,21 @@ from chronocanvas.api.routes import (
     validation,
     voice,
 )
+from chronocanvas.config import settings
 
 api_router = APIRouter(prefix="/api")
 
 api_router.include_router(health.router)
 api_router.include_router(figures.router)
 api_router.include_router(timeline.router)
-api_router.include_router(faces.router)
+if settings.enable_face_upload:
+    api_router.include_router(faces.router)
 api_router.include_router(generation.router)
 api_router.include_router(validation.router)
 api_router.include_router(export.router)
 api_router.include_router(agents.router)
-api_router.include_router(admin.router)
+if settings.enable_admin_api:
+    api_router.include_router(admin.router)
 api_router.include_router(memory.router)
 api_router.include_router(eval_viewer.router)
 api_router.include_router(reference_images.router)

@@ -74,6 +74,7 @@ class Settings(BaseSettings):
     # Storage
     upload_dir: str = "./uploads"
     output_dir: str = "./output"
+    archive_dir: str = "./archive"
     eval_dir: str = "./eval"
 
     # Rate Limiting
@@ -107,6 +108,11 @@ class Settings(BaseSettings):
 
     # Hackathon strict Gemini mode
     hackathon_strict_gemini: bool = False  # When True, fail fast instead of falling back away from Gemini
+
+    # Production feature flags — disable non-essential endpoints on GCP
+    enable_admin_api: bool = True
+    enable_audit_ui: bool = True
+    enable_face_upload: bool = True
 
     # Logging
     log_level: str = "INFO"

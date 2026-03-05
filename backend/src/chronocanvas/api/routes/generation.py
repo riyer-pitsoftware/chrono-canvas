@@ -193,6 +193,10 @@ async def get_generation(request_id: uuid.UUID, session: AsyncSession = Depends(
 async def get_generation_audit(
     request_id: uuid.UUID, session: AsyncSession = Depends(get_session)
 ):
+    from chronocanvas.config import settings
+
+    if not settings.enable_audit_ui:
+        raise HTTPException(status_code=404, detail="Not found")
     repo = RequestRepository(session)
     request = await repo.get(request_id)
     if not request:
