@@ -12,6 +12,10 @@ RUN python -c "import tomllib, pathlib; d = tomllib.loads(pathlib.Path('pyprojec
     && pip install --no-cache-dir -r requirements.txt \
     && rm requirements.txt
 
+# Install vendor wheels (neo-modules etc.)
+COPY vendor/*.whl /tmp/wheels/
+RUN pip install --no-cache-dir /tmp/wheels/*.whl && rm -rf /tmp/wheels
+
 # Copy source and install package
 COPY backend/src/ src/
 RUN pip install --no-cache-dir --no-deps .

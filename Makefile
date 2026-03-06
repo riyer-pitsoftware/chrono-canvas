@@ -2,7 +2,7 @@
        frontend backend cli clean check-env \
        logs logs-api logs-worker logs-frontend \
        status shell-api db-shell fresh health \
-       quickstart smoke-test
+       quickstart smoke-test neo-wheel
 
 COMPOSE_DEV = docker compose -f docker-compose.dev.yml
 API_CONTAINER = chrono-canvas-api-1
@@ -14,13 +14,17 @@ quickstart:
 smoke-test:
 	@bash scripts/smoke-test.sh
 
+# ── Vendor Wheels ─────────────────────────────────────────────────────
+neo-wheel:  ## Build neo-modules wheel into vendor/
+	bash scripts/build-vendor-wheels.sh
+
 # ── Development ──────────────────────────────────────────────────────
 dev: up
 	@echo "ChronoCanvas running at http://localhost:3000"
 
 start: dev
 
-up:
+up: neo-wheel
 	$(COMPOSE_DEV) up --build -d
 
 down:
@@ -28,7 +32,9 @@ down:
 
 stop: down
 
-restart: down up
+restart: neo-wheel
+	$(COMPOSE_DEV) down
+	$(COMPOSE_DEV) up --build -d
 
 build:
 	docker compose build
