@@ -100,6 +100,11 @@ lint:
 
 format:
 	cd backend && ruff format src/ tests/
+	cd frontend && npx prettier --write "src/**/*.{ts,tsx,css,json}"
+
+format-check:
+	cd backend && ruff format --check src/ tests/
+	cd frontend && npx prettier --check "src/**/*.{ts,tsx,css,json}"
 
 # ── Frontend ─────────────────────────────────────────────────────────
 frontend:

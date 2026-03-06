@@ -38,9 +38,24 @@ Provide detailed information as JSON with these fields:
 - clothing_details: string (accurate period clothing they would wear, fabrics, colors)
 - physical_description: string (known physical features, build, hair, complexion — incorporate and expand on any known traits listed above)
 - art_style_reference: string (art style of their era, e.g., "Renaissance oil painting")
-- sources: list of strings (reference descriptions)
+- citations: list of objects, each with:
+  - title: string (source title or name)
+  - url: string or null (URL if known)
+  - publisher: string or null (publisher or domain)
+  - quote_snippet: string or null (key quote supporting the claim)
+  - claim_supported: string or null (what claim this source supports)
+  - confidence: number 0-1 (confidence in the source)
 
 Respond with valid JSON only."""
+
+
+def _normalize_citations(data: dict) -> list[dict]:
+    """Convert LLM output to structured citations, handling old 'sources' format."""
+    if "citations" in data and isinstance(data["citations"], list):
+        return [c if isinstance(c, dict) else {"title": str(c)} for c in data["citations"]]
+    if "sources" in data and isinstance(data["sources"], list):
+        return [{"title": s} if isinstance(s, str) else s for s in data["sources"]]
+    return []
 
 
 async def research_node(state: AgentState) -> AgentState:
@@ -93,7 +108,7 @@ async def research_node(state: AgentState) -> AgentState:
                 "clothing_details": "Period-appropriate attire.",
                 "physical_description": "No specific physical description available.",
                 "art_style_reference": "Classical portrait style.",
-                "sources": [],
+                "citations": [],
             }
 
         # Store in cache (skip if figure_name is empty — NOT NULL constraint)
@@ -136,7 +151,7 @@ async def research_node(state: AgentState) -> AgentState:
             clothing_details=data.get("clothing_details", ""),
             physical_description=data.get("physical_description", ""),
             art_style_reference=data.get("art_style_reference", "Classical portrait"),
-            research_sources=data.get("sources", []),
+            citations=_normalize_citations(data),
             research_cache_hit=cache_hit,
         ),
         "agent_trace": trace,

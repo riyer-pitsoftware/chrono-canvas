@@ -38,7 +38,7 @@ def test_agent_state_with_all_fields():
             clothing_details="Military uniform",
             physical_description="Short stature",
             art_style_reference="Neoclassical oil painting",
-            research_sources=["Wikipedia"],
+            citations=[{"title": "Wikipedia", "confidence": 0.8}],
         ),
         "prompt": PromptState(
             image_prompt="A portrait...",

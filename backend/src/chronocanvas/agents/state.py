@@ -21,7 +21,7 @@ class ResearchState(TypedDict, total=False):
     clothing_details: str
     physical_description: str
     art_style_reference: str
-    research_sources: list[str]
+    citations: list[dict]
     research_cache_hit: bool
 
 

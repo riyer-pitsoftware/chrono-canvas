@@ -8,6 +8,8 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
+    "format": "prettier --write \"src/**/*.{ts,tsx,css,json}\"",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx,css,json}\"",
     "capture-screenshots": "npx tsx capture-screenshots.ts"
   },
   "dependencies": {
@@ -39,6 +41,7 @@
     "eslint": "^9.17.0",
     "eslint-plugin-react-hooks": "^5.0.0",
     "globals": "^15.14.0",
+    "prettier": "^3.8.1",
     "tailwindcss": "^4.0.0",
     "typescript": "~5.7.0",
     "typescript-eslint": "^8.18.0",

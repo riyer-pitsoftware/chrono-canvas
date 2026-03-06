@@ -5,6 +5,16 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 
+class Citation(BaseModel):
+    title: str
+    url: str | None = None
+    publisher: str | None = None
+    retrieved_at: str | None = None
+    quote_snippet: str | None = None
+    claim_supported: str | None = None
+    confidence: float | None = None
+
+
 class GenerationCreate(BaseModel):
     input_text: str = ""
     figure_id: uuid.UUID | None = None
@@ -125,4 +135,5 @@ class AuditDetailResponse(BaseModel):
     state_snapshots: list[StateSnapshot] = Field(default_factory=list)
     agent_trace: list[dict[str, Any]] = Field(default_factory=list)
     storyboard_data: dict[str, Any] | None = None
+    narration_audio_urls: list[dict[str, Any]] = Field(default_factory=list)
     run_type: str = "portrait"

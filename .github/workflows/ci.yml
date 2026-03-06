@@ -32,6 +32,8 @@ jobs:
         run: pip install -e "backend[dev]"
       - name: Lint
         run: cd backend && ruff check src/ tests/
+      - name: Check formatting
+        run: cd backend && ruff format --check src/ tests/
 
   backend-test:
     name: Backend tests
@@ -67,5 +69,7 @@ jobs:
         run: cd frontend && npm ci
       - name: Lint
         run: cd frontend && npm run lint
+      - name: Check formatting
+        run: cd frontend && npx prettier --check "src/**/*.{ts,tsx,css,json}"
       - name: Type check
         run: cd frontend && npx tsc --noEmit

@@ -55,6 +55,8 @@ class RequestStateProjector:
                 "historical_context": res.get("historical_context"),
                 "clothing_details": res.get("clothing_details"),
                 "physical_description": res.get("physical_description"),
+                "art_style_reference": res.get("art_style_reference"),
+                "citations": res.get("citations", []),
             }
         prompt_state = node_state.get("prompt")
         if prompt_state and prompt_state.get("image_prompt"):
