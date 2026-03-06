@@ -12,6 +12,20 @@
 set -euo pipefail
 source "$(dirname "$0")/00-env.sh"
 
+# ── Verify images exist ──────────────────────────────────────────────
+echo "=== Verifying images exist for tag: ${DEPLOY_TAG} ==="
+for svc in api frontend; do
+  if ! gcloud artifacts docker images describe "${IMAGE_BASE}/${svc}:${DEPLOY_TAG}" \
+       --project="${GCP_PROJECT_ID}" &>/dev/null; then
+    echo "ERROR: Image ${IMAGE_BASE}/${svc}:${DEPLOY_TAG} not found in Artifact Registry."
+    echo "Did you build with a different tag? Current HEAD is $(git rev-parse --short HEAD)."
+    echo "Fix: re-run step 04, or use --tag=<correct-tag>"
+    exit 1
+  fi
+done
+echo "  Images verified for tag: ${DEPLOY_TAG}"
+echo ""
+
 # ── Resolve infrastructure details ────────────────────────────────────
 DB_CONNECTION_NAME=$(gcloud sql instances describe "${DB_INSTANCE}" \
   --project="${GCP_PROJECT_ID}" \

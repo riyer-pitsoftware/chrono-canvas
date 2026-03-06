@@ -18,7 +18,18 @@ export REDIS_INSTANCE="chronocanvas-redis"
 export VPC_CONNECTOR="chronocanvas-vpc"
 export IMAGE_BASE="${GCP_REGION}-docker.pkg.dev/${GCP_PROJECT_ID}/${AR_REPO}"
 export SA_EMAIL="${SA_NAME}@${GCP_PROJECT_ID}.iam.gserviceaccount.com"
-export DEPLOY_TAG="${DEPLOY_TAG:-$(git rev-parse --short HEAD 2>/dev/null || echo latest)}"
+# Tag resolution: explicit env > state file > git HEAD
+STATE_FILE="$(cd "$(dirname "$0")/.." && pwd)/.deploy-state"
+if [ -n "${DEPLOY_TAG:-}" ]; then
+  # Explicit override — use as-is
+  :
+elif [ -f "$STATE_FILE" ]; then
+  export DEPLOY_TAG="$(cat "$STATE_FILE")"
+else
+  export DEPLOY_TAG="$(git rev-parse --short HEAD 2>/dev/null || echo latest)"
+fi
+# Persist for subsequent steps
+echo "$DEPLOY_TAG" > "$STATE_FILE"
 
 echo "╔══════════════════════════════════════════════════════╗"
 echo "║  ChronoCanvas Cloud Run Deploy                      ║"

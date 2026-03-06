@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 # Step 4: Build Docker images and push to Artifact Registry.
 #
+# Uses buildx to cross-compile for linux/amd64 (Cloud Run)
+# from Apple Silicon or any other architecture.
+#
 # Must be run from the chrono-canvas repo root.
 #
 # Usage:
@@ -10,33 +13,41 @@
 set -euo pipefail
 source "$(dirname "$0")/00-env.sh"
 
+# Build vendor wheels (neo-modules etc.)
+echo "=== Building vendor wheels ==="
+bash "$(git rev-parse --show-toplevel)/scripts/build-vendor-wheels.sh"
+
 # Authenticate Docker with Artifact Registry
 echo "=== Configuring Docker for Artifact Registry ==="
 gcloud auth configure-docker "${GCP_REGION}-docker.pkg.dev" --quiet
 
-# ── Build API image (also used for worker) ────────────────────────────
-echo "=== Building API image ==="
-docker build \
+# Use the default buildx builder (shares Docker daemon's network and credentials)
+docker buildx use default 2>/dev/null || true
+
+# ── Build & push API image (also used for worker) ──────────────────────
+echo "=== Building & pushing API image ==="
+docker buildx build \
+  --platform linux/amd64 \
   -f deploy/cloudrun/Dockerfile.api \
   -t "${IMAGE_BASE}/api:${DEPLOY_TAG}" \
   -t "${IMAGE_BASE}/api:latest" \
+  --push \
   .
 
-echo "=== Pushing API image ==="
-docker push "${IMAGE_BASE}/api:${DEPLOY_TAG}"
-docker push "${IMAGE_BASE}/api:latest"
-
-# ── Build Frontend image ─────────────────────────────────────────────
-echo "=== Building Frontend image ==="
-docker build \
+# ── Build & push Frontend image ───────────────────────────────────────
+echo "=== Building & pushing Frontend image ==="
+docker buildx build \
+  --platform linux/amd64 \
   -f deploy/cloudrun/Dockerfile.frontend \
   -t "${IMAGE_BASE}/frontend:${DEPLOY_TAG}" \
   -t "${IMAGE_BASE}/frontend:latest" \
+  --push \
   .
 
-echo "=== Pushing Frontend image ==="
-docker push "${IMAGE_BASE}/frontend:${DEPLOY_TAG}"
-docker push "${IMAGE_BASE}/frontend:latest"
+# Persist tag for subsequent deploy steps
+STATE_FILE="$(cd "$(dirname "$0")/.." && pwd)/.deploy-state"
+echo "$DEPLOY_TAG" > "$STATE_FILE"
+echo "  Tag persisted to ${STATE_FILE}"
 
 echo ""
 echo "============================================================"

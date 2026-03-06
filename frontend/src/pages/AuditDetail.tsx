@@ -9,7 +9,7 @@ import { StateInspector } from "@/components/generation/StateInspector";
 import { CostTimeline } from "@/components/generation/CostTimeline";
 import { DAGVisualizer } from "@/components/generation/DAGVisualizer";
 import { StoryboardView } from "@/components/generation/StoryboardView";
-import { BookOpen, ChevronDown, ChevronLeft, ChevronRight, Copy, Download, ExternalLink, RotateCcw, ShieldCheck, Trash2, X } from "lucide-react";
+import { BookOpen, ChevronDown, ChevronLeft, ChevronRight, Copy, Download, ExternalLink, RotateCcw, ShieldCheck, Trash2, Volume2, X } from "lucide-react";
 import type { AuditFeedback, GeneratedImage } from "@/api/types";
 import { MessageSquare, Send } from "lucide-react";
 
@@ -27,11 +27,16 @@ const PORTRAIT_PIPELINE_STEPS = [
 
 const STORY_PIPELINE_STEPS = [
   { value: "story_orchestrator", label: "Orchestrator" },
+  { value: "image_to_story", label: "Image to Story" },
+  { value: "reference_image_analysis", label: "Ref Image Analysis" },
   { value: "character_extraction", label: "Character Extraction" },
   { value: "scene_decomposition", label: "Scene Decomposition" },
   { value: "scene_prompt_generation", label: "Prompt Generation" },
   { value: "scene_image_generation", label: "Image Generation" },
   { value: "storyboard_coherence", label: "Coherence Check" },
+  { value: "narration_script", label: "Narration Script" },
+  { value: "narration_audio", label: "Narration Audio" },
+  { value: "video_assembly", label: "Video Assembly" },
   { value: "storyboard_export", label: "Export" },
 ];
 
@@ -246,6 +251,89 @@ export function AuditDetail({ requestId }: { requestId: string }) {
       {/* Agent Steps (non-LLM nodes: face_search, facial_compositing) */}
       <AgentStepsCard agentTrace={data.agent_trace ?? []} requestId={requestId} feedback={feedbackData?.items ?? []} />
 
+      {/* Research & Citations */}
+      {data.research_data && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Research & Citations</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Research context */}
+            {data.research_data.historical_context && (
+              <div>
+                <p className="text-xs font-medium text-[var(--muted-foreground)] mb-1">Historical Context</p>
+                <p className="text-sm">{data.research_data.historical_context}</p>
+              </div>
+            )}
+            {data.research_data.clothing_details && (
+              <div>
+                <p className="text-xs font-medium text-[var(--muted-foreground)] mb-1">Clothing Details</p>
+                <p className="text-sm">{data.research_data.clothing_details}</p>
+              </div>
+            )}
+            {data.research_data.physical_description && (
+              <div>
+                <p className="text-xs font-medium text-[var(--muted-foreground)] mb-1">Physical Description</p>
+                <p className="text-sm">{data.research_data.physical_description}</p>
+              </div>
+            )}
+            {data.research_data.art_style_reference && (
+              <div>
+                <p className="text-xs font-medium text-[var(--muted-foreground)] mb-1">Art Style Reference</p>
+                <p className="text-sm">{data.research_data.art_style_reference}</p>
+              </div>
+            )}
+
+            {/* Citations */}
+            {data.research_data.citations && data.research_data.citations.length > 0 && (
+              <div className="pt-3 border-t">
+                <p className="text-xs font-medium text-[var(--muted-foreground)] mb-2">
+                  Citations ({data.research_data.citations.length})
+                </p>
+                <div className="space-y-2">
+                  {data.research_data.citations.map((cite, i) => (
+                    <div key={i} className="border rounded-md p-3 text-sm space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium">{cite.title}</span>
+                        <div className="flex items-center gap-2">
+                          {cite.confidence != null && (
+                            <Badge
+                              variant={cite.confidence >= 0.7 ? "success" : cite.confidence >= 0.4 ? "secondary" : "destructive"}
+                              className="text-xs"
+                            >
+                              {(cite.confidence * 100).toFixed(0)}%
+                            </Badge>
+                          )}
+                          {cite.url && (
+                            <a
+                              href={cite.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-600 hover:text-blue-800 transition-colors"
+                            >
+                              <ExternalLink className="w-3.5 h-3.5" />
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                      {cite.publisher && (
+                        <p className="text-xs text-[var(--muted-foreground)]">{cite.publisher}</p>
+                      )}
+                      {cite.quote_snippet && (
+                        <p className="text-xs italic text-[var(--muted-foreground)]">&ldquo;{cite.quote_snippet}&rdquo;</p>
+                      )}
+                      {cite.claim_supported && (
+                        <p className="text-xs"><span className="text-[var(--muted-foreground)]">Supports:</span> {cite.claim_supported}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Agent State Inspector */}
       <Card>
         <CardHeader>
@@ -309,6 +397,43 @@ export function AuditDetail({ requestId }: { requestId: string }) {
               storyboard={data.storyboard_data}
               requestId={requestId}
             />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Narration Audio */}
+      {data.narration_audio_urls && data.narration_audio_urls.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Volume2 className="h-5 w-5" />
+              Narration Audio ({data.narration_audio_urls.length} clips)
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {data.narration_audio_urls.map((clip) => (
+              <div key={clip.scene_index} className="border rounded-md p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Scene {clip.scene_index + 1}</span>
+                  <a
+                    href={clip.url}
+                    download={`scene_${clip.scene_index}.wav`}
+                    className="flex items-center gap-1 text-xs text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    Download WAV
+                  </a>
+                </div>
+                {clip.narration_text && (
+                  <p className="text-sm italic text-[var(--muted-foreground)]">
+                    &ldquo;{clip.narration_text}&rdquo;
+                  </p>
+                )}
+                <audio controls className="w-full h-8" src={clip.url}>
+                  Your browser does not support audio playback.
+                </audio>
+              </div>
+            ))}
           </CardContent>
         </Card>
       )}
@@ -684,10 +809,15 @@ function DAGCostCard({
   );
 }
 
-function imageUrl(img: GeneratedImage, requestId: string) {
-  // file_path may be absolute or relative; extract just the filename
-  const filename = img.file_path.split("/").pop();
-  return `/output/${requestId}/${filename}`;
+function imageUrl(img: GeneratedImage, _requestId: string) {
+  // file_path is relative like "output/uuid/scene_0/file.png" or absolute "/app/output/..."
+  // Strip everything up to and including the first "output/" to get the subpath
+  const outputIdx = img.file_path.indexOf("output/");
+  if (outputIdx !== -1) {
+    return "/" + img.file_path.slice(outputIdx);
+  }
+  // Fallback: use the path as-is prefixed with /
+  return img.file_path.startsWith("/") ? img.file_path : "/" + img.file_path;
 }
 
 function ImageGallery({ images, requestId }: { images: GeneratedImage[]; requestId: string }) {

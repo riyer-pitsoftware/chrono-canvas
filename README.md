@@ -141,6 +141,43 @@ Every LLM call is logged with prompts, tokens, cost, and latency — browsable i
 
 ---
 
+## Why this is unique
+
+ChronoCanvas is **not** a ChatGPT wrapper. It is a multi-agent pipeline with structural guarantees that generic chat interfaces cannot provide:
+
+- **Multimodal pipeline** — text input flows through extraction, research, prompt generation, image generation, validation, and face compositing as discrete, auditable steps. Each node has a single responsibility and a typed state contract.
+- **Historical grounding** — a dedicated research node enriches every generation with period-specific context (clothing, art style, cultural details) before any image prompt is written. Research results are cached with pgvector semantic similarity for cost savings.
+- **Validation with retry** — generated portraits are scored against 4 weighted criteria (clothing accuracy, cultural accuracy, temporal plausibility, artistic plausibility). Failures trigger automatic prompt correction and regeneration (up to 2x).
+- **Face integration** — users upload a reference photo; FaceFusion composites their face onto the generated portrait while preserving historical costume and setting.
+- **Storyboard coherence** — story mode uses Gemini multimodal to review all generated panels together, scoring character consistency, art style uniformity, and narrative flow. Low-scoring scenes are automatically regenerated.
+- **Full audit trail** — every LLM call (prompt, response, tokens, cost, latency, provider) is logged and browsable per generation. No black boxes.
+
+**Target audience:** engineering leaders evaluating auditable AI workflows, staff-plus engineers building LangGraph pipelines, and educators exploring AI-assisted historical visualization.
+
+---
+
+## How we reduce hallucinations
+
+LLM outputs are not historically accurate — but ChronoCanvas applies multiple layers to catch and correct the worst errors:
+
+1. **Structured research** — before generating any image, a dedicated research node queries the LLM for period-specific details (clothing, physical description, cultural context, art style). This grounds the image prompt in contextual information rather than raw imagination.
+
+2. **Validation scoring** — every generated portrait is scored 0-100 across 4 weighted categories:
+   - Clothing accuracy — does the attire match the era and region?
+   - Cultural accuracy — are cultural markers (jewelry, headwear, symbols) appropriate?
+   - Temporal plausibility — do materials, colors, and techniques fit the time period?
+   - Artistic plausibility — does the style match the art conventions of the era?
+
+3. **Automatic retry** — if the validation score falls below the configurable threshold, the pipeline loops back to prompt generation with the validation feedback, corrects the prompt, and regenerates. Up to 2 retries are attempted before accepting the result.
+
+4. **Structured citations** — the research node returns structured citation objects (title, publisher, confidence score, supporting quote) rather than opaque text. These are persisted and displayed in the audit trail so users can trace claims to sources.
+
+5. **Disclaimer** — all generated output is clearly labeled as AI-generated illustration, not historically verified depiction.
+
+> **Important:** These measures reduce but do not eliminate hallucination. Treat all output as plausible illustration, not authoritative historical record.
+
+---
+
 ## Deployment modes
 
 | Mode | LLM provider | Image generation | Internet required | Notes |

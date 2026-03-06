@@ -4,10 +4,11 @@
 # Usage:
 #   cd /path/to/chrono-canvas
 #   export GCP_PROJECT_ID=gen-lang-client-0925647028
-#   bash deploy/cloudrun/deploy-all.sh [--from=STEP] [--dry-run]
+#   bash deploy/cloudrun/deploy-all.sh [--from=STEP] [--tag=TAG] [--dry-run]
 #
 # Options:
 #   --from=N     Start from step N (e.g., --from=4 to skip infra setup)
+#   --tag=TAG    Use a specific image tag (overrides git HEAD / state file)
 #   --dry-run    Print what would run without executing
 #   --skip-wait  Don't pause between steps (for CI)
 set -euo pipefail
@@ -20,6 +21,7 @@ SKIP_WAIT=false
 for arg in "$@"; do
   case "$arg" in
     --from=*) FROM_STEP="${arg#--from=}" ;;
+    --tag=*) export DEPLOY_TAG="${arg#--tag=}" ;;
     --dry-run) DRY_RUN=true ;;
     --skip-wait) SKIP_WAIT=true ;;
   esac
@@ -105,6 +107,7 @@ echo "║  ChronoCanvas Cloud Run — Full Deployment               ║"
 echo "╠══════════════════════════════════════════════════════════╣"
 echo "║  Project:  ${GCP_PROJECT_ID:?Set GCP_PROJECT_ID}        "
 echo "║  Region:   ${GCP_REGION:-us-central1}                   "
+echo "║  Tag:      ${DEPLOY_TAG:-<auto>}                        "
 echo "║  Starting: step ${FROM_STEP}                            "
 echo "╚══════════════════════════════════════════════════════════╝"
 echo ""

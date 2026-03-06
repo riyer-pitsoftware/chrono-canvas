@@ -88,5 +88,11 @@ AGENTS.md
 # Archived feedback (processed into beads)
 archive/
 
+# Vendor wheels (built locally, not checked in)
+vendor/*.whl
+
 # Deploy docs (local only)
 deploy/cloudrun/README.md
+
+# Deploy state (tag pinning between steps)
+deploy/cloudrun/.deploy-state

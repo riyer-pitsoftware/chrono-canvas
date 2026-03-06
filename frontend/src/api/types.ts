@@ -42,6 +42,23 @@ export interface StoryboardData {
   completed_scenes: number;
 }
 
+export interface Citation {
+  title: string;
+  url?: string | null;
+  publisher?: string | null;
+  quote_snippet?: string | null;
+  claim_supported?: string | null;
+  confidence?: number | null;
+}
+
+export interface ResearchData {
+  historical_context?: string;
+  clothing_details?: string;
+  physical_description?: string;
+  art_style_reference?: string;
+  citations?: Citation[];
+}
+
 export interface GenerationRequest {
   id: string;
   figure_id: string | null;
@@ -50,7 +67,7 @@ export interface GenerationRequest {
   status: string;
   current_agent: string | null;
   extracted_data: Record<string, unknown> | null;
-  research_data: Record<string, unknown> | null;
+  research_data: ResearchData | null;
   generated_prompt: string | null;
   error_message: string | null;
   agent_trace: Array<Record<string, unknown>> | null;
@@ -212,7 +229,7 @@ export interface AuditDetail {
   created_at: string;
   updated_at: string;
   extracted_data: Record<string, unknown> | null;
-  research_data: Record<string, unknown> | null;
+  research_data: ResearchData | null;
   generated_prompt: string | null;
   error_message: string | null;
   total_cost: number;
@@ -226,6 +243,7 @@ export interface AuditDetail {
   state_snapshots: StateSnapshot[];
   agent_trace: Array<Record<string, unknown>>;
   storyboard_data: StoryboardData | null;
+  narration_audio_urls: { scene_index: number; narration_text: string; url: string }[];
   run_type: string;
 }
 
