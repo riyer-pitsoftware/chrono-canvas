@@ -66,7 +66,7 @@ All configuration is via environment variables. Copy `.env.example` to `.env` to
 
 | Variable | Description | Default |
 |---|---|---|
-| `DEFAULT_LLM_PROVIDER` | Global fallback provider; per-task overrides in `llm/router.py` | `ollama` |
+| `DEFAULT_LLM_PROVIDER` | Global fallback provider; per-task overrides in `llm/router.py` | `gemini` |
 | `OLLAMA_BASE_URL` | Ollama endpoint | `http://localhost:11434` |
 | `OLLAMA_MODEL` | Model name for Ollama | `llama3.1:8b` |
 | `ANTHROPIC_API_KEY` | Anthropic API key (required for Claude) | — |
@@ -74,12 +74,16 @@ All configuration is via environment variables. Copy `.env.example` to `.env` to
 | `OPENAI_API_KEY` | OpenAI API key | — |
 | `OPENAI_MODEL` | OpenAI model | `gpt-4o` |
 | `SERPAPI_KEY` | SerpAPI key for face image web search (optional) | — |
+| `PEXELS_API_KEY` | Pexels stock image API key (optional, for Neo-Noir scenes) | — |
+| `UNSPLASH_ACCESS_KEY` | Unsplash stock image API key (optional, for Neo-Noir scenes) | — |
+| `GOOGLE_API_KEY` | Google API key (required for Gemini LLM, Imagen, TTS, multimodal) | — |
+| `GEMINI_MODEL` | Gemini model ID | `gemini-2.5-flash` |
 
 ### Image generation
 
 | Variable | Description | Default |
 |---|---|---|
-| `IMAGE_PROVIDER` | `mock`, `comfyui`, or `stable_diffusion` | `mock` |
+| `IMAGE_PROVIDER` | `imagen`, `comfyui`, `stable_diffusion`, or `mock` | `imagen` |
 | `SD_API_URL` | Stable Diffusion API endpoint | `http://localhost:7860` |
 | `COMFYUI_API_URL` | ComfyUI API endpoint | `http://localhost:8188` |
 | `COMFYUI_MODEL` | `sdxl` or `flux` | `sdxl` |
@@ -101,7 +105,27 @@ All configuration is via environment variables. Copy `.env.example` to `.env` to
 | `HACKATHON_MODE` | When `true`, UI defaults to Story Director mode and reorders sidebar nav (story-first) | `false` |
 | `HACKATHON_STRICT_GEMINI` | When `true`, LLM router fails fast with 503 instead of falling back away from Gemini | `false` |
 
-These flags are independent — you can enable strict Gemini without hackathon mode and vice versa. The `/api/health` endpoint exposes `hackathon_mode` so the frontend can read it at startup.
+These flags are independent — you can enable strict Gemini without hackathon mode and vice versa. The `/api/health` endpoint exposes `hackathon_mode` and a `services` availability map so the frontend can read configuration at startup.
+
+### Service availability
+
+The `/api/health` endpoint returns a `services` object showing which providers are available (keys configured and reachable). This powers the ConfigHUD — the pre-orchestration mixing board UI that lets users select providers per channel before starting a generation.
+
+```json
+{
+  "services": {
+    "llm": {"gemini": true, "claude": false, "openai": false, "ollama": true},
+    "image": {"imagen": true, "comfyui": false, "stable_diffusion": false},
+    "search": {"serpapi": true, "pexels": false, "unsplash": false},
+    "tts": true,
+    "facefusion": false
+  }
+}
+```
+
+### Per-request configuration
+
+Generation requests can include a `config` payload that overrides global settings for that run. This is parsed into a `RuntimeConfig` dataclass (`backend/src/chronocanvas/runtime_config.py`) which provides per-channel overrides for LLM provider, image provider, search toggles, TTS, vision features, and compositing. When an override is not set, the global `.env` setting is used.
 
 **Testing hackathon flags:**
 
