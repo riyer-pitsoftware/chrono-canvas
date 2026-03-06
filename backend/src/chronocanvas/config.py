@@ -25,6 +25,8 @@ class Settings(BaseSettings):
 
     # Web Search
     serpapi_key: str = ""
+    pexels_api_key: str = ""
+    unsplash_access_key: str = ""
 
     # LLM Routing
     default_llm_provider: str = "gemini"
