@@ -17,11 +17,22 @@ from chronocanvas.agents.story.state import StoryState
 from chronocanvas.config import settings
 
 
+def _rc(state: StoryState):
+    """Return RuntimeConfig from state, or a blank one."""
+    rc = state.get("runtime_config")
+    if rc is not None:
+        return rc
+    from chronocanvas.runtime_config import RuntimeConfig
+    return RuntimeConfig()
+
+
 def _should_continue_after_orchestrator(state: StoryState) -> str:
     if state.get("error"):
         return "error"
     # If an image was uploaded, route through image_to_story first
-    if state.get("reference_image_path") and settings.image_to_story_enabled:
+    rc = _rc(state)
+    image_to_story = rc.effective("image_to_story_enabled", settings.image_to_story_enabled)
+    if state.get("reference_image_path") and image_to_story:
         return "image_to_story"
     # If reference images provided, route through analysis first
     if state.get("reference_images") and len(state.get("reference_images", [])) > 0:
@@ -40,7 +51,9 @@ def _should_regen_after_coherence(state: StoryState) -> str:
     """Route to regen cycle if coherence flagged scenes, else narration or export."""
     if state.get("regen_scenes"):
         return "regen"
-    if settings.tts_enabled:
+    rc = _rc(state)
+    tts = rc.effective("tts_enabled", settings.tts_enabled)
+    if tts:
         return "narration"
     return "export"
 

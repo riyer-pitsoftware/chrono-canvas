@@ -41,6 +41,7 @@ export function useCreateGeneration() {
       run_type?: string;
       ref_image_id?: string;
       ref_image_ids?: string[];
+      config?: Record<string, unknown>;
     }) =>
       api.post<GenerationRequest>("/generate", data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["generations"] }),

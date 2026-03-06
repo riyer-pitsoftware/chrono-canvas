@@ -1,7 +1,7 @@
 import logging
 import uuid
 
-from chronocanvas.agents.graph import agent_graph as _default_graph
+import chronocanvas.agents.graph as _graph_module
 from chronocanvas.agents.invariants import InvariantViolationError, validate_initial_state
 from chronocanvas.agents.state import AgentState, FaceState, ValidationState
 from chronocanvas.db.engine import async_session as _default_session_factory
@@ -12,6 +12,7 @@ from chronocanvas.db.repositories.validation_rules import (
     AdminSettingRepository,
     ValidationRuleRepository,
 )
+from chronocanvas.runtime_config import RuntimeConfig
 from chronocanvas.services.image_recorder import ImageAttemptRecorder
 from chronocanvas.services.progress import ProgressPublisher
 from chronocanvas.services.retry import RetryCoordinator
@@ -58,11 +59,12 @@ async def run_generation_pipeline(
     input_text: str,
     *,
     source_face_path: str | None = None,
+    config_payload: dict | None = None,
     session_factory=None,
     graph=None,
 ) -> None:
     _sf = session_factory if session_factory is not None else _default_session_factory
-    _graph = graph if graph is not None else _default_graph
+    _graph = graph if graph is not None else _graph_module.agent_graph
     channel = f"generation:{request_id}"
     publisher = ProgressPublisher()
 
@@ -82,6 +84,8 @@ async def run_generation_pipeline(
             validation_weights = await rule_repo.get_weights()
             validation_threshold = await setting_repo.get_pass_threshold()
 
+            rc = RuntimeConfig.from_request_payload(config_payload)
+
             initial_state: AgentState = {
                 "request_id": request_id,
                 "input_text": input_text,
@@ -90,6 +94,7 @@ async def run_generation_pipeline(
                 "retry_count": 0,
                 "should_regenerate": False,
                 "error": None,
+                "runtime_config": rc,
                 "validation": ValidationState(
                     rule_weights=validation_weights,
                     pass_threshold=validation_threshold,
@@ -122,7 +127,7 @@ async def retry_generation_pipeline(
     graph=None,
 ) -> None:
     _sf = session_factory if session_factory is not None else _default_session_factory
-    _graph = graph if graph is not None else _default_graph
+    _graph = graph if graph is not None else _graph_module.agent_graph
     channel = f"generation:{request_id}"
     config = {"configurable": {"thread_id": request_id}}
     publisher = ProgressPublisher()

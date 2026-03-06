@@ -28,6 +28,8 @@ class GenerationCreate(BaseModel):
     ref_image_id: str | None = Field(None, pattern=r"^[0-9a-f]{32}$")
     # Optional reference images for style/location/character refs
     ref_image_ids: list[str] | None = None
+    # Per-request config overrides from ConfigHUD (passed through to RuntimeConfig)
+    config: dict | None = None
 
 
 class GenerationResponse(BaseModel):

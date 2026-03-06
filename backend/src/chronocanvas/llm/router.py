@@ -10,6 +10,7 @@ from chronocanvas.llm.providers.ollama import OllamaProvider
 from chronocanvas.llm.providers.openai import OpenAIProvider
 from chronocanvas.llm.rate_limiter import RateLimiter
 from chronocanvas.redis_client import publish_progress
+from chronocanvas.runtime_config import RuntimeConfig
 
 logger = logging.getLogger(__name__)
 
@@ -49,12 +50,25 @@ class LLMRouter:
         self,
         task_type: TaskType = TaskType.GENERAL,
         agent_name: str | None = None,
+        runtime_config: RuntimeConfig | None = None,
     ) -> LLMProvider:
-        # Per-agent override takes precedence (from LLM_AGENT_ROUTING env var)
+        # Per-agent override from RuntimeConfig takes highest precedence
+        if runtime_config and agent_name and agent_name in runtime_config.agent_routing:
+            override = runtime_config.agent_routing[agent_name]
+            if override in self.providers:
+                return self.providers[override]
+
+        # Per-agent override from env var (LLM_AGENT_ROUTING)
         if agent_name and agent_name in settings.llm_agent_routing:
             override = settings.llm_agent_routing[agent_name]
             if override in self.providers:
                 return self.providers[override]
+
+        # RuntimeConfig provider override
+        if runtime_config and runtime_config.llm_provider:
+            if runtime_config.llm_provider in self.providers:
+                return self.providers[runtime_config.llm_provider]
+
         preferred = DEFAULT_ROUTING.get(task_type, settings.default_llm_provider)
         if preferred in self.providers:
             return self.providers[preferred]
@@ -70,17 +84,27 @@ class LLMRouter:
         json_mode: bool = False,
         provider_override: str | None = None,
         agent_name: str | None = None,
+        runtime_config: RuntimeConfig | None = None,
     ) -> LLMResponse:
         if provider_override and provider_override in self.providers:
             provider = self.providers[provider_override]
         else:
-            provider = self.get_provider(task_type, agent_name=agent_name)
+            provider = self.get_provider(
+                task_type, agent_name=agent_name,
+                runtime_config=runtime_config,
+            )
 
         # Fallback chain: preferred -> ollama -> any available
         requested_provider = provider.name
         fell_back = False
+        rc_strict = (
+            runtime_config.strict_gemini
+            if runtime_config and runtime_config.strict_gemini is not None
+            else None
+        )
+        strict = rc_strict if rc_strict is not None else settings.hackathon_strict_gemini
         if not await provider.is_available():
-            if settings.hackathon_strict_gemini and requested_provider == "gemini":
+            if strict and requested_provider == "gemini":
                 raise GeminiUnavailableError(
                     "Gemini is currently unavailable. In hackathon strict mode, "
                     "fallback to other providers is disabled. Please check your "
@@ -132,16 +156,26 @@ class LLMRouter:
         max_tokens: int = 2000,
         json_mode: bool = False,
         provider_override: str | None = None,
+        runtime_config: RuntimeConfig | None = None,
     ) -> LLMResponse:
         if provider_override and provider_override in self.providers:
             provider = self.providers[provider_override]
         else:
-            provider = self.get_provider(task_type, agent_name=agent_name)
+            provider = self.get_provider(
+                task_type, agent_name=agent_name,
+                runtime_config=runtime_config,
+            )
 
         requested_provider = provider.name
         fell_back = False
+        rc_strict = (
+            runtime_config.strict_gemini
+            if runtime_config and runtime_config.strict_gemini is not None
+            else None
+        )
+        strict = rc_strict if rc_strict is not None else settings.hackathon_strict_gemini
         if not await provider.is_available():
-            if settings.hackathon_strict_gemini and requested_provider == "gemini":
+            if strict and requested_provider == "gemini":
                 raise GeminiUnavailableError(
                     "Gemini is currently unavailable. In hackathon strict mode, "
                     "fallback to other providers is disabled. Please check your "

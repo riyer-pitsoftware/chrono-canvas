@@ -69,8 +69,14 @@ async def research_node(state: AgentState) -> AgentState:
     data = None
     response = None
 
+    rc = state.get("runtime_config")
+
     # Check cache first
-    if settings.research_cache_enabled:
+    cache_enabled = (
+        rc.research_cache_enabled if rc and rc.research_cache_enabled is not None
+        else settings.research_cache_enabled
+    )
+    if cache_enabled:
         cached_data = await _get_cache_service().lookup(
             figure_name, time_period, region, settings.research_cache_threshold
         )
@@ -98,6 +104,7 @@ async def research_node(state: AgentState) -> AgentState:
             temperature=0.5,
             max_tokens=3000,
             json_mode=True,
+            runtime_config=rc,
         )
 
         try:
@@ -112,7 +119,7 @@ async def research_node(state: AgentState) -> AgentState:
             }
 
         # Store in cache (skip if figure_name is empty — NOT NULL constraint)
-        if settings.research_cache_enabled and figure_name:
+        if cache_enabled and figure_name:
             await _get_cache_service().store(
                 figure_name, time_period, region, data, response.cost
             )

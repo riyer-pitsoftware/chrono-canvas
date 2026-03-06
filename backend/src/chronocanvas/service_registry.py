@@ -75,18 +75,26 @@ def init_registry() -> None:
     from chronocanvas.llm.router import LLMRouter
     from chronocanvas.memory.cache_service import ResearchCacheService
 
-    def _image_generator_factory() -> ImageGenerator:
-        if settings.image_provider == "stable_diffusion":
+    def _image_generator_factory(runtime_config=None) -> ImageGenerator:
+        provider = settings.image_provider
+        if runtime_config and runtime_config.image_provider:
+            provider = runtime_config.image_provider
+
+        if provider == "stable_diffusion":
             return StableDiffusionClient()
-        if settings.image_provider == "comfyui":
+        if provider == "comfyui":
             return ComfyUIClient()
-        if settings.image_provider == "mock":
+        if provider == "mock":
             return MockImageGenerator()
         # Default: Imagen (requires GOOGLE_API_KEY)
         return ImagenGenerator()
 
-    def _compositing_client_factory():
-        if settings.facefusion_enabled:
+    def _compositing_client_factory(runtime_config=None):
+        enabled = settings.facefusion_enabled
+        if runtime_config and runtime_config.facefusion_enabled is not None:
+            enabled = runtime_config.facefusion_enabled
+
+        if enabled:
             return FaceFusionClient()
         return MockFaceSwapClient()
 

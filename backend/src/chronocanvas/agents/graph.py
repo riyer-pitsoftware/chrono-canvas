@@ -12,6 +12,7 @@ from chronocanvas.agents.nodes.extraction import extraction_node
 from chronocanvas.agents.nodes.face_search import face_search_node
 from chronocanvas.agents.nodes.facial_compositing import facial_compositing_node
 from chronocanvas.agents.nodes.image_generation import image_generation_node
+from chronocanvas.agents.nodes.multimodal_validation import multimodal_validation_node
 from chronocanvas.agents.nodes.orchestrator import orchestrator_node
 from chronocanvas.agents.nodes.prompt_generation import prompt_generation_node
 from chronocanvas.agents.nodes.research import research_node
@@ -30,6 +31,10 @@ def build_graph() -> StateGraph:
     graph.add_node("prompt_generation", checked("prompt_generation")(prompt_generation_node))
     graph.add_node("image_generation", checked("image_generation")(image_generation_node))
     graph.add_node("validation", checked("validation")(validation_node))
+    graph.add_node(
+        "multimodal_validation",
+        checked("multimodal_validation")(multimodal_validation_node),
+    )
     graph.add_node("facial_compositing", checked("facial_compositing")(facial_compositing_node))
     graph.add_node("export", checked("export")(export_node))
 
@@ -54,9 +59,10 @@ def build_graph() -> StateGraph:
     graph.add_conditional_edges(
         "validation",
         should_continue_after_validation,
-        {"continue": "facial_compositing", "regenerate": "prompt_generation", "error": END},
+        {"continue": "multimodal_validation", "regenerate": "prompt_generation", "error": END},
     )
 
+    graph.add_edge("multimodal_validation", "facial_compositing")
     graph.add_edge("facial_compositing", "export")
     graph.add_edge("export", END)
 

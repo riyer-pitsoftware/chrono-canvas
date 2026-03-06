@@ -34,12 +34,14 @@ async def extraction_node(state: AgentState) -> AgentState:
 
     input_text = state.get("input_text", "")
 
+    rc = state.get("runtime_config")
     response = await get_llm_router().generate(
         prompt=EXTRACTION_PROMPT.format(input_text=input_text),
         task_type=TaskType.EXTRACTION,
         temperature=0.3,
         json_mode=True,
         agent_name="extraction",
+        runtime_config=rc,
     )
 
     try:

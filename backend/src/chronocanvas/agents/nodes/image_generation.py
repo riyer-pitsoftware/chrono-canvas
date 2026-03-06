@@ -11,10 +11,10 @@ from chronocanvas.services.progress import ProgressPublisher
 logger = logging.getLogger(__name__)
 
 
-def _get_generator():
+def _get_generator(runtime_config=None):
     factory = get_registry().image_generator_factory
     if factory is not None:
-        return factory()
+        return factory(runtime_config=runtime_config)
     # Fallback before registry init (tests, CLI)
     from chronocanvas.imaging.mock_generator import MockImageGenerator
 
@@ -25,15 +25,20 @@ async def image_generation_node(state: AgentState) -> AgentState:
     request_id = state.get("request_id", "unknown")
     ext = state.get("extraction", {})
     prompt_state = state.get("prompt", {})
+    rc = state.get("runtime_config")
     logger.info(
         "Image generation agent: generating image for %s [request_id=%s]",
         ext.get("figure_name", ""),
         request_id,
     )
 
-    generator = _get_generator()
+    generator = _get_generator(runtime_config=rc)
     output_dir = Path(settings.output_dir) / request_id
     channel = f"generation:{request_id}"
+
+    # Use runtime config for dimensions if provided
+    width = (rc.portrait_width if rc and rc.portrait_width else None) or settings.portrait_width
+    height = (rc.portrait_height if rc and rc.portrait_height else None) or settings.portrait_height
 
     async def on_progress(step: int, total: int) -> None:
         await publish_progress(channel, {
@@ -47,8 +52,8 @@ async def image_generation_node(state: AgentState) -> AgentState:
         result = await generator.generate(
             prompt=prompt_state.get("image_prompt", "historical portrait"),
             output_dir=output_dir,
-            width=settings.portrait_width,
-            height=settings.portrait_height,
+            width=width,
+            height=height,
             negative_prompt=prompt_state.get("negative_prompt", ""),
             on_progress=on_progress,
         )

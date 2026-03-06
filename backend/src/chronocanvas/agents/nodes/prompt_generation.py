@@ -97,6 +97,7 @@ async def prompt_generation_node(state: AgentState) -> AgentState:
     figure_name = ext.get("figure_name", "")
     logger.info(f"Prompt generation agent: creating prompt for {figure_name}")
 
+    rc = state.get("runtime_config")
     response = await get_llm_router().generate_stream(
         prompt=_get_prompt_template().format(
             figure_name=figure_name,
@@ -111,6 +112,7 @@ async def prompt_generation_node(state: AgentState) -> AgentState:
         agent_name="prompt_generation",
         temperature=0.8,
         max_tokens=1000,
+        runtime_config=rc,
     )
 
     trace = state.get("agent_trace", [])

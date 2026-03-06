@@ -3,6 +3,7 @@ from fastapi import APIRouter
 from chronocanvas.api.routes import (
     admin,
     agents,
+    config,
     conversation,
     eval_viewer,
     export,
@@ -29,6 +30,7 @@ api_router.include_router(generation.router)
 api_router.include_router(validation.router)
 api_router.include_router(export.router)
 api_router.include_router(agents.router)
+api_router.include_router(config.router)
 if settings.enable_admin_api:
     api_router.include_router(admin.router)
 api_router.include_router(memory.router)

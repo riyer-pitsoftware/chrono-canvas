@@ -66,6 +66,7 @@ async def validation_node(state: AgentState) -> AgentState:
     rule_weights: dict[str, float] = val.get("rule_weights") or {}
     category_list = _build_category_list(rule_weights)
 
+    rc = state.get("runtime_config")
     response = await get_llm_router().generate(
         prompt=VALIDATION_PROMPT.format(
             figure_name=figure_name,
@@ -81,6 +82,7 @@ async def validation_node(state: AgentState) -> AgentState:
         temperature=0.3,
         json_mode=True,
         agent_name="validation",
+        runtime_config=rc,
     )
 
     try:
@@ -141,10 +143,14 @@ async def validation_node(state: AgentState) -> AgentState:
     })
 
     retry_count = state.get("retry_count", 0)
+    retry_enabled = (
+        rc.validation_retry_enabled if rc and rc.validation_retry_enabled is not None
+        else settings.validation_retry_enabled
+    )
     should_regenerate = (
         not passed
         and retry_count < 2
-        and settings.validation_retry_enabled
+        and retry_enabled
     )
 
     return {

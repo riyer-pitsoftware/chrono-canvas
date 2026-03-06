@@ -108,6 +108,7 @@ async def create_generation(
             ref_image_path=ref_image_path,
             ref_image_mime=ref_image_mime,
             ref_images=ref_images_data,
+            config_payload=data.config,
         )
     else:
         source_face_path: str | None = None
@@ -129,6 +130,7 @@ async def create_generation(
             "run_generation_pipeline_task",
             str(gen_request.id), data.input_text,
             source_face_path=source_face_path,
+            config_payload=data.config,
         )
 
     return GenerationResponse.model_validate(gen_request)

@@ -12,10 +12,10 @@ from chronocanvas.services.progress import ProgressPublisher
 logger = logging.getLogger(__name__)
 
 
-def _get_generator():
+def _get_generator(runtime_config=None):
     factory = get_registry().image_generator_factory
     if factory is not None:
-        return factory()
+        return factory(runtime_config=runtime_config)
     from chronocanvas.imaging.mock_generator import MockImageGenerator
     return MockImageGenerator()
 
@@ -108,9 +108,10 @@ async def scene_image_generation_node(state: StoryState) -> StoryState:
         total_scenes, request_id,
     )
 
+    rc = state.get("runtime_config")
     trace = list(state.get("agent_trace", []))
     channel = f"generation:{request_id}"
-    generator = _get_generator()
+    generator = _get_generator(runtime_config=rc)
 
     # Generate all scene images concurrently
     completed_counter = [0]  # mutable counter (safe: asyncio is single-threaded)

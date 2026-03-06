@@ -19,6 +19,8 @@ import { StreamingText } from "@/components/generation/StreamingText";
 import { StoryboardView } from "@/components/generation/StoryboardView";
 import { VoiceInputButton } from "@/components/generation/VoiceInputButton";
 import { useNavigation } from "@/stores/navigation";
+import { ConfigHUD } from "@/components/config/ConfigHUD";
+import { useConfigStore } from "@/stores/configStore";
 
 const MODE_LABELS: Record<string, string> = {
   creative_story: "Story Director",
@@ -61,6 +63,8 @@ export function Generate({ figureId, mode }: { figureId?: string; mode?: string 
     );
   }, [figure, activeRequestId, startGeneration]);
 
+  const configPayload = useConfigStore((s) => s.toPayload);
+
   const handleGenerate = () => {
     // For image-to-story: text is optional when image is provided
     if (!inputText.trim() && !refImageId) return;
@@ -71,6 +75,7 @@ export function Generate({ figureId, mode }: { figureId?: string; mode?: string 
         ...(faceId ? { face_id: faceId } : {}),
         ...(isStoryMode ? { run_type: "creative_story" } : {}),
         ...(refImageId ? { ref_image_id: refImageId } : {}),
+        config: configPayload(),
       },
       {
         onSuccess: (data) => {
@@ -147,6 +152,8 @@ export function Generate({ figureId, mode }: { figureId?: string; mode?: string 
           </Badge>
         )}
       </div>
+
+      <ConfigHUD className="mb-4" />
 
       <Card className="mb-6">
         <CardHeader>

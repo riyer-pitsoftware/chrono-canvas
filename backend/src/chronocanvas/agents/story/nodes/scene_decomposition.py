@@ -78,6 +78,7 @@ async def scene_decomposition_node(state: StoryState) -> StoryState:
     )
 
     try:
+        rc = state.get("runtime_config")
         router = get_llm_router()
         response = await router.generate(
             prompt=prompt,
@@ -86,6 +87,7 @@ async def scene_decomposition_node(state: StoryState) -> StoryState:
             max_tokens=4000,
             json_mode=True,
             agent_name="scene_decomposition",
+            runtime_config=rc,
         )
 
         # Parse JSON from response

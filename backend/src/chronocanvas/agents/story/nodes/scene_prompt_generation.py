@@ -111,6 +111,7 @@ async def _build_character_anchors(
     characters: list[dict],
     router,
     request_id: str,
+    runtime_config=None,
 ) -> tuple[dict[str, str], dict | None]:
     """Generate canonical visual anchor descriptions for all characters.
 
@@ -130,9 +131,10 @@ async def _build_character_anchors(
             prompt=prompt,
             task_type=TaskType.PROMPT_GENERATION,
             temperature=0.3,
-            max_tokens=1500,
+            max_tokens=4000,
             json_mode=True,
             agent_name="character_anchor_generation",
+            runtime_config=runtime_config,
         )
 
         content = response.content
@@ -202,6 +204,7 @@ async def _generate_prompt_for_scene(
     router,
     request_id: str,
     reference_context: str = "",
+    runtime_config=None,
 ) -> tuple[StoryPanel, dict | None]:
     """Generate prompt for a single scene. Returns (panel, llm_call_record)."""
     scene_index = scene.get("scene_index", 0)
@@ -222,9 +225,10 @@ async def _generate_prompt_for_scene(
             prompt=prompt,
             task_type=TaskType.PROMPT_GENERATION,
             temperature=0.7,
-            max_tokens=1000,
+            max_tokens=4000,
             json_mode=True,
             agent_name="scene_prompt_generation",
+            runtime_config=runtime_config,
         )
 
         content = response.content
@@ -315,11 +319,12 @@ async def scene_prompt_generation_node(state: StoryState) -> StoryState:
     trace = list(state.get("agent_trace", []))
     llm_calls = list(state.get("llm_calls", []))
 
+    rc = state.get("runtime_config")
     router = get_llm_router()
 
     # Build canonical visual anchors for all characters (one LLM call)
     anchors, anchor_llm_record = await _build_character_anchors(
-        characters, router, request_id,
+        characters, router, request_id, runtime_config=rc,
     )
     if anchor_llm_record:
         llm_calls.append(anchor_llm_record)
@@ -353,7 +358,7 @@ async def scene_prompt_generation_node(state: StoryState) -> StoryState:
 
     # Generate all scene prompts concurrently
     results = await asyncio.gather(*(
-        _generate_prompt_for_scene(scene, characters, router, request_id, ref_context)
+        _generate_prompt_for_scene(scene, characters, router, request_id, ref_context, runtime_config=rc)
         for scene in target_scenes
     ))
 

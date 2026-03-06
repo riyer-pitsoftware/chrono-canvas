@@ -18,9 +18,10 @@ class NeoLLMBridge:
         # bridge.last_response has token counts, cost, etc.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, runtime_config=None) -> None:
         self.last_response: LLMResponse | None = None
         self.last_prompt: str | None = None
+        self._runtime_config = runtime_config
 
     async def __call__(self, prompt: str) -> str:
         self.last_prompt = prompt
@@ -31,6 +32,7 @@ class NeoLLMBridge:
             temperature=0.3,
             max_tokens=4000,
             json_mode=True,
+            runtime_config=self._runtime_config,
         )
         return self.last_response.content
 

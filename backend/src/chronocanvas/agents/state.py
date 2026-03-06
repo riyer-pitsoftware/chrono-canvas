@@ -1,4 +1,7 @@
-from typing import Any, TypedDict
+from typing import TYPE_CHECKING, Any, TypedDict
+
+if TYPE_CHECKING:
+    from chronocanvas.runtime_config import RuntimeConfig
 
 
 class ExtractionState(TypedDict, total=False):
@@ -79,6 +82,9 @@ class AgentState(TypedDict, total=False):
 
     # Audit
     llm_calls: list[dict[str, Any]]
+
+    # Per-request configuration overrides (from UI ConfigHUD)
+    runtime_config: "RuntimeConfig | None"
 
     # Control
     current_agent: str

@@ -9,6 +9,7 @@ from chronocanvas.db.engine import async_session as _default_session_factory
 from chronocanvas.db.models.image import GeneratedImage
 from chronocanvas.db.models.request import RequestStatus
 from chronocanvas.db.repositories.requests import RequestRepository
+from chronocanvas.runtime_config import RuntimeConfig
 from chronocanvas.services.progress import ProgressPublisher
 
 logger = logging.getLogger(__name__)
@@ -27,6 +28,7 @@ async def run_story_pipeline(
     ref_image_path: str | None = None,
     ref_image_mime: str | None = None,
     ref_images: list[dict] | None = None,
+    config_payload: dict | None = None,
     session_factory=None,
     graph=None,
 ) -> None:
@@ -49,6 +51,8 @@ async def run_story_pipeline(
                 "message": "Extracting characters from story...",
             })
 
+            rc = RuntimeConfig.from_request_payload(config_payload)
+
             initial_state: StoryState = {
                 "request_id": request_id,
                 "input_text": input_text,
@@ -59,6 +63,7 @@ async def run_story_pipeline(
                 "llm_calls": [],
                 "total_scenes": 0,
                 "completed_scenes": 0,
+                "runtime_config": rc,
                 "error": None,
             }
             # Optional image-to-story inputs
@@ -172,6 +177,8 @@ async def run_story_pipeline(
                                 "image_prompt": p.get("image_prompt"),
                                 "image_path": p.get("image_path"),
                                 "status": p.get("status"),
+                                "narration_text": p.get("narration_text", ""),
+                                "narration_audio_path": p.get("narration_audio_path", ""),
                                 "coherence_score": p.get("coherence_score"),
                                 "coherence_issues": p.get("coherence_issues", []),
                                 "coherence_suggestion": p.get("coherence_suggestion", ""),

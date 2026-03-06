@@ -20,9 +20,17 @@ async def shutdown(ctx: dict) -> None:
 
 
 async def run_generation_pipeline_task(
-    ctx: dict, request_id: str, input_text: str, source_face_path: str | None = None
+    ctx: dict,
+    request_id: str,
+    input_text: str,
+    source_face_path: str | None = None,
+    config_payload: dict | None = None,
 ) -> None:
-    await run_generation_pipeline(request_id, input_text, source_face_path=source_face_path)
+    await run_generation_pipeline(
+        request_id, input_text,
+        source_face_path=source_face_path,
+        config_payload=config_payload,
+    )
 
 
 async def retry_generation_pipeline_task(ctx: dict, request_id: str, from_step: str) -> None:
@@ -36,6 +44,7 @@ async def run_story_pipeline_task(
     ref_image_path: str | None = None,
     ref_image_mime: str | None = None,
     ref_images: list[dict] | None = None,
+    config_payload: dict | None = None,
 ) -> None:
     await run_story_pipeline(
         request_id,
@@ -43,6 +52,7 @@ async def run_story_pipeline_task(
         ref_image_path=ref_image_path,
         ref_image_mime=ref_image_mime,
         ref_images=ref_images,
+        config_payload=config_payload,
     )
 
 

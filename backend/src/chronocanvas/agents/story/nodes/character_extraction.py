@@ -18,7 +18,7 @@ async def character_extraction_node(state: StoryState) -> StoryState:
     try:
         from neo_modules.extraction import extract_characters
 
-        bridge = NeoLLMBridge()
+        bridge = NeoLLMBridge(runtime_config=state.get("runtime_config"))
         start = time.perf_counter()
         result = await extract_characters(input_text, llm_fn=bridge)
         elapsed_ms = (time.perf_counter() - start) * 1000

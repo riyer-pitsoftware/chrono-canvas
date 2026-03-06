@@ -155,6 +155,7 @@ async def _text_only_narration(
         scenes_json=json.dumps(scenes_for_prompt, indent=2),
     )
 
+    rc = state.get("runtime_config")
     router = get_llm_router()
     response = await router.generate(
         prompt=prompt,
@@ -163,6 +164,7 @@ async def _text_only_narration(
         max_tokens=2000,
         json_mode=True,
         agent_name="narration_script",
+        runtime_config=rc,
     )
 
     content = response.content

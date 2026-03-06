@@ -10,10 +10,10 @@ from chronocanvas.service_registry import get_registry
 logger = logging.getLogger(__name__)
 
 
-def _get_compositing_client():
+def _get_compositing_client(runtime_config=None):
     factory = get_registry().compositing_client_factory
     if factory is not None:
-        return factory()
+        return factory(runtime_config=runtime_config)
     # Fallback before registry init (tests, CLI)
     from chronocanvas.imaging.mock_face_swap import MockFaceSwapClient
 
@@ -69,7 +69,8 @@ async def facial_compositing_node(state: AgentState) -> AgentState:
         shutil.copy2(image_path, original_copy)
 
         # Run facial compositing (mock when FACEFUSION_ENABLED is false)
-        client = _get_compositing_client()
+        rc = state.get("runtime_config")
+        client = _get_compositing_client(runtime_config=rc)
         output_dir = Path(settings.output_dir) / request_id
 
         result = await client.generate(
