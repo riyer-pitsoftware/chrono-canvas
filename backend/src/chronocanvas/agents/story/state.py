@@ -1,7 +1,6 @@
-from typing import TYPE_CHECKING, Any, TypedDict
+from typing import Any, TypedDict
 
-if TYPE_CHECKING:
-    from chronocanvas.runtime_config import RuntimeConfig
+from chronocanvas.runtime_config import RuntimeConfig
 
 
 class StoryPanel(TypedDict, total=False):
@@ -62,7 +61,7 @@ class StoryState(TypedDict, total=False):
     narration_audio_paths: list[str]
 
     # Per-request configuration overrides (from UI ConfigHUD)
-    runtime_config: "RuntimeConfig | None"
+    runtime_config: RuntimeConfig | None
 
     # Control
     current_agent: str

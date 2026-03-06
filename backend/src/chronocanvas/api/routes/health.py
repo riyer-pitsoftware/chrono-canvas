@@ -51,7 +51,7 @@ async def _build_service_map() -> dict:
         "llm": llm_avail,
         "image": image_avail,
         "search": search_avail,
-        "tts": settings.tts_enabled and bool(settings.google_api_key),
+        "tts": bool(settings.google_api_key),
         "facefusion": settings.facefusion_enabled,
     }
 

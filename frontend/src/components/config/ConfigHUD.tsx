@@ -222,7 +222,8 @@ export function ConfigHUD({ className }: { className?: string }) {
             label="Gemini TTS"
             selected={store.ttsEnabled}
             available={services?.tts}
-            onClick={() => store.setTtsEnabled(!store.ttsEnabled)}
+            disabled={!isGcp && !services?.tts}
+            onClick={() => store.setTtsEnabled(true)}
           />
           <ProviderButton
             label="Off"
