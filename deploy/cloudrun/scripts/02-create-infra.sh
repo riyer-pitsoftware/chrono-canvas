@@ -56,6 +56,19 @@ else
     --data-file=- \
     --project="${GCP_PROJECT_ID}"
   echo "  DB password stored in Secret Manager: chronocanvas-db-password"
+else
+  # DB already exists — ensure the password secret exists too
+  if ! gcloud secrets describe "chronocanvas-db-password" --project="${GCP_PROJECT_ID}" &>/dev/null; then
+    echo "  ⚠️  Cloud SQL exists but chronocanvas-db-password secret is missing."
+    echo "  Creating placeholder — you MUST set the real password:"
+    echo ""
+    echo -n "REPLACE_ME" | gcloud secrets create "chronocanvas-db-password" \
+      --data-file=- \
+      --project="${GCP_PROJECT_ID}"
+    echo "  echo -n 'YOUR_DB_PASSWORD' | \\"
+    echo "    gcloud secrets versions add chronocanvas-db-password --data-file=-"
+    echo ""
+  fi
 fi
 
 DB_CONNECTION_NAME=$(gcloud sql instances describe "${DB_INSTANCE}" \

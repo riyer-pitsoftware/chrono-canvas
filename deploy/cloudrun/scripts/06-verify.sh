@@ -33,6 +33,16 @@ if [ "${API_URL}" != "NOT_DEPLOYED" ]; then
   if [ "${HTTP_CODE}" = "200" ]; then
     echo "  ✅ API is healthy (HTTP 200)"
     cat /tmp/health_response.json | python3 -m json.tool 2>/dev/null || cat /tmp/health_response.json
+
+    # Verify deployment_mode is set correctly for GCP
+    DEPLOY_MODE=$(python3 -c "import json; print(json.load(open('/tmp/health_response.json')).get('deployment_mode',''))" 2>/dev/null || echo "")
+    if [ "${DEPLOY_MODE}" = "gcp" ]; then
+      echo "  ✅ deployment_mode=gcp (cloud providers enforced)"
+    else
+      echo "  ❌ deployment_mode='${DEPLOY_MODE}' — expected 'gcp'. Local providers may be accessible!"
+      echo "     Fix: ensure DEPLOYMENT_MODE=gcp is set in Cloud Run env vars."
+      exit 1
+    fi
   else
     echo "  ❌ API returned HTTP ${HTTP_CODE}"
     cat /tmp/health_response.json 2>/dev/null || true
