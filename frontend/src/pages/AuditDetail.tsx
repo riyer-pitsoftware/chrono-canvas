@@ -465,7 +465,7 @@ export function AuditDetail({ requestId }: { requestId: string }) {
       )}
 
       {/* Retry */}
-      {data.status === "failed" && (
+      {data.status !== "completed" && data.status !== "pending" && (
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">Retry from Step</CardTitle>
