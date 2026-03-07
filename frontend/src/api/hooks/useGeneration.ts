@@ -96,6 +96,11 @@ export function useAuditDetail(id: string) {
     queryKey: ["audit", id],
     queryFn: () => api.get<AuditDetail>(`/generate/${id}/audit`),
     enabled: !!id,
+    refetchInterval: (query) => {
+      const data = query.state.data;
+      if (data && (data.status === "completed" || data.status === "failed")) return false;
+      return 2000;
+    },
   });
 }
 
