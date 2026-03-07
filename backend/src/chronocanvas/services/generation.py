@@ -22,8 +22,14 @@ from chronocanvas.services.state_projector import RequestStateProjector
 logger = logging.getLogger(__name__)
 
 VALID_RETRY_STEPS = frozenset([
+    # Portrait pipeline
     "orchestrator", "extraction", "research", "prompt_generation",
     "image_generation", "validation", "facial_compositing", "export",
+    # Story pipeline
+    "story_orchestrator", "image_to_story", "reference_image_analysis",
+    "character_extraction", "scene_decomposition", "scene_prompt_generation",
+    "scene_image_generation", "storyboard_coherence", "narration_script",
+    "narration_audio", "video_assembly", "storyboard_export",
 ])
 
 # Steps that require clearing existing image records before retrying

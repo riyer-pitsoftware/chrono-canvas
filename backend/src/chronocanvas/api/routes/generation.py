@@ -286,15 +286,23 @@ async def retry_generation(
     if not gen_request:
         raise HTTPException(status_code=404, detail="Generation request not found")
 
-    if gen_request.status not in ("failed", "completed"):
+    if gen_request.status in ("pending",):
         raise HTTPException(
             status_code=409,
             detail=f"Cannot retry a generation with status '{gen_request.status}'",
         )
 
-    await request.app.state.arq_pool.enqueue_job(
-        "retry_generation_pipeline_task", str(request_id), from_step
-    )
+    if gen_request.run_type == "creative_story":
+        # Story pipeline: re-run from scratch (no checkpoint-step retry yet)
+        await request.app.state.arq_pool.enqueue_job(
+            "run_story_pipeline_task",
+            str(request_id),
+            gen_request.input_text or "",
+        )
+    else:
+        await request.app.state.arq_pool.enqueue_job(
+            "retry_generation_pipeline_task", str(request_id), from_step
+        )
     return GenerationResponse.model_validate(gen_request)
 
 
