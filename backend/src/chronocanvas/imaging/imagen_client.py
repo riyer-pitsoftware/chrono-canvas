@@ -77,18 +77,38 @@ class ImagenGenerator(ImageGenerator):
         # Retry with exponential backoff for transient errors
         # (rate limits on free tier + 503 service unavailable)
         max_retries = 3
-        _RETRYABLE = {"rate", "resource_exhausted", "429", "503", "unavailable"}
+        request_timeout = 120  # seconds per attempt
+        _RETRYABLE = {"rate", "resource_exhausted", "429", "503", "unavailable", "timeout"}
         for attempt in range(max_retries + 1):
             try:
-                response = await client.aio.models.generate_images(
-                    model=model,
-                    prompt=prompt,
-                    config=types.GenerateImagesConfig(
-                        number_of_images=1,
-                        aspect_ratio=aspect_ratio,
+                response = await asyncio.wait_for(
+                    client.aio.models.generate_images(
+                        model=model,
+                        prompt=prompt,
+                        config=types.GenerateImagesConfig(
+                            number_of_images=1,
+                            aspect_ratio=aspect_ratio,
+                        ),
                     ),
+                    timeout=request_timeout,
                 )
                 break
+            except asyncio.TimeoutError:
+                if attempt < max_retries:
+                    wait = 2 ** (attempt + 1)
+                    logger.warning(
+                        "Imagen timeout after %ds (attempt %d/%d), retrying in %ds",
+                        request_timeout,
+                        attempt + 1,
+                        max_retries,
+                        wait,
+                    )
+                    await asyncio.sleep(wait)
+                    continue
+                raise TimeoutError(
+                    f"Imagen API did not respond after {max_retries + 1} attempts "
+                    f"({request_timeout}s timeout each)"
+                )
             except Exception as exc:
                 err_str = str(exc).lower()
                 if any(tok in err_str for tok in _RETRYABLE):
