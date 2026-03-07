@@ -131,7 +131,7 @@ jobs:
             DATABASE_URL=postgresql+asyncpg://chronocanvas@/chronocanvas?host=/cloudsql/${{ steps.infra.outputs.db_connection }}
             REDIS_URL=redis://${{ steps.infra.outputs.redis_host }}:${{ steps.infra.outputs.redis_port }}/0
             IMAGE_PROVIDER=imagen
-            DEFAULT_LLM_PROVIDER=gemini
+            DEPLOYMENT_MODE=gcp
             GEMINI_MODEL=gemini-2.5-flash
             CLAUDE_MODEL=claude-sonnet-4-5-20250929
             CONTENT_MODERATION_ENABLED=true
@@ -173,7 +173,7 @@ jobs:
             DATABASE_URL=postgresql+asyncpg://chronocanvas@/chronocanvas?host=/cloudsql/${{ steps.infra.outputs.db_connection }}
             REDIS_URL=redis://${{ steps.infra.outputs.redis_host }}:${{ steps.infra.outputs.redis_port }}/0
             IMAGE_PROVIDER=imagen
-            DEFAULT_LLM_PROVIDER=gemini
+            DEPLOYMENT_MODE=gcp
             GEMINI_MODEL=gemini-2.5-flash
             CLAUDE_MODEL=claude-sonnet-4-5-20250929
             CONTENT_MODERATION_ENABLED=true

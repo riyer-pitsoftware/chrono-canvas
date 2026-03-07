@@ -12,6 +12,7 @@ interface ServiceMap {
 interface HealthResponse {
   status: string;
   service: string;
+  deployment_mode: "gcp" | "local" | "hybrid";
   hackathon_mode: boolean;
   services: ServiceMap;
 }
@@ -23,6 +24,11 @@ export function useHealth() {
     staleTime: 30_000,
     refetchOnWindowFocus: true,
   });
+}
+
+export function useDeploymentMode() {
+  const { data } = useHealth();
+  return data?.deployment_mode ?? "hybrid";
 }
 
 export function useHackathonMode() {

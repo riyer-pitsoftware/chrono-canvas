@@ -648,7 +648,7 @@ export function Guide({ section }: GuideProps) {
                   LLM Routing
                 </CardTitle>
                 <CardDescription>
-                  Default task-to-provider mapping. Override by changing <code className="text-xs px-1 py-0.5 rounded bg-[var(--secondary)]">DEFAULT_LLM_PROVIDER</code> in your .env file.
+                  LLM provider selection is controlled by the ConfigHUD. The <code className="text-xs px-1 py-0.5 rounded bg-[var(--secondary)]">DEPLOYMENT_MODE</code> env var determines which providers are available.
                 </CardDescription>
               </CardHeader>
               <CardContent>

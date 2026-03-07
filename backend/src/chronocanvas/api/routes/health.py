@@ -62,6 +62,7 @@ async def health_check():
     return {
         "status": "ok",
         "service": "chronocanvas",
+        "deployment_mode": settings.deployment_mode,
         "hackathon_mode": settings.hackathon_mode,
         "services": services,
     }

@@ -76,7 +76,7 @@ async def test_strict_gemini_blocks_fallback() -> None:
 
     with patch("chronocanvas.llm.router.settings") as mock_settings:
         mock_settings.hackathon_strict_gemini = True
-        mock_settings.default_llm_provider = "gemini"
+        mock_settings.deployment_mode = "gcp"
         mock_settings.rate_limit_rpm = 60
         mock_settings.llm_max_concurrent = 5
         mock_settings.llm_agent_routing = {}
@@ -99,7 +99,7 @@ async def test_strict_gemini_allows_fallback_when_off() -> None:
 
     with patch("chronocanvas.llm.router.settings") as mock_settings:
         mock_settings.hackathon_strict_gemini = False
-        mock_settings.default_llm_provider = "gemini"
+        mock_settings.deployment_mode = "gcp"
         mock_settings.rate_limit_rpm = 60
         mock_settings.llm_max_concurrent = 5
         mock_settings.llm_agent_routing = {}
@@ -133,7 +133,7 @@ async def test_strict_gemini_stream_blocks() -> None:
 
     with patch("chronocanvas.llm.router.settings") as mock_settings:
         mock_settings.hackathon_strict_gemini = True
-        mock_settings.default_llm_provider = "gemini"
+        mock_settings.deployment_mode = "gcp"
         mock_settings.rate_limit_rpm = 60
         mock_settings.llm_max_concurrent = 5
         mock_settings.llm_agent_routing = {}

@@ -6,8 +6,9 @@ metadata:
   labels:
     app.kubernetes.io/part-of: chronocanvas
 data:
+  # ── Deployment mode (locks provider selection to cloud-only) ──────
+  DEPLOYMENT_MODE: "gcp"
   # ── LLM providers ──────────────────────────────────────────────────
-  DEFAULT_LLM_PROVIDER: "gemini"
   GEMINI_MODEL: "gemini-2.5-flash"
   CLAUDE_MODEL: "claude-sonnet-4-5-20250929"
   OPENAI_MODEL: "gpt-4o"

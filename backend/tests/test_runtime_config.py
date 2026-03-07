@@ -87,12 +87,10 @@ def test_effective_uses_override():
 def test_effective_falls_back_to_settings():
     rc = RuntimeConfig()  # all None
     # Mock the settings import to avoid needing a real .env
-    mock_settings = type("S", (), {"default_llm_provider": "gemini", "tts_enabled": True})()
+    mock_settings = type("S", (), {"deployment_mode": "gcp", "tts_enabled": True})()
     with patch("chronocanvas.runtime_config.settings", mock_settings, create=True):
         # effective() imports settings inside the function, so we patch at module level
         from chronocanvas import runtime_config
         with patch.object(runtime_config, "settings", mock_settings, create=True):
-            # Direct fallback: llm_provider is None, but settings has default_llm_provider
-            # The key must match the settings attribute name
-            assert rc.effective("default_llm_provider") == "gemini"
+            assert rc.effective("deployment_mode") == "gcp"
             assert rc.effective("tts_enabled") is True

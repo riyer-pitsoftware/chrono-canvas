@@ -28,8 +28,11 @@ class Settings(BaseSettings):
     pexels_api_key: str = ""
     unsplash_access_key: str = ""
 
+    # Deployment mode: "gcp" (cloud-only providers), "local" (local-only), "hybrid" (both)
+    # GCP deployments MUST set DEPLOYMENT_MODE=gcp to lock out local providers.
+    deployment_mode: str = "hybrid"
+
     # LLM Routing
-    default_llm_provider: str = "gemini"
     # Per-agent provider overrides (JSON): {"prompt_generation": "claude", "extraction": "gemini"}
     # Agent names: orchestrator, extraction, research, face_search, prompt_generation,
     #   image_generation, validation, story_orchestrator, character_extraction,

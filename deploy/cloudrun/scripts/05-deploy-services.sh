@@ -47,8 +47,8 @@ echo ""
 COMMON_ENV="\
 DATABASE_URL=postgresql+asyncpg://chronocanvas@/chronocanvas?host=/cloudsql/${DB_CONNECTION_NAME},\
 REDIS_URL=redis://${REDIS_HOST}:${REDIS_PORT}/0,\
+DEPLOYMENT_MODE=gcp,\
 IMAGE_PROVIDER=imagen,\
-DEFAULT_LLM_PROVIDER=gemini,\
 GEMINI_MODEL=gemini-2.5-flash,\
 CLAUDE_MODEL=claude-sonnet-4-5-20250929,\
 CONTENT_MODERATION_ENABLED=true,\

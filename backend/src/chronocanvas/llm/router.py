@@ -20,15 +20,11 @@ class GeminiUnavailableError(RuntimeError):
     pass
 
 
-# Default routing: which provider to prefer for each task type
-# For hackathon: default everything to Gemini (GCP-native)
-DEFAULT_ROUTING: dict[TaskType, str] = {
-    TaskType.EXTRACTION: "gemini",
-    TaskType.RESEARCH: "gemini",
-    TaskType.PROMPT_GENERATION: "gemini",
-    TaskType.VALIDATION: "gemini",
-    TaskType.ORCHESTRATION: "gemini",
-    TaskType.GENERAL: "gemini",
+# Default provider per deployment mode (used when ConfigHUD sends no llm_provider).
+_MODE_DEFAULT_PROVIDER: dict[str, str] = {
+    "gcp": "gemini",
+    "local": "ollama",
+    "hybrid": "gemini",
 }
 
 
@@ -64,15 +60,19 @@ class LLMRouter:
             if override in self.providers:
                 return self.providers[override]
 
-        # RuntimeConfig provider override
+        # RuntimeConfig provider override (from ConfigHUD — authoritative source)
         if runtime_config and runtime_config.llm_provider:
             if runtime_config.llm_provider in self.providers:
+                logger.debug("LLM provider from ConfigHUD: %s (agent=%s)", runtime_config.llm_provider, agent_name)
                 return self.providers[runtime_config.llm_provider]
 
-        preferred = DEFAULT_ROUTING.get(task_type, settings.default_llm_provider)
-        if preferred in self.providers:
-            return self.providers[preferred]
-        return self.providers[settings.default_llm_provider]
+        # No ConfigHUD provider — derive default from deployment mode
+        preferred = _MODE_DEFAULT_PROVIDER.get(settings.deployment_mode, "gemini")
+        logger.debug(
+            "LLM provider from deployment_mode=%s: %s (agent=%s)",
+            settings.deployment_mode, preferred, agent_name,
+        )
+        return self.providers[preferred]
 
     async def generate(
         self,

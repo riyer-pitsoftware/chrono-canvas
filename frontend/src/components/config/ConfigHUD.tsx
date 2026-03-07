@@ -1,6 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
-import { useServiceAvailability, validateConfig } from "@/api/hooks/useConfig";
+import {
+  useDeploymentMode,
+  useServiceAvailability,
+  validateConfig,
+} from "@/api/hooks/useConfig";
 import { useConfigStore, type Mode } from "@/stores/configStore";
 
 const LLM_PROVIDERS = [
@@ -90,11 +94,20 @@ function Channel({
 
 export function ConfigHUD({ className }: { className?: string }) {
   const services = useServiceAvailability();
+  const deploymentMode = useDeploymentMode();
   const store = useConfigStore();
   const [errors, setErrors] = useState<
     Array<{ channel: string; error: string }>
   >([]);
   const [validating, setValidating] = useState(false);
+
+  // Lock mode to match server deployment_mode (gcp or local locks the toggle)
+  const modeLocked = deploymentMode !== "hybrid";
+  useEffect(() => {
+    if (modeLocked && store.mode !== deploymentMode) {
+      store.setMode(deploymentMode as Mode);
+    }
+  }, [deploymentMode, modeLocked, store]);
 
   const isGcp = store.mode === "gcp";
 
@@ -122,22 +135,28 @@ export function ConfigHUD({ className }: { className?: string }) {
         <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-400">
           Signal Chain
         </h3>
-        <div className="flex gap-1 rounded-md border border-zinc-800 bg-zinc-900 p-0.5">
-          {(["gcp", "local"] as Mode[]).map((m) => (
-            <button
-              key={m}
-              onClick={() => store.setMode(m)}
-              className={cn(
-                "rounded px-3 py-1 text-xs font-mono uppercase transition-all",
-                store.mode === m
-                  ? "bg-amber-500/20 text-amber-300 shadow-inner"
-                  : "text-zinc-500 hover:text-zinc-300",
-              )}
-            >
-              {m}
-            </button>
-          ))}
-        </div>
+        {modeLocked ? (
+          <span className="rounded bg-amber-500/20 px-3 py-1 text-xs font-mono uppercase text-amber-300">
+            {store.mode}
+          </span>
+        ) : (
+          <div className="flex gap-1 rounded-md border border-zinc-800 bg-zinc-900 p-0.5">
+            {(["gcp", "local"] as Mode[]).map((m) => (
+              <button
+                key={m}
+                onClick={() => store.setMode(m)}
+                className={cn(
+                  "rounded px-3 py-1 text-xs font-mono uppercase transition-all",
+                  store.mode === m
+                    ? "bg-amber-500/20 text-amber-300 shadow-inner"
+                    : "text-zinc-500 hover:text-zinc-300",
+                )}
+              >
+                {m}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Channels */}
