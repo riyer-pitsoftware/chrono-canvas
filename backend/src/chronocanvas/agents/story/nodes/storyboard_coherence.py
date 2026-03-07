@@ -231,6 +231,8 @@ async def storyboard_coherence_node(state: StoryState) -> StoryState:
         )
 
     except Exception as e:
+        if settings.hackathon_mode:
+            raise
         elapsed_ms = (time.perf_counter() - start) * 1000
         logger.warning(
             "Storyboard coherence check failed [request_id=%s]: %s",

@@ -56,13 +56,34 @@ async def _build_service_map() -> dict:
     }
 
 
+def validate_hackathon_requirements() -> list[str]:
+    """Check that all critical services are available for hackathon mode.
+
+    Returns a list of failure messages (empty = all good).
+    """
+    failures = []
+    if not settings.google_api_key:
+        failures.append("GOOGLE_API_KEY not set — Gemini LLM, Imagen, TTS, and multimodal validation will fail")
+    if settings.image_provider == "mock":
+        failures.append("IMAGE_PROVIDER is 'mock' — judges will see placeholder images")
+    if settings.default_llm_provider not in ("gemini",):
+        failures.append(f"DEFAULT_LLM_PROVIDER is '{settings.default_llm_provider}' — should be 'gemini' for hackathon")
+    return failures
+
+
 @router.get("/health")
 async def health_check():
     services = await _build_service_map()
-    return {
+    result = {
         "status": "ok",
         "service": "chronocanvas",
         "deployment_mode": settings.deployment_mode,
         "hackathon_mode": settings.hackathon_mode,
         "services": services,
     }
+    if settings.hackathon_mode:
+        failures = validate_hackathon_requirements()
+        if failures:
+            result["hackathon_warnings"] = failures
+            result["status"] = "degraded"
+    return result

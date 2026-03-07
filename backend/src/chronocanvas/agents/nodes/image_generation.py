@@ -15,6 +15,10 @@ def _get_generator(runtime_config=None):
     factory = get_registry().image_generator_factory
     if factory is not None:
         return factory(runtime_config=runtime_config)
+    if settings.hackathon_mode:
+        raise RuntimeError(
+            "HACKATHON MODE: Image generation falling back to mock — service registry not initialized"
+        )
     # Fallback before registry init (tests, CLI)
     from chronocanvas.imaging.mock_generator import MockImageGenerator
 

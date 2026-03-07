@@ -114,6 +114,10 @@ async def multimodal_validation_node(state: AgentState) -> AgentState:
         return _skip_result(trace, llm_calls)
 
     if not settings.google_api_key:
+        if settings.hackathon_mode:
+            raise RuntimeError(
+                "HACKATHON MODE: Multimodal validation cannot run — GOOGLE_API_KEY is not set"
+            )
         logger.info(
             "Multimodal validation: no GOOGLE_API_KEY [request_id=%s]",
             request_id,
@@ -225,6 +229,8 @@ async def multimodal_validation_node(state: AgentState) -> AgentState:
         }
 
     except Exception as e:
+        if settings.hackathon_mode:
+            raise
         elapsed_ms = (time.perf_counter() - start) * 1000
         logger.warning(
             "Multimodal validation failed (non-fatal) "

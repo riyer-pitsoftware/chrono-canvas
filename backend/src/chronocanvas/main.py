@@ -44,6 +44,13 @@ async def lifespan(app: FastAPI):
     init_registry()
     await init_checkpointer()
     recompile_graph()
+    if settings.hackathon_mode:
+        from chronocanvas.api.routes.health import validate_hackathon_requirements
+        failures = validate_hackathon_requirements()
+        for f in failures:
+            logger.error("HACKATHON PREFLIGHT FAIL: %s", f)
+        if failures:
+            logger.error("Hackathon mode is ON but critical services are misconfigured. Fix the above issues.")
     yield
     logger.info("ChronoCanvas shutting down")
     await close_checkpointer()

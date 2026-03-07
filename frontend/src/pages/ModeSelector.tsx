@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import {
   Card,
   CardHeader,
@@ -9,8 +10,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { BookOpen, Camera } from "lucide-react";
 import { useNavigation } from "@/stores/navigation";
+import { useHackathonMode } from "@/api/hooks/useConfig";
 
-const modes = [
+const allModes = [
   {
     id: "creative_story",
     title: "Story Director",
@@ -33,6 +35,19 @@ const modes = [
 
 export function ModeSelector() {
   const { navigate } = useNavigation();
+  const hackathonMode = useHackathonMode();
+
+  const modes = hackathonMode
+    ? allModes.filter((m) => m.id !== "portrait")
+    : allModes;
+
+  useEffect(() => {
+    if (modes.length === 1) {
+      navigate(`/generate?mode=${modes[0].id}`);
+    }
+  }, [modes.length, navigate]);
+
+  if (modes.length === 1) return null;
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[80vh] gap-8">

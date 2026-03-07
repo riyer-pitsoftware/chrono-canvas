@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import {
   useDeploymentMode,
+  useHackathonMode,
   useServiceAvailability,
   validateConfig,
 } from "@/api/hooks/useConfig";
@@ -93,6 +94,7 @@ function Channel({
 }
 
 export function ConfigHUD({ className }: { className?: string }) {
+  const hackathonMode = useHackathonMode();
   const services = useServiceAvailability();
   const deploymentMode = useDeploymentMode();
   const store = useConfigStore();
@@ -108,6 +110,8 @@ export function ConfigHUD({ className }: { className?: string }) {
       store.setMode(deploymentMode as Mode);
     }
   }, [deploymentMode, modeLocked, store]);
+
+  if (hackathonMode) return null;
 
   const isGcp = store.mode === "gcp";
 
