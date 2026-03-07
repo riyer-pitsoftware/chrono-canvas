@@ -1,3 +1,5 @@
+import asyncio
+import logging
 from collections.abc import Awaitable, Callable
 
 from google import genai
@@ -5,6 +7,27 @@ from google.genai import types
 
 from chronocanvas.config import settings
 from chronocanvas.llm.base import LLMProvider, LLMResponse
+
+logger = logging.getLogger(__name__)
+
+# Per-call timeout for Gemini API requests (seconds)
+_REQUEST_TIMEOUT = 120
+
+GEMINI_REQUEST_TIMEOUT = _REQUEST_TIMEOUT  # public alias for direct-call sites
+
+
+async def gemini_generate_with_timeout(client: genai.Client, **kwargs) -> object:
+    """Wrap client.aio.models.generate_content with a timeout.
+
+    Use this for any direct Gemini call outside the LLM router (vision nodes,
+    TTS, coherence, scene editor, etc.).  All kwargs are forwarded to
+    ``client.aio.models.generate_content()``.
+    """
+    return await asyncio.wait_for(
+        client.aio.models.generate_content(**kwargs),
+        timeout=_REQUEST_TIMEOUT,
+    )
+
 
 GEMINI_PRICING = {
     "gemini-2.5-flash": {"input": 0.15 / 1_000_000, "output": 0.60 / 1_000_000},
@@ -48,10 +71,13 @@ class GeminiProvider(LLMProvider):
 
         config = types.GenerateContentConfig(**config_kwargs)
 
-        response = await client.aio.models.generate_content(
-            model=self.model,
-            contents=prompt,
-            config=config,
+        response = await asyncio.wait_for(
+            client.aio.models.generate_content(
+                model=self.model,
+                contents=prompt,
+                config=config,
+            ),
+            timeout=_REQUEST_TIMEOUT,
         )
 
         input_tokens = response.usage_metadata.prompt_token_count or 0
@@ -59,8 +85,17 @@ class GeminiProvider(LLMProvider):
         pricing = GEMINI_PRICING.get(self.model, {"input": 0, "output": 0})
         cost = input_tokens * pricing["input"] + output_tokens * pricing["output"]
 
+        content = response.text or ""
+        if not content.strip():
+            logger.warning(
+                "Gemini returned empty response (model=%s, finish_reason=%s, input_tokens=%d)",
+                self.model,
+                getattr(response.candidates[0], "finish_reason", "unknown") if response.candidates else "no_candidates",
+                input_tokens,
+            )
+
         return LLMResponse(
-            content=response.text or "",
+            content=content,
             provider=self.name,
             model=self.model,
             input_tokens=input_tokens,
@@ -94,18 +129,23 @@ class GeminiProvider(LLMProvider):
         input_tokens = 0
         output_tokens = 0
 
-        async for chunk in client.aio.models.generate_content_stream(
-            model=self.model,
-            contents=prompt,
-            config=config,
-        ):
-            if chunk.text:
-                full_text += chunk.text
-                if on_token:
-                    await on_token(chunk.text)
-            if chunk.usage_metadata:
-                input_tokens = chunk.usage_metadata.prompt_token_count or input_tokens
-                output_tokens = chunk.usage_metadata.candidates_token_count or output_tokens
+        async def _stream():
+            nonlocal full_text, input_tokens, output_tokens
+            stream = await client.aio.models.generate_content_stream(
+                model=self.model,
+                contents=prompt,
+                config=config,
+            )
+            async for chunk in stream:
+                if chunk.text:
+                    full_text += chunk.text
+                    if on_token:
+                        await on_token(chunk.text)
+                if chunk.usage_metadata:
+                    input_tokens = chunk.usage_metadata.prompt_token_count or input_tokens
+                    output_tokens = chunk.usage_metadata.candidates_token_count or output_tokens
+
+        await asyncio.wait_for(_stream(), timeout=_REQUEST_TIMEOUT)
 
         pricing = GEMINI_PRICING.get(self.model, {"input": 0, "output": 0})
         cost = input_tokens * pricing["input"] + output_tokens * pricing["output"]

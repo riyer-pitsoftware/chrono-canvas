@@ -9,8 +9,8 @@ from google import genai
 from google.genai import types
 
 from chronocanvas.config import settings
-from chronocanvas.imaging.imagen_client import ImagenClient
-from chronocanvas.llm.providers.gemini import GEMINI_PRICING
+from chronocanvas.imaging.imagen_client import ImagenGenerator
+from chronocanvas.llm.providers.gemini import GEMINI_PRICING, gemini_generate_with_timeout
 from chronocanvas.services.progress import ProgressPublisher
 
 logger = logging.getLogger(__name__)
@@ -68,7 +68,8 @@ async def edit_scene(
         parts.append(types.Part.from_bytes(data=image_bytes, mime_type="image/png"))
 
     start = time.perf_counter()
-    response = await client.aio.models.generate_content(
+    response = await gemini_generate_with_timeout(
+        client,
         model=model,
         contents=types.Content(role="user", parts=parts),
         config=types.GenerateContentConfig(
@@ -107,23 +108,24 @@ async def edit_scene(
         raise ValueError("Gemini returned no revised prompt")
 
     # Step 2: Imagen regeneration
-    imagen = ImagenClient()
+    imagen = ImagenGenerator()
     scene_dir = Path(settings.output_dir) / request_id / f"scene_{scene_index}"
     scene_dir.mkdir(parents=True, exist_ok=True)
 
-    # Save edited image with "edited_" prefix
-    edited_filename = f"edited_{int(time.time())}.png"
-    edited_path = scene_dir / edited_filename
-
     img_start = time.perf_counter()
-    image_bytes_result = await imagen.generate(
+    img_result = await imagen.generate(
         prompt=revised_prompt,
+        output_dir=scene_dir,
         width=768,
         height=768,
     )
     img_elapsed = (time.perf_counter() - img_start) * 1000
 
-    edited_path.write_bytes(image_bytes_result)
+    # Rename to edited_ prefix for clarity
+    original_path = Path(img_result.file_path)
+    edited_filename = f"edited_{int(time.time())}.png"
+    edited_path = scene_dir / edited_filename
+    original_path.rename(edited_path)
 
     # Publish artifact
     image_url = f"/output/{request_id}/scene_{scene_index}/{edited_filename}"

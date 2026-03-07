@@ -1,3 +1,4 @@
+import asyncio
 from collections.abc import Awaitable, Callable
 
 import anthropic
@@ -37,7 +38,10 @@ class ClaudeProvider(LLMProvider):
         if json_mode and system_prompt:
             kwargs["system"] = system_prompt + "\n\nRespond with valid JSON only."
 
-        response = await self.client.messages.create(**kwargs)
+        response = await asyncio.wait_for(
+            self.client.messages.create(**kwargs),
+            timeout=120,
+        )
 
         input_tokens = response.usage.input_tokens
         output_tokens = response.usage.output_tokens
@@ -75,12 +79,17 @@ class ClaudeProvider(LLMProvider):
             kwargs["system"] = sys
 
         full_text = ""
-        async with self.client.messages.stream(**kwargs) as stream:
-            async for chunk in stream.text_stream:
-                full_text += chunk
-                if on_token:
-                    await on_token(chunk)
-            final = await stream.get_final_message()
+
+        async def _stream():
+            nonlocal full_text
+            async with self.client.messages.stream(**kwargs) as stream:
+                async for chunk in stream.text_stream:
+                    full_text += chunk
+                    if on_token:
+                        await on_token(chunk)
+                return await stream.get_final_message()
+
+        final = await asyncio.wait_for(_stream(), timeout=120)
 
         input_tokens = final.usage.input_tokens
         output_tokens = final.usage.output_tokens

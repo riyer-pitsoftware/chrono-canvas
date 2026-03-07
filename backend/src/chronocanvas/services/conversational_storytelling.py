@@ -10,7 +10,7 @@ from google import genai
 from google.genai import types
 
 from chronocanvas.config import settings
-from chronocanvas.llm.providers.gemini import GEMINI_PRICING
+from chronocanvas.llm.providers.gemini import GEMINI_PRICING, gemini_generate_with_timeout
 
 logger = logging.getLogger(__name__)
 
@@ -112,7 +112,8 @@ class ConversationSession:
             ))
 
         start = time.perf_counter()
-        response = await self.client.aio.models.generate_content(
+        response = await gemini_generate_with_timeout(
+            self.client,
             model=self.model,
             contents=contents,
             config=types.GenerateContentConfig(

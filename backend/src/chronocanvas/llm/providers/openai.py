@@ -1,3 +1,4 @@
+import asyncio
 from collections.abc import Awaitable, Callable
 
 import openai
@@ -40,7 +41,10 @@ class OpenAIProvider(LLMProvider):
         if json_mode:
             kwargs["response_format"] = {"type": "json_object"}
 
-        response = await self.client.chat.completions.create(**kwargs)
+        response = await asyncio.wait_for(
+            self.client.chat.completions.create(**kwargs),
+            timeout=120,
+        )
 
         input_tokens = response.usage.prompt_tokens if response.usage else 0
         output_tokens = response.usage.completion_tokens if response.usage else 0
@@ -85,7 +89,10 @@ class OpenAIProvider(LLMProvider):
         input_tokens = 0
         output_tokens = 0
 
-        stream = await self.client.chat.completions.create(**kwargs)
+        stream = await asyncio.wait_for(
+            self.client.chat.completions.create(**kwargs),
+            timeout=120,
+        )
         async for chunk in stream:
             delta = chunk.choices[0].delta.content if chunk.choices else None
             if delta:

@@ -12,7 +12,7 @@ import logging
 import time
 from pathlib import Path
 
-from chronocanvas.agents.story.state import StoryState
+from chronocanvas.agents.story.state import StoryState, get_runtime_config
 from chronocanvas.config import settings
 from chronocanvas.llm.base import TaskType
 from chronocanvas.llm.router import get_llm_router
@@ -65,7 +65,7 @@ async def _vision_narration(panels: list[dict], request_id: str) -> tuple[dict[i
     """Use Gemini multimodal to generate narration from actual images."""
     from google import genai
     from google.genai import types
-    from chronocanvas.llm.providers.gemini import GEMINI_PRICING
+    from chronocanvas.llm.providers.gemini import GEMINI_PRICING, gemini_generate_with_timeout
 
     parts: list[types.Part] = []
 
@@ -91,7 +91,8 @@ async def _vision_narration(panels: list[dict], request_id: str) -> tuple[dict[i
     model = settings.gemini_model
 
     start = time.perf_counter()
-    response = await client.aio.models.generate_content(
+    response = await gemini_generate_with_timeout(
+        client,
         model=model,
         contents=types.Content(role="user", parts=parts),
         config=types.GenerateContentConfig(
@@ -155,7 +156,7 @@ async def _text_only_narration(
         scenes_json=json.dumps(scenes_for_prompt, indent=2),
     )
 
-    rc = state.get("runtime_config")
+    rc = get_runtime_config(state)
     router = get_llm_router()
     response = await router.generate(
         prompt=prompt,

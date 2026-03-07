@@ -16,7 +16,7 @@ from google.genai import types
 
 from chronocanvas.agents.story.state import StoryState
 from chronocanvas.config import settings
-from chronocanvas.llm.providers.gemini import GEMINI_PRICING
+from chronocanvas.llm.providers.gemini import GEMINI_PRICING, gemini_generate_with_timeout
 
 logger = logging.getLogger(__name__)
 
@@ -138,7 +138,8 @@ async def storyboard_coherence_node(state: StoryState) -> StoryState:
 
     start = time.perf_counter()
     try:
-        response = await client.aio.models.generate_content(
+        response = await gemini_generate_with_timeout(
+            client,
             model=model,
             contents=types.Content(role="user", parts=content_parts),
             config=types.GenerateContentConfig(
