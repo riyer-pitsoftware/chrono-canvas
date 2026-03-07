@@ -95,18 +95,26 @@ const PORTRAIT_NODE_DEFS = [
 
 const PORTRAIT_END_NODE = { id: 'END', x: 1225, y: 60 };
 
-// Story pipeline nodes
+// Story pipeline nodes — matches graph.py
+// Row 1 (y=10): optional branches (image_to_story, ref_image_analysis)
+// Row 2 (y=80): main pipeline path
+// Row 3 (y=150): narration / video / export
 const STORY_NODE_DEFS = [
-  { id: 'story_orchestrator', label: 'Orchestrator', x: 0, y: 60 },
-  { id: 'character_extraction', label: 'Characters', x: 165, y: 60 },
-  { id: 'scene_decomposition', label: 'Scenes', x: 310, y: 60 },
-  { id: 'scene_prompt_generation', label: 'Prompt Gen', x: 455, y: 60 },
-  { id: 'scene_image_generation', label: 'Image Gen', x: 610, y: 60 },
-  { id: 'storyboard_coherence', label: 'Coherence', x: 765, y: 60 },
-  { id: 'storyboard_export', label: 'Export', x: 910, y: 60 },
+  { id: 'story_orchestrator', label: 'Orchestrator', x: 0, y: 80 },
+  { id: 'image_to_story', label: 'Img→Story', x: 170, y: 10 },
+  { id: 'reference_image_analysis', label: 'Ref Analysis', x: 170, y: 150 },
+  { id: 'character_extraction', label: 'Characters', x: 340, y: 80 },
+  { id: 'scene_decomposition', label: 'Scenes', x: 490, y: 80 },
+  { id: 'scene_prompt_generation', label: 'Prompt Gen', x: 640, y: 80 },
+  { id: 'scene_image_generation', label: 'Image Gen', x: 800, y: 80 },
+  { id: 'storyboard_coherence', label: 'Coherence', x: 960, y: 80 },
+  { id: 'narration_script', label: 'Narration', x: 1110, y: 80 },
+  { id: 'narration_audio', label: 'Audio', x: 1230, y: 80 },
+  { id: 'video_assembly', label: 'Video', x: 1340, y: 80 },
+  { id: 'storyboard_export', label: 'Export', x: 1450, y: 80 },
 ];
 
-const STORY_END_NODE = { id: 'END', x: 1050, y: 60 };
+const STORY_END_NODE = { id: 'END', x: 1570, y: 80 };
 
 const GRAY_MARKER = { type: MarkerType.ArrowClosed, width: 10, height: 10 };
 const RED_MARKER = { type: MarkerType.ArrowClosed, width: 10, height: 10, color: '#ef4444' };
@@ -194,12 +202,101 @@ const PORTRAIT_EDGES: Edge[] = [
 ];
 
 const STORY_EDGES: Edge[] = [
-  { id: 's-orch-char', source: 'story_orchestrator', target: 'character_extraction', style: EDGE_STYLE_DIRECT, markerEnd: GRAY_MARKER },
+  // Orchestrator → conditional branches
+  {
+    id: 's-orch-char',
+    source: 'story_orchestrator',
+    target: 'character_extraction',
+    label: 'continue',
+    labelStyle: LABEL_GRAY,
+    labelBgStyle: LABEL_BG,
+    style: EDGE_STYLE_DIRECT,
+    markerEnd: GRAY_MARKER,
+  },
+  {
+    id: 's-orch-i2s',
+    source: 'story_orchestrator',
+    target: 'image_to_story',
+    label: 'image',
+    labelStyle: LABEL_GRAY,
+    labelBgStyle: LABEL_BG,
+    style: EDGE_STYLE_COND,
+    markerEnd: GRAY_MARKER,
+  },
+  {
+    id: 's-orch-ref',
+    source: 'story_orchestrator',
+    target: 'reference_image_analysis',
+    label: 'ref imgs',
+    labelStyle: LABEL_GRAY,
+    labelBgStyle: LABEL_BG,
+    style: EDGE_STYLE_COND,
+    markerEnd: GRAY_MARKER,
+  },
+  {
+    id: 's-orch-end',
+    source: 'story_orchestrator',
+    target: 'END',
+    sourceHandle: 'bottom-out',
+    targetHandle: 'top',
+    label: 'error',
+    labelStyle: LABEL_RED,
+    labelBgStyle: LABEL_BG,
+    style: EDGE_STYLE_ERROR,
+    markerEnd: RED_MARKER,
+    type: 'smoothstep',
+  },
+  // image_to_story → character_extraction (or ref analysis)
+  { id: 's-i2s-char', source: 'image_to_story', target: 'character_extraction', style: EDGE_STYLE_DIRECT, markerEnd: GRAY_MARKER },
+  { id: 's-i2s-ref', source: 'image_to_story', target: 'reference_image_analysis', label: 'ref imgs', labelStyle: LABEL_GRAY, labelBgStyle: LABEL_BG, style: EDGE_STYLE_COND, markerEnd: GRAY_MARKER },
+  // reference_image_analysis → character_extraction
+  { id: 's-ref-char', source: 'reference_image_analysis', target: 'character_extraction', style: EDGE_STYLE_DIRECT, markerEnd: GRAY_MARKER },
+  // Main pipeline path
   { id: 's-char-scene', source: 'character_extraction', target: 'scene_decomposition', style: EDGE_STYLE_DIRECT, markerEnd: GRAY_MARKER },
   { id: 's-scene-prompt', source: 'scene_decomposition', target: 'scene_prompt_generation', style: EDGE_STYLE_DIRECT, markerEnd: GRAY_MARKER },
   { id: 's-prompt-img', source: 'scene_prompt_generation', target: 'scene_image_generation', style: EDGE_STYLE_DIRECT, markerEnd: GRAY_MARKER },
   { id: 's-img-coh', source: 'scene_image_generation', target: 'storyboard_coherence', style: EDGE_STYLE_DIRECT, markerEnd: GRAY_MARKER },
-  { id: 's-coh-exp', source: 'storyboard_coherence', target: 'storyboard_export', style: EDGE_STYLE_DIRECT, markerEnd: GRAY_MARKER },
+  // Coherence → conditional: narration (TTS) / regen / export
+  {
+    id: 's-coh-narr',
+    source: 'storyboard_coherence',
+    target: 'narration_script',
+    label: 'narration',
+    labelStyle: LABEL_GRAY,
+    labelBgStyle: LABEL_BG,
+    style: EDGE_STYLE_COND,
+    markerEnd: GRAY_MARKER,
+  },
+  {
+    id: 's-coh-exp',
+    source: 'storyboard_coherence',
+    target: 'storyboard_export',
+    sourceHandle: 'bottom-out',
+    targetHandle: 'bottom-in',
+    label: 'no TTS',
+    labelStyle: LABEL_GRAY,
+    labelBgStyle: LABEL_BG,
+    style: EDGE_STYLE_COND,
+    markerEnd: GRAY_MARKER,
+    type: 'smoothstep',
+  },
+  {
+    id: 's-coh-regen',
+    source: 'storyboard_coherence',
+    target: 'scene_prompt_generation',
+    sourceHandle: 'bottom-out',
+    targetHandle: 'bottom-in',
+    label: 'regenerate',
+    labelStyle: LABEL_AMBER,
+    labelBgStyle: LABEL_BG,
+    style: EDGE_STYLE_REGEN,
+    markerEnd: AMBER_MARKER,
+    type: 'smoothstep',
+  },
+  // Narration → Audio → Video → Export
+  { id: 's-narr-audio', source: 'narration_script', target: 'narration_audio', style: EDGE_STYLE_DIRECT, markerEnd: GRAY_MARKER },
+  { id: 's-audio-video', source: 'narration_audio', target: 'video_assembly', style: EDGE_STYLE_DIRECT, markerEnd: GRAY_MARKER },
+  { id: 's-video-exp', source: 'video_assembly', target: 'storyboard_export', style: EDGE_STYLE_DIRECT, markerEnd: GRAY_MARKER },
   { id: 's-exp-end', source: 'storyboard_export', target: 'END', style: EDGE_STYLE_DIRECT, markerEnd: GRAY_MARKER },
 ];
 
@@ -238,7 +335,7 @@ export function DAGVisualizer({ currentAgent, status, agentTrace, runType }: DAG
   }, [currentAgent, status, completedAgents, nodeDefs, endNodeDef]);
 
   return (
-    <div className="rounded-lg border border-[var(--border)] bg-white overflow-hidden" style={{ height: 260 }}>
+    <div className="rounded-lg border border-[var(--border)] bg-white overflow-hidden" style={{ height: isStory ? 320 : 260 }}>
       <ReactFlow
         nodes={nodes}
         edges={edges}

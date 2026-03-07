@@ -2,6 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import { CheckCircle, Circle, Loader, XCircle } from "lucide-react";
 import type { LLMCallDetail } from "@/api/types";
 import type { ImageProgress } from "@/api/hooks/useGenerationWS";
+import { PatienceMeter } from "./PatienceMeter";
 
 const PORTRAIT_STAGES = [
   { key: "extraction", label: "Extraction" },
@@ -16,11 +17,16 @@ const PORTRAIT_STAGES = [
 
 const STORY_STAGES = [
   { key: "story_orchestrator", label: "Orchestrator" },
+  { key: "image_to_story", label: "Image to Story" },
+  { key: "reference_image_analysis", label: "Ref Image Analysis" },
   { key: "character_extraction", label: "Character Extraction" },
   { key: "scene_decomposition", label: "Scene Decomposition" },
   { key: "scene_prompt_generation", label: "Prompt Generation" },
   { key: "scene_image_generation", label: "Image Generation" },
   { key: "storyboard_coherence", label: "Coherence Check" },
+  { key: "narration_script", label: "Narration Script" },
+  { key: "narration_audio", label: "Narration Audio" },
+  { key: "video_assembly", label: "Video Assembly" },
   { key: "storyboard_export", label: "Export" },
 ] as const;
 
@@ -38,7 +44,7 @@ function getStageStatus(
   currentAgent: string | null,
   status: string,
   completedAgents: Set<string>,
-) {
+): "pending" | "running" | "completed" | "error" {
   if (status === "failed" && currentAgent === stageKey) return "error";
   if (completedAgents.has(stageKey)) return "completed";
   if (currentAgent === stageKey && status !== "completed" && status !== "failed") return "running";
@@ -92,9 +98,15 @@ export function PipelineStepper({ currentAgent, status, agentTrace, llmCalls = [
           summary = `Score: ${traceEntry.score ?? "—"} ${traceEntry.passed ? "(passed)" : "(failed)"}`;
         }
 
+        // For scene_image_generation with per-scene progress, show fraction instead
+        const isSceneImageRunning =
+          (stage.key === "scene_image_generation" || stage.key === "image_generation") &&
+          stageStatus === "running" &&
+          imageProgress;
+
         return (
-          <div key={stage.key} className="flex items-center gap-3 py-1.5">
-            <div className="flex-shrink-0">
+          <div key={stage.key} className="flex items-start gap-3 py-1.5">
+            <div className="flex-shrink-0 mt-0.5">
               {stageStatus === "completed" && <CheckCircle className="w-5 h-5 text-green-600" />}
               {stageStatus === "running" && <Loader className="w-5 h-5 text-blue-500 animate-spin" />}
               {stageStatus === "error" && <XCircle className="w-5 h-5 text-red-500" />}
@@ -120,20 +132,12 @@ export function PipelineStepper({ currentAgent, status, agentTrace, llmCalls = [
                     ${totalCost.toFixed(6)}
                   </Badge>
                 )}
-                {stage.key === "image_generation" && stageStatus === "running" && imageProgress && (
+                {isSceneImageRunning && (
                   <span className="text-xs text-[var(--muted-foreground)]">
-                    Step {imageProgress.step}/{imageProgress.total}
+                    {imageProgress.step}/{imageProgress.total} scenes
                   </span>
                 )}
               </div>
-              {stage.key === "image_generation" && stageStatus === "running" && imageProgress && (
-                <div className="mt-1 h-1.5 w-full rounded-full bg-[var(--muted)] overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-blue-500 transition-all duration-300"
-                    style={{ width: `${Math.round((imageProgress.step / imageProgress.total) * 100)}%` }}
-                  />
-                </div>
-              )}
               {summary && (
                 <p className="text-xs text-[var(--muted-foreground)] truncate">
                   {summaryHref ? (
@@ -143,6 +147,11 @@ export function PipelineStepper({ currentAgent, status, agentTrace, llmCalls = [
                   ) : summary}
                 </p>
               )}
+              <PatienceMeter
+                phase={stage.key}
+                status={stageStatus}
+                elapsedMs={stageStatus === "completed" ? totalDuration : undefined}
+              />
             </div>
           </div>
         );
