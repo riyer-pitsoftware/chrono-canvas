@@ -74,6 +74,7 @@ services:
     volumes:
       - ./backend/src:/app/src
       - ./output:/app/output
+      - ./archive:/app/archive
       - ./uploads:/app/uploads
       - ./eval:/app/eval:ro
       - ../neo-mumbai-noir:/app/neo-mumbai-noir
@@ -103,6 +104,7 @@ services:
     volumes:
       - ./backend/src:/app/src
       - ./output:/app/output
+      - ./archive:/app/archive
       - ./uploads:/app/uploads
       - ../neo-mumbai-noir:/app/neo-mumbai-noir
     command: ["arq", "chronocanvas.worker.WorkerSettings"]

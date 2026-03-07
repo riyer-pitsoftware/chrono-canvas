@@ -9,8 +9,6 @@ services:
       - pgdata:/var/lib/postgresql/data
     ports:
       - "5432:5432"
-    networks:
-      - db-net
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U chronocanvas"]
       interval: 5s
@@ -23,9 +21,6 @@ services:
     image: redis:7-alpine
     ports:
       - "6379:6379"
-    networks:
-      - db-net
-      - worker-net
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -52,13 +47,9 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    networks:
-      - frontend-net
-      - db-net
-      - worker-net
-      - llm-net
     volumes:
       - output:/app/output
+      - archive:/app/archive
       - uploads:/app/uploads
       - ../neo-mumbai-noir:/app/neo-mumbai-noir
     security_opt:
@@ -83,12 +74,9 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    networks:
-      - db-net
-      - worker-net
-      - llm-net
     volumes:
       - output:/app/output
+      - archive:/app/archive
       - uploads:/app/uploads
       - ../neo-mumbai-noir:/app/neo-mumbai-noir
     command: ["arq", "chronocanvas.worker.WorkerSettings"]
@@ -107,8 +95,6 @@ services:
       - "3000:8080"
     depends_on:
       - api
-    networks:
-      - frontend-net
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -119,10 +105,6 @@ services:
 volumes:
   pgdata:
   output:
+  archive:
   uploads:
 
-networks:
-  frontend-net:
-  worker-net:
-  db-net:
-  llm-net:
