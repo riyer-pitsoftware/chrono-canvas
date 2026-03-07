@@ -96,3 +96,16 @@ deploy/cloudrun/README.md
 
 # Deploy state (tag pinning between steps)
 deploy/cloudrun/.deploy-state
+.agent/**
+.codebuddy/**
+.codex/**
+.continue/**
+.cursor/**
+.gemini/**
+.github/**
+.kiro/**
+.opencode/**
+.qoder/**
+.roo/**
+.trae/**
+.windsurf/**
