@@ -63,7 +63,7 @@ async def run_story_pipeline(
                 "llm_calls": [],
                 "total_scenes": 0,
                 "completed_scenes": 0,
-                "runtime_config": rc,
+                "runtime_config": rc.to_dict(),
                 "error": None,
             }
             # Optional image-to-story inputs

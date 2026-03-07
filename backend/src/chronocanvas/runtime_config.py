@@ -58,6 +58,19 @@ class RuntimeConfig:
 
         return getattr(settings, key, default)
 
+    def to_dict(self) -> dict:
+        """Serialize to a plain dict (safe for JSON/msgpack checkpointing)."""
+        from dataclasses import asdict
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: dict | None) -> RuntimeConfig:
+        """Reconstruct from a plain dict (e.g. after checkpoint deserialization)."""
+        if not data:
+            return cls()
+        known = {f.name for f in __import__("dataclasses").fields(cls)}
+        return cls(**{k: v for k, v in data.items() if k in known})
+
     @classmethod
     def from_request_payload(cls, payload: dict | None) -> RuntimeConfig:
         """Parse the config section of a generation request."""

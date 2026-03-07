@@ -3,7 +3,7 @@ import logging
 import time
 from pathlib import Path
 
-from chronocanvas.agents.story.state import StoryState
+from chronocanvas.agents.story.state import StoryState, get_runtime_config
 from chronocanvas.config import settings
 from chronocanvas.redis_client import publish_progress
 from chronocanvas.service_registry import get_registry
@@ -15,8 +15,12 @@ logger = logging.getLogger(__name__)
 def _get_generator(runtime_config=None):
     factory = get_registry().image_generator_factory
     if factory is not None:
-        return factory(runtime_config=runtime_config)
+        gen = factory(runtime_config=runtime_config)
+        logger.info("Image generator selected: %s (runtime_config.image_provider=%s)",
+                     gen.name, getattr(runtime_config, 'image_provider', None))
+        return gen
     from chronocanvas.imaging.mock_generator import MockImageGenerator
+    logger.warning("No image_generator_factory registered, using MockImageGenerator")
     return MockImageGenerator()
 
 
@@ -108,7 +112,7 @@ async def scene_image_generation_node(state: StoryState) -> StoryState:
         total_scenes, request_id,
     )
 
-    rc = state.get("runtime_config")
+    rc = get_runtime_config(state)
     trace = list(state.get("agent_trace", []))
     channel = f"generation:{request_id}"
     generator = _get_generator(runtime_config=rc)

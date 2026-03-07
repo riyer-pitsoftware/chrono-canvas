@@ -60,9 +60,22 @@ class StoryState(TypedDict, total=False):
     # Narration audio
     narration_audio_paths: list[str]
 
-    # Per-request configuration overrides (from UI ConfigHUD)
-    runtime_config: RuntimeConfig | None
+    # Per-request configuration overrides (from UI ConfigHUD).
+    # Stored as a plain dict for checkpoint serialization safety.
+    runtime_config: dict[str, Any] | None
 
     # Control
     current_agent: str
     error: str | None
+
+
+def get_runtime_config(state: StoryState) -> RuntimeConfig | None:
+    """Reconstruct RuntimeConfig from state, handling both dict and object forms."""
+    rc = state.get("runtime_config")
+    if rc is None:
+        return None
+    if isinstance(rc, RuntimeConfig):
+        return rc
+    if isinstance(rc, dict):
+        return RuntimeConfig.from_dict(rc)
+    return None

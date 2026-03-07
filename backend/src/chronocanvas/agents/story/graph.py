@@ -19,11 +19,9 @@ from chronocanvas.config import settings
 
 def _rc(state: StoryState):
     """Return RuntimeConfig from state, or a blank one."""
-    rc = state.get("runtime_config")
-    if rc is not None:
-        return rc
+    from chronocanvas.agents.story.state import get_runtime_config
     from chronocanvas.runtime_config import RuntimeConfig
-    return RuntimeConfig()
+    return get_runtime_config(state) or RuntimeConfig()
 
 
 def _should_continue_after_orchestrator(state: StoryState) -> str:

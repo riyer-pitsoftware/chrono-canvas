@@ -2,7 +2,7 @@ import logging
 import time
 
 from chronocanvas.agents.story.neo_adapter import NeoLLMBridge
-from chronocanvas.agents.story.state import StoryState
+from chronocanvas.agents.story.state import StoryState, get_runtime_config
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +18,7 @@ async def character_extraction_node(state: StoryState) -> StoryState:
     try:
         from neo_modules.extraction import extract_characters
 
-        bridge = NeoLLMBridge(runtime_config=state.get("runtime_config"))
+        bridge = NeoLLMBridge(runtime_config=get_runtime_config(state))
         start = time.perf_counter()
         result = await extract_characters(input_text, llm_fn=bridge)
         elapsed_ms = (time.perf_counter() - start) * 1000

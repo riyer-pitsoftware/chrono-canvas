@@ -3,7 +3,7 @@ import json
 import logging
 import time
 
-from chronocanvas.agents.story.state import StoryPanel, StoryState
+from chronocanvas.agents.story.state import StoryPanel, StoryState, get_runtime_config
 from chronocanvas.config import settings
 from chronocanvas.llm.base import TaskType
 from chronocanvas.llm.router import get_llm_router
@@ -137,9 +137,23 @@ async def _build_character_anchors(
             runtime_config=runtime_config,
         )
 
-        content = response.content
+        content = response.content.strip()
+        if not content:
+            logger.warning(
+                "Character anchor LLM returned empty response [request_id=%s]",
+                request_id,
+            )
+            return {}, None
+
         json_start = content.find("[")
         json_end = content.rfind("]") + 1
+        if json_start == -1 or json_end <= json_start:
+            logger.warning(
+                "Character anchor LLM returned no JSON array [request_id=%s]: %.200s",
+                request_id, content,
+            )
+            return {}, None
+
         anchors_list = json.loads(content[json_start:json_end])
 
         anchors = {a["name"]: a["visual_anchor"] for a in anchors_list if "name" in a}
@@ -319,7 +333,7 @@ async def scene_prompt_generation_node(state: StoryState) -> StoryState:
     trace = list(state.get("agent_trace", []))
     llm_calls = list(state.get("llm_calls", []))
 
-    rc = state.get("runtime_config")
+    rc = get_runtime_config(state)
     router = get_llm_router()
 
     # Build canonical visual anchors for all characters (one LLM call)

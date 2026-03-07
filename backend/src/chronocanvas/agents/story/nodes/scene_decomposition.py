@@ -2,7 +2,7 @@ import json
 import logging
 import time
 
-from chronocanvas.agents.story.state import StoryState
+from chronocanvas.agents.story.state import StoryState, get_runtime_config
 from chronocanvas.llm.base import TaskType
 from chronocanvas.llm.router import get_llm_router
 
@@ -78,7 +78,7 @@ async def scene_decomposition_node(state: StoryState) -> StoryState:
     )
 
     try:
-        rc = state.get("runtime_config")
+        rc = get_runtime_config(state)
         router = get_llm_router()
         response = await router.generate(
             prompt=prompt,
