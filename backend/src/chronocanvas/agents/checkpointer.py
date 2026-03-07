@@ -83,11 +83,9 @@ async def init_checkpointer() -> None:
         checkpointer = saver
         logger.info("Durable Postgres checkpointer initialised")
     except Exception as exc:
-        logger.warning(
-            "Failed to initialise Postgres checkpointer, falling back to "
-            "MemorySaver (pipeline state will not survive restarts): %s",
-            exc,
-        )
+        raise CheckpointerInitError(
+            f"Failed to initialise Postgres checkpointer: {exc}"
+        ) from exc
 
 
 async def close_checkpointer() -> None:
