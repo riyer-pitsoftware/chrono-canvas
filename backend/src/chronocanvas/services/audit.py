@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from chronocanvas.api.schemas.generation import (
     AuditDetailResponse,
     ImageResponse,
@@ -9,6 +11,7 @@ from chronocanvas.api.schemas.generation import (
     StateSnapshot,
     ValidationCategoryDetail,
 )
+from chronocanvas.config import settings
 from chronocanvas.db.models.image import GeneratedImage
 from chronocanvas.db.models.request import GenerationRequest
 
@@ -60,6 +63,38 @@ class AuditProjector:
             if "state_snapshot" in entry
         ]
 
+        # Build narration audio URLs from storyboard panels or by scanning disk
+        narration_audio_urls: list[dict[str, object]] = []
+        if request.storyboard_data:
+            panels = request.storyboard_data.get("panels", [])
+            # Try storyboard_data first (new generations have narration_audio_path)
+            for panel in panels:
+                if panel.get("narration_audio_path"):
+                    scene_idx = panel.get("scene_index", 0)
+                    narration_audio_urls.append({
+                        "scene_index": scene_idx,
+                        "narration_text": panel.get("narration_text", ""),
+                        "url": f"/api/export/{request.id}/audio/{scene_idx}",
+                    })
+            # Fallback: scan disk for audio files from older generations
+            if not narration_audio_urls:
+                audio_dir = Path(settings.output_dir) / str(request.id) / "audio"
+                if audio_dir.is_dir():
+                    for wav in sorted(audio_dir.glob("scene_*.wav")):
+                        stem = wav.stem  # e.g. "scene_0"
+                        try:
+                            scene_idx = int(stem.split("_")[1])
+                        except (IndexError, ValueError):
+                            continue
+                        text = ""
+                        if scene_idx < len(panels):
+                            text = panels[scene_idx].get("narration_text", "")
+                        narration_audio_urls.append({
+                            "scene_index": scene_idx,
+                            "narration_text": text,
+                            "url": f"/api/export/{request.id}/audio/{scene_idx}",
+                        })
+
         return AuditDetailResponse(
             id=request.id,
             input_text=request.input_text,
@@ -83,5 +118,6 @@ class AuditProjector:
             state_snapshots=state_snapshots,
             agent_trace=request.agent_trace or [],
             storyboard_data=request.storyboard_data,
+            narration_audio_urls=narration_audio_urls,
             run_type=request.run_type or "portrait",
         )
