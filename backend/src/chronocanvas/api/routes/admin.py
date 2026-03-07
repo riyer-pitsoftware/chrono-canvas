@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -253,3 +253,18 @@ async def flag_validation(
         status="flagged",
         notes=body.notes,
     )
+
+
+# ── Archive ──────────────────────────────────────────────────────────────────
+
+
+@router.post("/archive")
+async def archive_old_images(
+    older_than_days: int = Query(default=2, ge=0, description="Archive requests older than N days"),
+    dry_run: bool = Query(default=False, description="Preview what would be archived without making changes"),
+    session: AsyncSession = Depends(get_session),
+):
+    from chronocanvas.services.archiver import archive_old_requests
+
+    result = await archive_old_requests(session, older_than_days=older_than_days, dry_run=dry_run)
+    return result

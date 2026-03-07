@@ -25,6 +25,7 @@ class RequestStatus(StrEnum):
     SWAPPING_FACE = "swapping_face"
     COMPLETED = "completed"
     FAILED = "failed"
+    ARCHIVED = "archived"
 
 
 class GenerationRequest(Base, UUIDMixin, TimestampMixin):

@@ -1,7 +1,7 @@
 import uuid
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Float, ForeignKey, Integer, String
+from sqlalchemy import Float, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -23,7 +23,7 @@ class GeneratedImage(Base, UUIDMixin, TimestampMixin):
     )
     file_path: Mapped[str] = mapped_column(String(500))
     thumbnail_path: Mapped[str | None] = mapped_column(String(500))
-    prompt_used: Mapped[str | None] = mapped_column(String(2000))
+    prompt_used: Mapped[str | None] = mapped_column(Text)
     provider: Mapped[str] = mapped_column(String(50))
     width: Mapped[int] = mapped_column(Integer, default=512)
     height: Mapped[int] = mapped_column(Integer, default=512)
