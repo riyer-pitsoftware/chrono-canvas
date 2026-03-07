@@ -109,3 +109,4 @@ deploy/cloudrun/.deploy-state
 .roo/**
 .trae/**
 .windsurf/**
+.env.hackathon
