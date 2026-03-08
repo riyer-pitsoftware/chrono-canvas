@@ -66,15 +66,16 @@ Verify the cold start with `make smoke-test` — runs 8 checks against the live 
 
 **Category:** Creative Storyteller with Gemini interleaved output
 
-ChronoCanvas uses **Gemini 2.5 Flash multimodal** to power an end-to-end story generation pipeline: research, narration, image generation, and storyboard coherence review — all orchestrated as a LangGraph agent with a full audit trail.
+ChronoCanvas uses **Gemini 2.5 Flash multimodal** to power an end-to-end story generation pipeline with a **noir creative director persona** ("Dash"): research with Google Search grounding, scene decomposition with continuity tracking, prompt pre-validation, image generation, storyboard coherence review, and narration — all orchestrated as a LangGraph agent with a full audit trail.
 
 ### GCP services used
 
 | GCP Service | Role in ChronoCanvas |
 |---|---|
-| **Gemini** (via google-genai SDK) | All LLM calls in Story Director mode — scene narration, dialogue, panel layout |
+| **Gemini** (via google-genai SDK) | All LLM calls in Story Director mode — scene narration, dialogue, panel layout, prompt pre-validation |
+| **Gemini + Google Search** | Research grounding with citation extraction from Google Search tool |
 | **Imagen** (via google-genai SDK) | Image generation for every story panel and portrait |
-| **Gemini multimodal** | Storyboard coherence review — evaluates character consistency and art style across panels using images + text |
+| **Gemini multimodal** | Storyboard coherence review — evaluates character consistency, art style, and continuity tracking across panels using images + text |
 | **Cloud Run** | Managed deployment of API, worker, and frontend services |
 | **Cloud SQL** (PostgreSQL) | Persistent storage for generations, audit logs, and validation results |
 | **Memorystore** (Redis) | Real-time streaming via pub/sub + ARQ job queue |
@@ -84,7 +85,8 @@ ChronoCanvas uses **Gemini 2.5 Flash multimodal** to power an end-to-end story g
 All Gemini and Imagen calls go through the **`google-genai` Python SDK** (`google.genai.Client`). No REST wrappers — direct SDK integration in:
 - `backend/src/chronocanvas/llm/providers/gemini.py` — Gemini LLM provider
 - `backend/src/chronocanvas/imaging/imagen_client.py` — Imagen image generation
-- `backend/src/chronocanvas/agents/nodes/storyboard_coherence.py` — Gemini multimodal coherence check
+- `backend/src/chronocanvas/agents/story/nodes/storyboard_coherence.py` — Gemini multimodal coherence check
+- `backend/src/chronocanvas/agents/story/nodes/prompt_validation.py` — Prompt pre-validation with auto-repair
 
 ### Verify it yourself
 
@@ -149,7 +151,12 @@ ChronoCanvas is **not** a ChatGPT wrapper. It is a multi-agent pipeline with str
 - **Historical grounding** — a dedicated research node enriches every generation with period-specific context (clothing, art style, cultural details) before any image prompt is written. Research results are cached with pgvector semantic similarity for cost savings.
 - **Validation with retry** — generated portraits are scored against 4 weighted criteria (clothing accuracy, cultural accuracy, temporal plausibility, artistic plausibility). Failures trigger automatic prompt correction and regeneration (up to 2x).
 - **Face integration** — users upload a reference photo; FaceFusion composites their face onto the generated portrait while preserving historical costume and setting.
-- **Storyboard coherence** — story mode uses Gemini multimodal to review all generated panels together, scoring character consistency, art style uniformity, and narrative flow. Low-scoring scenes are automatically regenerated.
+- **Storyboard coherence** — story mode uses Gemini multimodal to review all generated panels together, scoring character consistency, art style uniformity, narrative flow, and **cross-panel continuity** (expected vs established state). Low-scoring scenes are automatically regenerated.
+- **Prompt pre-validation** — before expensive image generation, each prompt is scored for identity clarity, era plausibility, composition completeness, and contradictions. Weak prompts are auto-repaired by LLM.
+- **Noir creative director persona** — "Dash" voices all story pipeline prompts with noir literary grammar (Hammett's economy, Chandler's poetry), producing distinctive visual and narrative output.
+- **Google Search grounding** — research node uses Gemini's Google Search tool for factual grounding with extracted citations from grounding metadata.
+- **Export bundles** — download a zip containing `citations.json`, `story.md`, and `frames/` directory for any completed generation.
+- **"Powered by Gemini" badge** and **AI-generated content disclaimer** visible in the UI during generation.
 - **Full audit trail** — every LLM call (prompt, response, tokens, cost, latency, provider) is logged and browsable per generation. No black boxes.
 
 **Target audience:** engineering leaders evaluating auditable AI workflows, staff-plus engineers building LangGraph pipelines, and educators exploring AI-assisted historical visualization.
