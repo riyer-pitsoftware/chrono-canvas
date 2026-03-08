@@ -17,6 +17,7 @@ import { PipelineStepper } from "@/components/generation/PipelineStepper";
 import { DAGVisualizer } from "@/components/generation/DAGVisualizer";
 import { StreamingText } from "@/components/generation/StreamingText";
 import { StoryboardView } from "@/components/generation/StoryboardView";
+import { TrustCard } from "@/components/generation/TrustCard";
 import { VoiceInputButton } from "@/components/generation/VoiceInputButton";
 import { useNavigation } from "@/stores/navigation";
 import { ConfigHUD } from "@/components/config/ConfigHUD";
@@ -437,6 +438,19 @@ export function Generate({ figureId, mode }: { figureId?: string; mode?: string 
                   </div>
                 );
               })()}
+
+              {/* TrustCard — pipeline transparency after completion */}
+              {(activeRequest.data.status === "completed" || activeRequest.data.status === "failed") &&
+                activeRequest.data.agent_trace &&
+                activeRequest.data.agent_trace.length > 0 && (
+                <TrustCard
+                  agentTrace={activeRequest.data.agent_trace}
+                  llmCalls={activeRequest.data.llm_calls ?? []}
+                  runType={activeRequest.data.run_type}
+                  status={activeRequest.data.status}
+                  defaultCollapsed={false}
+                />
+              )}
 
               {(activeRequest.data.status === "completed" || activeRequest.data.status === "failed") && (
                 <Button

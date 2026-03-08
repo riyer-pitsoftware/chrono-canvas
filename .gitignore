@@ -110,3 +110,4 @@ deploy/cloudrun/.deploy-state
 .trae/**
 .windsurf/**
 .env.hackathon
+.deploy-status.json

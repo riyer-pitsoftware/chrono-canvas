@@ -9,6 +9,7 @@ import { StateInspector } from "@/components/generation/StateInspector";
 import { CostTimeline } from "@/components/generation/CostTimeline";
 import { DAGVisualizer } from "@/components/generation/DAGVisualizer";
 import { StoryboardView } from "@/components/generation/StoryboardView";
+import { TrustCard } from "@/components/generation/TrustCard";
 import { BookOpen, ChevronDown, ChevronLeft, ChevronRight, Copy, Download, ExternalLink, RotateCcw, ShieldCheck, Trash2, Volume2, X } from "lucide-react";
 import type { AuditFeedback, GeneratedImage } from "@/api/types";
 import { MessageSquare, Send } from "lucide-react";
@@ -161,6 +162,17 @@ export function AuditDetail({ requestId }: { requestId: string }) {
           />
         </CardContent>
       </Card>
+
+      {/* TrustCard — pipeline transparency summary */}
+      <TrustCard
+        agentTrace={data.agent_trace ?? []}
+        llmCalls={data.llm_calls}
+        runType={data.run_type}
+        status={data.status}
+        totalCost={data.total_cost}
+        totalDurationMs={data.total_duration_ms}
+        defaultCollapsed={false}
+      />
 
       {/* DAG + Cost & Latency — tabbed card */}
       <DAGCostCard

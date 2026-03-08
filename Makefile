@@ -2,7 +2,8 @@
        frontend backend cli clean check-env \
        logs logs-api logs-worker logs-frontend \
        status shell-api db-shell fresh health \
-       quickstart smoke-test neo-wheel
+       quickstart smoke-test neo-wheel \
+       deploy-status ds deploy-remote
 
 COMPOSE_DEV = docker compose -f docker-compose.dev.yml
 API_CONTAINER = chrono-canvas-api-1
@@ -26,6 +27,7 @@ start: dev
 
 up: neo-wheel
 	$(COMPOSE_DEV) up --build -d
+	@bash scripts/deploy-mark.sh local 2>/dev/null || true
 
 down:
 	$(COMPOSE_DEV) down
@@ -35,6 +37,7 @@ stop: down
 restart: neo-wheel
 	$(COMPOSE_DEV) down
 	$(COMPOSE_DEV) up --build -d
+	@bash scripts/deploy-mark.sh local 2>/dev/null || true
 
 build:
 	docker compose build
@@ -140,6 +143,17 @@ fresh: clean up
 	@sleep 5
 	@$(MAKE) seed
 	@echo "Fresh environment ready at http://localhost:3000"
+
+# ── Deploy Status & Workflow ────────────────────────────────────────
+deploy-status:  ## What changed, what needs redeploying
+	@bash scripts/deploy-status.sh
+
+ds: deploy-status  ## Alias for deploy-status
+
+deploy-remote:  ## Build, push, deploy to Cloud Run + mark
+	@export GCP_PROJECT_ID=$${GCP_PROJECT_ID:-gen-lang-client-0925647028} && \
+	bash deploy/cloudrun/redeploy.sh && \
+	bash scripts/deploy-mark.sh remote --url
 
 # ── Clean ────────────────────────────────────────────────────────────
 clean:
