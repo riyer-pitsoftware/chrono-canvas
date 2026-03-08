@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,8 +10,9 @@ import { CostTimeline } from "@/components/generation/CostTimeline";
 import { DAGVisualizer } from "@/components/generation/DAGVisualizer";
 import { StoryboardView } from "@/components/generation/StoryboardView";
 import { TrustCard } from "@/components/generation/TrustCard";
-import { BookOpen, ChevronDown, ChevronLeft, ChevronRight, Copy, Download, ExternalLink, RotateCcw, ShieldCheck, Trash2, Volume2, X } from "lucide-react";
-import type { AuditFeedback, GeneratedImage } from "@/api/types";
+import { ImageGallery } from "@/components/generation/ImageGallery";
+import { BookOpen, ChevronDown, ChevronRight, Copy, Download, ExternalLink, RotateCcw, ShieldCheck, Trash2, Volume2 } from "lucide-react";
+import type { AuditFeedback } from "@/api/types";
 import { MessageSquare, Send } from "lucide-react";
 
 const PORTRAIT_PIPELINE_STEPS = [
@@ -459,7 +460,11 @@ export function AuditDetail({ requestId }: { requestId: string }) {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <ImageGallery images={data.images} requestId={requestId} />
+            <ImageGallery
+              images={data.images}
+              requestId={requestId}
+              validationCategories={data.validation_categories}
+            />
           </CardContent>
         </Card>
       )}
@@ -821,200 +826,3 @@ function DAGCostCard({
   );
 }
 
-function imageUrl(img: GeneratedImage, _requestId: string) {
-  // file_path is relative like "output/uuid/scene_0/file.png" or absolute "/app/output/..."
-  // Strip everything up to and including the first "output/" to get the subpath
-  const outputIdx = img.file_path.indexOf("output/");
-  if (outputIdx !== -1) {
-    return "/" + img.file_path.slice(outputIdx);
-  }
-  // Fallback: use the path as-is prefixed with /
-  return img.file_path.startsWith("/") ? img.file_path : "/" + img.file_path;
-}
-
-function ImageGallery({ images, requestId }: { images: GeneratedImage[]; requestId: string }) {
-  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
-
-  // Sort by created_at so attempt order is chronological
-  const sorted = [...images].sort(
-    (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
-  );
-
-  return (
-    <>
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-        {sorted.map((img, i) => (
-          <button
-            key={img.id}
-            onClick={() => setLightboxIndex(i)}
-            className="group relative rounded-md overflow-hidden border hover:ring-2 hover:ring-[var(--ring)] transition-all text-left"
-          >
-            <img
-              src={imageUrl(img, requestId)}
-              alt={`Attempt ${i + 1}`}
-              className="w-full aspect-square object-cover"
-            />
-            {/* Overlay badges */}
-            <div className="absolute top-2 left-2 flex flex-col gap-1">
-              <Badge variant="secondary" className="text-xs">
-                #{i + 1}
-              </Badge>
-              <Badge variant="outline" className="text-xs bg-[var(--background)]/80">
-                {img.provider}
-              </Badge>
-            </div>
-            {img.validation_score != null && (
-              <div className="absolute top-2 right-2">
-                <Badge
-                  variant={img.validation_score >= 70 ? "success" : "destructive"}
-                  className="text-xs"
-                >
-                  {img.validation_score.toFixed(0)}
-                </Badge>
-              </div>
-            )}
-            {/* Hover overlay */}
-            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center gap-3">
-              <span className="text-white opacity-0 group-hover:opacity-100 text-sm font-medium drop-shadow-md transition-opacity">
-                Enlarge
-              </span>
-              <a
-                href={imageUrl(img, requestId)}
-                download
-                className="opacity-0 group-hover:opacity-100 text-white hover:text-gray-200 transition-opacity drop-shadow-md"
-                title="Download"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <Download className="w-5 h-5" />
-              </a>
-            </div>
-          </button>
-        ))}
-      </div>
-      {lightboxIndex !== null && (
-        <Lightbox
-          images={sorted}
-          requestId={requestId}
-          currentIndex={lightboxIndex}
-          onClose={() => setLightboxIndex(null)}
-          onNavigate={setLightboxIndex}
-        />
-      )}
-    </>
-  );
-}
-
-function Lightbox({
-  images,
-  requestId,
-  currentIndex,
-  onClose,
-  onNavigate,
-}: {
-  images: GeneratedImage[];
-  requestId: string;
-  currentIndex: number;
-  onClose: () => void;
-  onNavigate: (index: number) => void;
-}) {
-  const img = images[currentIndex];
-  const hasPrev = currentIndex > 0;
-  const hasNext = currentIndex < images.length - 1;
-
-  const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-      if (e.key === "ArrowLeft" && hasPrev) onNavigate(currentIndex - 1);
-      if (e.key === "ArrowRight" && hasNext) onNavigate(currentIndex + 1);
-    },
-    [onClose, onNavigate, currentIndex, hasPrev, hasNext],
-  );
-
-  useEffect(() => {
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [handleKeyDown]);
-
-  return (
-    <div
-      className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center"
-      onClick={onClose}
-    >
-      <div
-        className="relative max-w-4xl max-h-[90vh] mx-4"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Close button */}
-        <button
-          onClick={onClose}
-          className="absolute -top-10 right-0 text-white hover:text-gray-300 transition-colors"
-        >
-          <X className="w-6 h-6" />
-        </button>
-
-        {/* Image */}
-        <img
-          src={imageUrl(img, requestId)}
-          alt={`Attempt ${currentIndex + 1}`}
-          className="max-h-[80vh] rounded-md object-contain"
-        />
-
-        {/* Info bar */}
-        <div className="flex items-center justify-between mt-3 text-white text-sm">
-          <div className="flex items-center gap-2">
-            <Badge variant="secondary">Attempt #{currentIndex + 1}</Badge>
-            <Badge variant="outline" className="text-white border-white/40">
-              {img.provider}
-            </Badge>
-            {img.validation_score != null && (
-              <Badge variant={img.validation_score >= 70 ? "success" : "destructive"}>
-                Score: {img.validation_score.toFixed(1)}
-                {img.validation_score >= 70 ? " (passed)" : " (failed)"}
-              </Badge>
-            )}
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="text-white/60">{img.width}x{img.height}</span>
-            <a
-              href={imageUrl(img, requestId)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1 text-white/80 hover:text-white transition-colors"
-              title="Open in new tab"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <ExternalLink className="w-4 h-4" />
-            </a>
-            <a
-              href={imageUrl(img, requestId)}
-              download
-              className="flex items-center gap-1 text-white/80 hover:text-white transition-colors"
-              title="Download image"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <Download className="w-4 h-4" />
-            </a>
-          </div>
-        </div>
-
-        {/* Navigation arrows */}
-        {hasPrev && (
-          <button
-            onClick={() => onNavigate(currentIndex - 1)}
-            className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-12 text-white hover:text-gray-300 transition-colors"
-          >
-            <ChevronLeft className="w-8 h-8" />
-          </button>
-        )}
-        {hasNext && (
-          <button
-            onClick={() => onNavigate(currentIndex + 1)}
-            className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-12 text-white hover:text-gray-300 transition-colors"
-          >
-            <ChevronRight className="w-8 h-8" />
-          </button>
-        )}
-      </div>
-    </div>
-  );
-}

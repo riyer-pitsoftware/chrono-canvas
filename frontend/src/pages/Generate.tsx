@@ -19,6 +19,7 @@ import { StreamingText } from "@/components/generation/StreamingText";
 import { StoryboardView } from "@/components/generation/StoryboardView";
 import { TrustCard } from "@/components/generation/TrustCard";
 import { VoiceInputButton } from "@/components/generation/VoiceInputButton";
+import { TemplatePresets, type PresetTemplate } from "@/components/generation/TemplatePresets";
 import { useNavigation } from "@/stores/navigation";
 import { ConfigHUD } from "@/components/config/ConfigHUD";
 import { useConfigStore } from "@/stores/configStore";
@@ -66,6 +67,10 @@ export function Generate({ figureId, mode }: { figureId?: string; mode?: string 
   }, [figure, activeRequestId, startGeneration]);
 
   const configPayload = useConfigStore((s) => s.toPayload);
+
+  const handlePresetSelect = (preset: PresetTemplate) => {
+    setInputText(preset.prompt);
+  };
 
   const handleGenerate = async () => {
     // For image-to-story: text is optional when image is provided
@@ -169,6 +174,14 @@ export function Generate({ figureId, mode }: { figureId?: string; mode?: string 
       </div>
 
       <ConfigHUD className="mb-4" />
+
+      {!activeRequestId && mode && (
+        <TemplatePresets
+          mode={mode}
+          onSelect={handlePresetSelect}
+          disabled={isCreating}
+        />
+      )}
 
       <Card className="mb-6">
         <CardHeader>
