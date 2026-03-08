@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { BarChart3, BookOpen, Download, FileSearch, Home, Image, LayoutDashboard, Settings, Shield, Users, Cpu, Scroll, Database, ChevronLeft, ChevronRight, ChevronDown, Wrench } from "lucide-react";
+import { BarChart3, BookOpen, Download, FileSearch, Home, Image, LayoutDashboard, Settings, Shield, Users, Cpu, Scroll, Database, ChevronLeft, ChevronRight, ChevronDown, Wrench, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useHackathonMode } from "@/api/hooks/useConfig";
 
@@ -9,6 +9,7 @@ const defaultNavItems = [
   { label: "Timeline", href: "/timeline", icon: Scroll },
   { label: "Figures", href: "/figures", icon: Users },
   { label: "Generate", href: "/generate", icon: Image },
+  { label: "Live Story", href: "/live-story", icon: Zap },
   { label: "Validate", href: "/validate", icon: Shield },
   { label: "Audit", href: "/audit", icon: FileSearch },
   { label: "Memory", href: "/memory", icon: Database },
@@ -20,6 +21,7 @@ const defaultNavItems = [
 // Hackathon mode: only the creative storytelling essentials
 const hackathonPrimaryNav = [
   { label: "Story Director", href: "/generate?mode=creative_story", icon: Image },
+  { label: "Live Story", href: "/live-story", icon: Zap },
   { label: "Storyboard", href: "/export", icon: Download },
 ];
 

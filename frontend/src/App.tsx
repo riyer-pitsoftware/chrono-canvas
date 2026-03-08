@@ -15,6 +15,7 @@ import { Timeline } from "@/pages/Timeline";
 import { Review } from "@/pages/Review";
 import { EvalViewer } from "@/pages/EvalViewer";
 import { ModeSelector } from "@/pages/ModeSelector";
+import { LiveStory } from "@/pages/LiveStory";
 
 function getPage(path: string, hackathonMode: boolean) {
   const qIdx = path.indexOf("?");
@@ -64,6 +65,8 @@ function getPage(path: string, hackathonMode: boolean) {
       return <Memory />;
     case "/eval":
       return <EvalViewer />;
+    case "/live-story":
+      return <LiveStory />;
     case "/dashboard":
       return <Dashboard />;
     default:

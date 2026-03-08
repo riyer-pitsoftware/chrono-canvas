@@ -11,6 +11,8 @@ from chronocanvas.api.routes import (
     figures,
     generation,
     health,
+    live_story,
+    live_voice,
     memory,
     reference_images,
     timeline,
@@ -38,3 +40,5 @@ api_router.include_router(eval_viewer.router)
 api_router.include_router(reference_images.router)
 api_router.include_router(voice.router)
 api_router.include_router(conversation.router)
+api_router.include_router(live_story.router)
+api_router.include_router(live_voice.router)

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { VoiceInputButton } from "@/components/generation/VoiceInputButton";
+import { LiveVoiceNarration } from "@/components/generation/LiveVoiceNarration";
 import { StoryConversationPanel } from "@/components/generation/StoryConversationPanel";
 import { api } from "@/api/client";
 import type { StoryboardData } from "@/api/types";
@@ -327,11 +328,14 @@ function ScenePanel({
           </div>
         ) : null}
 
-        {/* Narration text */}
+        {/* Narration text + Live Voice narration */}
         {panel.narration_text && (
-          <p className="text-sm italic text-[var(--muted-foreground)] mb-2">
-            &ldquo;{panel.narration_text}&rdquo;
-          </p>
+          <div className="flex items-start gap-2 mb-2">
+            <p className="text-sm italic text-[var(--muted-foreground)] flex-1">
+              &ldquo;{panel.narration_text}&rdquo;
+            </p>
+            <LiveVoiceNarration text={panel.narration_text} />
+          </div>
         )}
 
         {/* Scene description */}

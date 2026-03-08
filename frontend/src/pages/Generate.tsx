@@ -19,6 +19,7 @@ import { StreamingText } from "@/components/generation/StreamingText";
 import { StoryboardView } from "@/components/generation/StoryboardView";
 import { TrustCard } from "@/components/generation/TrustCard";
 import { VoiceInputButton } from "@/components/generation/VoiceInputButton";
+import { LiveVoicePrompt } from "@/components/generation/LiveVoicePrompt";
 import { TemplatePresets, type PresetTemplate } from "@/components/generation/TemplatePresets";
 import { useNavigation } from "@/stores/navigation";
 import { ConfigHUD } from "@/components/config/ConfigHUD";
@@ -191,6 +192,10 @@ export function Generate({ figureId, mode }: { figureId?: string; mode?: string 
           <div className={isStoryMode ? "mb-4 space-y-3" : "flex gap-3 mb-4"}>
             {isStoryMode ? (
               <>
+                <LiveVoicePrompt
+                  onUse={(text) => setInputText(text)}
+                  disabled={isCreating}
+                />
                 <div className="relative">
                   <Textarea
                     placeholder={refImageId
