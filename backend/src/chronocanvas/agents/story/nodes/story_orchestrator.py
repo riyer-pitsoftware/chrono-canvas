@@ -33,7 +33,10 @@ async def story_orchestrator_node(state: StoryState) -> StoryState:
         return {
             "current_agent": "story_orchestrator",
             "agent_trace": trace,
-            "error": f"Content policy violation: {reason}",
+            "error": (
+                "I don't touch stories that cross certain lines. "
+                "Even in noir, there are rules. Clean it up and we'll talk."
+            ),
         }
 
     return {

@@ -233,6 +233,73 @@ class LLMRouter:
 
         return response
 
+    async def generate_with_search(
+        self,
+        prompt: str,
+        task_type: TaskType = TaskType.GENERAL,
+        request_id: str = "",
+        agent_name: str = "",
+        system_prompt: str | None = None,
+        temperature: float = 0.7,
+        max_tokens: int = 2000,
+        json_mode: bool = False,
+        runtime_config: RuntimeConfig | None = None,
+    ) -> LLMResponse:
+        """Generate with Google Search grounding (Gemini only). Falls back to plain generate for other providers."""
+        provider = self.get_provider(
+            task_type, agent_name=agent_name,
+            runtime_config=runtime_config,
+        )
+
+        requested_provider = provider.name
+        fell_back = False
+        rc_strict = (
+            runtime_config.strict_gemini
+            if runtime_config and runtime_config.strict_gemini is not None
+            else None
+        )
+        strict = rc_strict if rc_strict is not None else settings.hackathon_strict_gemini
+        if not await provider.is_available():
+            if strict and requested_provider == "gemini":
+                raise GeminiUnavailableError(
+                    "Gemini is currently unavailable. In hackathon strict mode, "
+                    "fallback to other providers is disabled."
+                )
+            for name, p in self.providers.items():
+                if name != provider.name and await p.is_available():
+                    logger.warning(f"Falling back from {provider.name} to {name}")
+                    provider = p
+                    fell_back = True
+                    break
+
+        start = time.perf_counter()
+        async with self.rate_limiter:
+            response = await provider.generate_with_search(
+                prompt=prompt,
+                system_prompt=system_prompt,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                json_mode=json_mode,
+            )
+        elapsed_ms = (time.perf_counter() - start) * 1000
+
+        response.system_prompt = system_prompt
+        response.user_prompt = prompt
+        response.duration_ms = elapsed_ms
+        response.requested_provider = requested_provider
+        response.fallback = fell_back
+
+        self.cost_tracker.record(
+            provider=response.provider,
+            model=response.model,
+            input_tokens=response.input_tokens,
+            output_tokens=response.output_tokens,
+            cost=response.cost,
+            task_type=task_type,
+        )
+
+        return response
+
     async def check_availability(self) -> dict[str, bool]:
         result = {}
         for name, provider in self.providers.items():

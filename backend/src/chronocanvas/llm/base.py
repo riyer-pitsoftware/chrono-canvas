@@ -62,6 +62,23 @@ class LLMProvider(ABC):
             json_mode=json_mode,
         )
 
+    async def generate_with_search(
+        self,
+        prompt: str,
+        system_prompt: str | None = None,
+        temperature: float = 0.7,
+        max_tokens: int = 2000,
+        json_mode: bool = False,
+    ) -> LLMResponse:
+        """Generate with grounded search (Google Search). Falls back to plain generate."""
+        return await self.generate(
+            prompt=prompt,
+            system_prompt=system_prompt,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            json_mode=json_mode,
+        )
+
     @abstractmethod
     async def is_available(self) -> bool:
         ...

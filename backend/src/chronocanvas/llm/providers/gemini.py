@@ -159,5 +159,71 @@ class GeminiProvider(LLMProvider):
             cost=cost,
         )
 
+    async def generate_with_search(
+        self,
+        prompt: str,
+        system_prompt: str | None = None,
+        temperature: float = 0.7,
+        max_tokens: int = 2000,
+        json_mode: bool = False,
+    ) -> LLMResponse:
+        """Generate with Gemini Google Search grounding tool."""
+        client = self._get_client()
+
+        config_kwargs: dict = {
+            "temperature": temperature,
+            "max_output_tokens": max_tokens,
+            "tools": [types.Tool(google_search=types.GoogleSearch())],
+        }
+        if system_prompt:
+            config_kwargs["system_instruction"] = system_prompt
+        if json_mode:
+            config_kwargs["response_mime_type"] = "application/json"
+
+        config = types.GenerateContentConfig(**config_kwargs)
+
+        response = await asyncio.wait_for(
+            client.aio.models.generate_content(
+                model=self.model,
+                contents=prompt,
+                config=config,
+            ),
+            timeout=_REQUEST_TIMEOUT,
+        )
+
+        input_tokens = response.usage_metadata.prompt_token_count or 0
+        output_tokens = response.usage_metadata.candidates_token_count or 0
+        pricing = GEMINI_PRICING.get(self.model, {"input": 0, "output": 0})
+        cost = input_tokens * pricing["input"] + output_tokens * pricing["output"]
+
+        content = response.text or ""
+
+        # Extract grounding metadata (citations) from the response
+        grounding_citations = []
+        candidate = response.candidates[0] if response.candidates else None
+        if candidate and hasattr(candidate, "grounding_metadata") and candidate.grounding_metadata:
+            gm = candidate.grounding_metadata
+            for chunk in getattr(gm, "grounding_chunks", []) or []:
+                web = getattr(chunk, "web", None)
+                if web:
+                    grounding_citations.append({
+                        "title": getattr(web, "title", "") or "",
+                        "url": getattr(web, "uri", "") or "",
+                        "publisher": None,
+                        "quote_snippet": None,
+                        "claim_supported": None,
+                        "confidence": 1.0,
+                    })
+
+        return LLMResponse(
+            content=content,
+            provider=self.name,
+            model=self.model,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            cost=cost,
+            metadata={"grounding_citations": grounding_citations},
+        )
+
     async def is_available(self) -> bool:
         return bool(settings.google_api_key)

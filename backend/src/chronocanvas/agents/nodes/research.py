@@ -87,7 +87,7 @@ async def research_node(state: AgentState) -> AgentState:
 
     # If not in cache, call LLM
     if not cache_hit:
-        response = await get_llm_router().generate_stream(
+        response = await get_llm_router().generate_with_search(
             prompt=RESEARCH_PROMPT.format(
                 figure_name=figure_name,
                 time_period=time_period,
@@ -117,6 +117,13 @@ async def research_node(state: AgentState) -> AgentState:
                 "art_style_reference": "Classical portrait style.",
                 "citations": [],
             }
+
+        # Merge grounding citations from Gemini Google Search into LLM citations
+        grounding_citations = response.metadata.get("grounding_citations", [])
+        if grounding_citations:
+            existing = data.get("citations", [])
+            existing.extend(grounding_citations)
+            data["citations"] = existing
 
         # Store in cache (skip if figure_name is empty — NOT NULL constraint)
         if cache_enabled and figure_name:

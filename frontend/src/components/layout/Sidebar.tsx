@@ -1,4 +1,5 @@
-import { BarChart3, BookOpen, Download, FileSearch, Home, Image, LayoutDashboard, Settings, Shield, Users, Cpu, Scroll, Database, ChevronLeft, ChevronRight } from "lucide-react";
+import { useState } from "react";
+import { BarChart3, BookOpen, Download, FileSearch, Home, Image, LayoutDashboard, Settings, Shield, Users, Cpu, Scroll, Database, ChevronLeft, ChevronRight, ChevronDown, Wrench } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useHackathonMode } from "@/api/hooks/useConfig";
 
@@ -16,13 +17,17 @@ const defaultNavItems = [
   { label: "Admin", href: "/admin", icon: Settings },
 ];
 
-// In hackathon mode, Story Director (Generate) is first, admin/eval items move to the end
-const hackathonNavItems = [
+// Hackathon mode: only the creative storytelling essentials
+const hackathonPrimaryNav = [
   { label: "Story Director", href: "/generate?mode=creative_story", icon: Image },
+  { label: "Storyboard", href: "/export", icon: Download },
+];
+
+// Everything else lives behind a collapsible "Developer Tools" section
+const hackathonDevTools = [
   { label: "Home", href: "/", icon: Home },
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Timeline", href: "/timeline", icon: Scroll },
-  { label: "Export", href: "/export", icon: Download },
   { label: "Figures", href: "/figures", icon: Users },
   { label: "Validate", href: "/validate", icon: Shield },
   { label: "Memory", href: "/memory", icon: Database },
@@ -43,11 +48,38 @@ export function Sidebar({
   onToggle: () => void;
 }) {
   const hackathonMode = useHackathonMode();
-  const navItems = hackathonMode ? hackathonNavItems : defaultNavItems;
+  const navItems = hackathonMode ? hackathonPrimaryNav : defaultNavItems;
+  const [devToolsOpen, setDevToolsOpen] = useState(false);
   const guideActive = currentPath === "/guide";
 
   // For active-state matching, strip query params from both sides
   const currentPathname = currentPath.split("?")[0];
+
+  const renderNavItem = (item: { label: string; href: string; icon: React.ElementType }) => {
+    const Icon = item.icon;
+    const itemPathname = item.href.split("?")[0];
+    const active = currentPathname === itemPathname;
+    return (
+      <button
+        key={item.href}
+        onClick={() => onNavigate(item.href)}
+        className={cn(
+          "relative w-full flex items-center gap-3 py-2 rounded-md text-sm mb-1 transition-colors overflow-hidden",
+          active
+            ? "bg-[var(--accent)] text-[var(--accent-foreground)] font-medium"
+            : "text-[var(--muted-foreground)] hover:bg-[var(--accent)]",
+          collapsed ? "justify-center px-0" : "pl-6 pr-3",
+        )}
+        title={item.label}
+      >
+        {active && (
+          <span className="absolute left-1 top-1 bottom-1 w-1 rounded-full bg-[var(--primary)]" />
+        )}
+        <Icon className="w-4 h-4" />
+        {!collapsed && <span>{item.label}</span>}
+      </button>
+    );
+  };
 
   return (
     <aside
@@ -89,31 +121,26 @@ export function Sidebar({
         </button>
       </div>
       <nav className={cn("flex-1 px-3", collapsed && "px-0 flex flex-col items-center")}>
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          const itemPathname = item.href.split("?")[0];
-          const active = currentPathname === itemPathname;
-          return (
+        {navItems.map(renderNavItem)}
+
+        {/* In hackathon mode, show dev tools behind a collapsible */}
+        {hackathonMode && !collapsed && (
+          <div className="mt-4 border-t border-[var(--border)] pt-3">
             <button
-              key={item.href}
-              onClick={() => onNavigate(item.href)}
-              className={cn(
-                "relative w-full flex items-center gap-3 py-2 rounded-md text-sm mb-1 transition-colors overflow-hidden",
-                active
-                  ? "bg-[var(--accent)] text-[var(--accent-foreground)] font-medium"
-                  : "text-[var(--muted-foreground)] hover:bg-[var(--accent)]",
-                collapsed ? "justify-center px-0" : "pl-6 pr-3",
-              )}
-              title={item.label}
+              onClick={() => setDevToolsOpen(!devToolsOpen)}
+              className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors"
             >
-              {active && (
-                <span className="absolute left-1 top-1 bottom-1 w-1 rounded-full bg-[var(--primary)]" />
-              )}
-              <Icon className="w-4 h-4" />
-              {!collapsed && <span>{item.label}</span>}
+              <Wrench className="w-3.5 h-3.5" />
+              <span>Developer Tools</span>
+              <ChevronDown className={cn("w-3 h-3 ml-auto transition-transform", devToolsOpen && "rotate-180")} />
             </button>
-          );
-        })}
+            {devToolsOpen && (
+              <div className="mt-1">
+                {hackathonDevTools.map(renderNavItem)}
+              </div>
+            )}
+          </div>
+        )}
       </nav>
     </aside>
   );
