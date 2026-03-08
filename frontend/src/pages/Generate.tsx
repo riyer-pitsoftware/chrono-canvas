@@ -21,6 +21,7 @@ import { VoiceInputButton } from "@/components/generation/VoiceInputButton";
 import { useNavigation } from "@/stores/navigation";
 import { ConfigHUD } from "@/components/config/ConfigHUD";
 import { useConfigStore } from "@/stores/configStore";
+import { validateConfig } from "@/api/hooks/useConfig";
 
 const MODE_LABELS: Record<string, string> = {
   creative_story: "Story Director",
@@ -65,9 +66,22 @@ export function Generate({ figureId, mode }: { figureId?: string; mode?: string 
 
   const configPayload = useConfigStore((s) => s.toPayload);
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     // For image-to-story: text is optional when image is provided
     if (!inputText.trim() && !refImageId) return;
+
+    const config = configPayload();
+
+    // Validate config before submitting
+    try {
+      const validation = await validateConfig(config);
+      if (validation.errors?.length) {
+        console.warn("Config validation warnings:", validation.errors);
+      }
+    } catch {
+      // Config validation is non-blocking — proceed even if endpoint fails
+    }
+
     startGeneration(
       {
         input_text: inputText,
@@ -75,7 +89,7 @@ export function Generate({ figureId, mode }: { figureId?: string; mode?: string 
         ...(faceId ? { face_id: faceId } : {}),
         ...(isStoryMode ? { run_type: "creative_story" } : {}),
         ...(refImageId ? { ref_image_id: refImageId } : {}),
-        config: configPayload(),
+        config,
       },
       {
         onSuccess: (data) => {

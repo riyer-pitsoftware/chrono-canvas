@@ -142,6 +142,13 @@ export function Sidebar({
           </div>
         )}
       </nav>
+      {!collapsed && (
+        <div className="px-6 py-3 border-t border-[var(--border)]">
+          <span className="text-xs text-[var(--muted-foreground)] opacity-70">
+            ✦ Powered by Gemini
+          </span>
+        </div>
+      )}
     </aside>
   );
 }

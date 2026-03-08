@@ -56,6 +56,17 @@ export function StoryboardView({ storyboard, requestId, sceneImages = [], artifa
 
   return (
     <div className="space-y-6">
+      {/* AI disclaimer — satisfies §3.2 Grounding & §7 Overclaiming */}
+      {panels.length > 0 && (
+        <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-amber-950/30 border border-amber-900/40 text-amber-200/80 text-xs">
+          <span>⚠</span>
+          <span>
+            AI-generated content — not historically accurate. For creative entertainment only.
+            <span className="ml-1 italic opacity-70">&ldquo;This ain&apos;t a history lesson, kid. It&apos;s a story.&rdquo;</span>
+          </span>
+        </div>
+      )}
+
       {/* Characters summary */}
       {characters.length > 0 && (
         <div>
@@ -145,6 +156,13 @@ export function StoryboardView({ storyboard, requestId, sceneImages = [], artifa
           )}
         </div>
       )}
+
+      {/* Powered by Gemini badge */}
+      <div className="flex justify-end pt-2">
+        <span className="text-xs text-[var(--muted-foreground)] opacity-70">
+          ✦ Powered by Gemini
+        </span>
+      </div>
     </div>
   );
 }

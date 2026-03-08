@@ -1,13 +1,17 @@
+import io
+import json
 import uuid
+import zipfile
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from chronocanvas.config import settings
 from chronocanvas.db.engine import get_session
 from chronocanvas.db.repositories.images import ImageRepository
+from chronocanvas.db.repositories.requests import RequestRepository
 from chronocanvas.security import confine_path
 
 router = APIRouter(prefix="/export", tags=["export"])
@@ -83,6 +87,101 @@ async def get_export_metadata(request_id: uuid.UUID):
     if not metadata_path.exists():
         raise HTTPException(status_code=404, detail="Export metadata not found")
 
-    import json
-
     return json.loads(metadata_path.read_text())
+
+
+@router.get("/{request_id}/bundle")
+async def download_bundle(
+    request_id: uuid.UUID, session: AsyncSession = Depends(get_session)
+):
+    """Download a zip bundle containing citations.json, story.md, and scene frames."""
+    repo = RequestRepository(session)
+    gen_request = await repo.get(request_id)
+    if gen_request is None:
+        raise HTTPException(status_code=404, detail="Generation request not found")
+
+    storyboard_data = gen_request.storyboard_data or {}
+    research_data = gen_request.research_data or {}
+    panels = storyboard_data.get("panels", [])
+
+    # --- Build citations.json ---
+    citations = list(research_data.get("citations", []))
+    for panel in panels:
+        for cite in panel.get("citations", []):
+            if cite not in citations:
+                citations.append(cite)
+    for cite in storyboard_data.get("citations", []):
+        if cite not in citations:
+            citations.append(cite)
+
+    citations_json = json.dumps(citations, indent=2, ensure_ascii=False)
+
+    # --- Build story.md ---
+    title = gen_request.input_text or "Untitled Story"
+    title_line = title if len(title) <= 120 else title[:117] + "..."
+    md_parts = [f"# {title_line}\n"]
+
+    for i, panel in enumerate(panels, start=1):
+        md_parts.append(f"## Scene {i}")
+
+        narration = panel.get("narration_text", "")
+        if narration:
+            md_parts.append(f"> {narration}\n")
+
+        description = panel.get("description", "")
+        if description:
+            md_parts.append(f"{description}\n")
+
+        characters = panel.get("characters")
+        if characters:
+            if isinstance(characters, list):
+                characters = ", ".join(str(c) for c in characters)
+            md_parts.append(f"**Characters**: {characters}")
+
+        mood = panel.get("mood", "")
+        if mood:
+            md_parts.append(f"**Mood**: {mood}")
+
+        setting = panel.get("setting", "")
+        if setting:
+            md_parts.append(f"**Setting**: {setting}")
+
+        md_parts.append("\n---\n")
+
+    story_md = "\n".join(md_parts)
+
+    # --- Build zip in memory ---
+    output_base = Path(settings.output_dir)
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("citations.json", citations_json)
+        zf.writestr("story.md", story_md)
+
+        for i, panel in enumerate(panels):
+            image_path_str = panel.get("image_path")
+            if not image_path_str:
+                image_path_str = str(
+                    output_base / str(request_id) / f"scene_{i}.png"
+                )
+
+            image_path = Path(image_path_str)
+            if not image_path.is_absolute():
+                image_path = output_base / image_path
+
+            try:
+                image_path = confine_path(image_path, output_base)
+            except PermissionError:
+                continue
+
+            if image_path.exists():
+                arcname = f"frames/{image_path.name}"
+                zf.write(image_path, arcname)
+
+    buf.seek(0)
+    filename = f"chrononoir_bundle_{request_id}.zip"
+
+    return StreamingResponse(
+        buf,
+        media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )

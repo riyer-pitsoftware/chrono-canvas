@@ -17,6 +17,9 @@ class StoryPanel(TypedDict, total=False):
     height: int
     status: str  # "pending" | "generating" | "completed" | "failed"
     error: str
+    # Continuity tracking (populated by scene_decomposition)
+    expected_state: dict  # what this scene expects from the previous (characters, wardrobe, lighting, time of day)
+    established_state: dict  # what this scene establishes for the next
     # Coherence (populated by storyboard_coherence node)
     coherence_score: float | None
     coherence_issues: list[str]

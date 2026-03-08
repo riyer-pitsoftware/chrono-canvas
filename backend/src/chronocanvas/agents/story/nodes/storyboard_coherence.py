@@ -35,10 +35,16 @@ Analyze ALL the provided scene images together as a single storyboard. Evaluate:
    highlights, cool blues? Or do some panels look like they wandered in from a different film?
 4. NARRATIVE FLOW: Do the scenes tell a story when viewed in sequence? Does each \
    frame earn its place? Would cutting or reordering improve the arc?
+5. CONTINUITY TRACKING: For each scene (except the first), compare its expected_state \
+   against the previous scene's established_state. Flag any breaks — wardrobe changes \
+   that weren't established, lighting jumps, characters appearing or vanishing without \
+   explanation, time-of-day contradictions. Continuity is the contract between frames; \
+   breaking it breaks the audience's trust.
 
-For each scene, provide a coherence_score (0.0-1.0) and a list of issues found.
-Then provide an overall assessment with a narrative_flow_score and optional \
-reordering suggestion.
+For each scene, provide a coherence_score (0.0-1.0), a list of issues found, and a list \
+of continuity_breaks (empty if none).
+Then provide an overall assessment with a narrative_flow_score, a continuity_score, \
+and optional reordering suggestion.
 
 Output ONLY valid JSON with this structure:
 {
@@ -47,6 +53,7 @@ Output ONLY valid JSON with this structure:
     "style_consistency_score": 0.9,
     "character_consistency_score": 0.8,
     "palette_harmony_score": 0.85,
+    "continuity_score": 0.8,
     "summary": "Brief overall assessment...",
     "suggested_order": [0, 1, 2, 3],
     "reorder_reason": "null or explanation if reorder suggested"
@@ -56,6 +63,7 @@ Output ONLY valid JSON with this structure:
       "scene_index": 0,
       "coherence_score": 0.9,
       "issues": [],
+      "continuity_breaks": [],
       "suggestion": ""
     }
   ]
@@ -77,6 +85,8 @@ def _build_multimodal_content(panels: list[dict]) -> list[types.Part]:
         mood = panel.get("mood", "")
         setting = panel.get("setting", "")
         image_path = panel.get("image_path", "")
+        expected_state = panel.get("expected_state", {})
+        established_state = panel.get("established_state", {})
 
         # Add text context for this scene
         parts.append(types.Part.from_text(
@@ -84,6 +94,8 @@ def _build_multimodal_content(panels: list[dict]) -> list[types.Part]:
             f"Description: {description}\n"
             f"Mood: {mood}\n"
             f"Setting: {setting}\n"
+            f"Expected state (from prior scene): {json.dumps(expected_state)}\n"
+            f"Established state (for next scene): {json.dumps(established_state)}\n"
         ))
 
         # Add the image if it exists
@@ -95,6 +107,8 @@ def _build_multimodal_content(panels: list[dict]) -> list[types.Part]:
 
     parts.append(types.Part.from_text(
         text="\n\nNow analyze all scenes together for coherence. "
+        "Pay special attention to continuity: compare each scene's expected_state "
+        "against the previous scene's established_state and flag any breaks. "
         "Output ONLY the JSON structure described in your instructions."
     ))
 
@@ -169,13 +183,19 @@ async def storyboard_coherence_node(state: StoryState) -> StoryState:
             for p in coherence_data.get("panels", [])
         }
 
-        # Annotate panels with coherence scores
+        # Annotate panels with coherence scores and continuity breaks
         for panel in panels:
             scene_idx = panel.get("scene_index")
             assessment = panel_assessments.get(scene_idx, {})
             panel["coherence_score"] = assessment.get("coherence_score")
             panel["coherence_issues"] = assessment.get("issues", [])
             panel["coherence_suggestion"] = assessment.get("suggestion", "")
+            # Merge continuity breaks into issues for visibility
+            continuity_breaks = assessment.get("continuity_breaks", [])
+            if continuity_breaks:
+                panel["coherence_issues"] = panel["coherence_issues"] + [
+                    f"[continuity] {b}" for b in continuity_breaks
+                ]
 
         llm_calls.append({
             "agent": "storyboard_coherence",
@@ -199,16 +219,18 @@ async def storyboard_coherence_node(state: StoryState) -> StoryState:
             "style_consistency_score": overall.get("style_consistency_score"),
             "character_consistency_score": overall.get("character_consistency_score"),
             "palette_harmony_score": overall.get("palette_harmony_score"),
+            "continuity_score": overall.get("continuity_score"),
             "summary": overall.get("summary", ""),
             "suggested_order": overall.get("suggested_order"),
         })
 
-        # Check if character consistency warrants regeneration
+        # Check if character consistency or continuity warrants regeneration
         char_score = overall.get("character_consistency_score", 1.0)
+        continuity_score = overall.get("continuity_score", 1.0)
         retry_count = state.get("coherence_retry_count", 0)
         regen_scenes: list[int] = []
 
-        if char_score < 0.6 and retry_count < 1:
+        if (char_score < 0.6 or continuity_score < 0.5) and retry_count < 1:
             # Identify worst-scoring scenes for regeneration
             scored = [
                 (p.get("scene_index", i), p.get("coherence_score", 1.0))
@@ -219,15 +241,17 @@ async def storyboard_coherence_node(state: StoryState) -> StoryState:
             n_regen = max(1, len(scored) // 2)
             regen_scenes = [idx for idx, _score in scored[:n_regen]]
             logger.info(
-                "Character consistency %.2f < 0.6 — flagging scenes %s for regen [request_id=%s]",
-                char_score, regen_scenes, request_id,
+                "Consistency scores (char=%.2f, continuity=%.2f) below threshold "
+                "— flagging scenes %s for regen [request_id=%s]",
+                char_score, continuity_score, regen_scenes, request_id,
             )
 
         logger.info(
-            "Coherence review complete: flow=%.2f style=%.2f chars=%.2f [request_id=%s]",
+            "Coherence review complete: flow=%.2f style=%.2f chars=%.2f continuity=%.2f [request_id=%s]",
             overall.get("narrative_flow_score", 0),
             overall.get("style_consistency_score", 0),
             char_score,
+            continuity_score,
             request_id,
         )
 

@@ -22,6 +22,11 @@ For each scene, provide:
 2. Which characters appear in the scene — only those visibly present
 3. The mood/atmosphere — noir lives in tension, shadow, and the unsaid
 4. The setting/location — be specific about light, time of day, weather
+5. expected_state: What this scene inherits/expects from the previous scene — character \
+appearances, wardrobe, time of day, weather, lighting. For the FIRST scene, use \
+{{"note": "establishing shot — no prior state"}}.
+6. established_state: What this scene locks in for the next scene — character positions, \
+lighting changes, mood shifts, wardrobe changes, any new props or visual elements introduced.
 
 STORY:
 {story_text}
@@ -42,7 +47,9 @@ Output ONLY valid JSON in this exact format:
       "description": "Visual description of what is happening in this scene",
       "characters": ["Character Name 1", "Character Name 2"],
       "mood": "tense, atmospheric",
-      "setting": "rain-soaked street at night"
+      "setting": "rain-soaked street at night",
+      "expected_state": {{"note": "establishing shot — no prior state"}},
+      "established_state": {{"lighting": "neon-reflected wet asphalt", "time_of_day": "night", "weather": "rain", "characters_visible": ["Character Name 1", "Character Name 2"]}}
     }}
   ]
 }}"""
@@ -105,9 +112,16 @@ async def scene_decomposition_node(state: StoryState) -> StoryState:
         parsed = json.loads(content[json_start:json_end])
         scenes = parsed.get("scenes", [])
 
-        # Ensure scene_index is set
+        # Ensure scene_index is set and continuity fields have defaults
         for i, scene in enumerate(scenes):
             scene["scene_index"] = i
+            if "expected_state" not in scene:
+                if i == 0:
+                    scene["expected_state"] = {"note": "establishing shot — no prior state"}
+                else:
+                    scene["expected_state"] = {}
+            if "established_state" not in scene:
+                scene["established_state"] = {}
 
         logger.info("Decomposed into %d scenes [request_id=%s]", len(scenes), request_id)
 
