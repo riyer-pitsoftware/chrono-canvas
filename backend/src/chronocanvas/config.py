@@ -9,7 +9,7 @@ _INSECURE_DEFAULT_KEY = "change-me-in-production"
 
 
 class Settings(BaseSettings):
-    model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
+    model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
 
     # Database
     database_url: str = "postgresql+asyncpg://chronocanvas:chronocanvas@localhost:5432/chronocanvas"

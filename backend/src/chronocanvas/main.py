@@ -40,9 +40,27 @@ async def lifespan(app: FastAPI):
     import os
     os.makedirs(settings.output_dir, exist_ok=True)
     os.makedirs(settings.upload_dir, exist_ok=True)
-    app.state.arq_pool = await create_pool(RedisSettings.from_dsn(settings.redis_url))
+
+    # Connect to Redis with retry (Cloud SQL proxy / VPC may need a moment)
+    import asyncio
+    for attempt in range(5):
+        try:
+            app.state.arq_pool = await create_pool(RedisSettings.from_dsn(settings.redis_url))
+            break
+        except Exception as e:
+            if attempt == 4:
+                logger.error("Redis connection failed after 5 attempts: %s", e)
+                raise
+            logger.warning("Redis not ready (attempt %d/5): %s", attempt + 1, e)
+            await asyncio.sleep(2)
+
     init_registry()
-    await init_checkpointer()
+
+    try:
+        await init_checkpointer()
+    except Exception as e:
+        logger.warning("Checkpointer init failed (falling back to memory): %s", e)
+
     recompile_graph()
     if settings.hackathon_mode:
         from chronocanvas.api.routes.health import validate_hackathon_requirements
