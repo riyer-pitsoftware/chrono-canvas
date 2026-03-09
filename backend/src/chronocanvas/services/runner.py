@@ -154,17 +154,31 @@ class GenerationRunner:
 
                 await self._session.commit()
 
-        except Exception:
+        except Exception as exc:
             failed = True
             logger.exception("Pipeline failed at node %s", last_successful_agent or "unknown")
             try:
                 await self._session.rollback()
+
+                # Capture structured error details from ImagenError if available
+                from chronocanvas.imaging.imagen_client import ImagenError
+
+                if isinstance(exc, ImagenError):
+                    error_msg = (
+                        f"[{exc.category}] {exc} "
+                        f"(retries={len(exc.retry_history)}, "
+                        f"node={last_successful_agent or 'unknown'})"
+                    )
+                else:
+                    error_msg = (
+                        f"Pipeline error after node: {last_successful_agent or 'unknown'}: "
+                        f"{type(exc).__name__}: {exc}"
+                    )
+
                 await self._repo.update(
                     request_id,
                     status=RequestStatus.FAILED,
-                    error_message=(
-                        f"Pipeline error after node: {last_successful_agent or 'unknown'}"
-                    ),
+                    error_message=error_msg,
                 )
                 await self._session.commit()
             except Exception:

@@ -5,6 +5,7 @@ from chronocanvas.api.routes import (
     agents,
     config,
     conversation,
+    diagnostics,
     eval_viewer,
     export,
     faces,
@@ -35,6 +36,7 @@ api_router.include_router(agents.router)
 api_router.include_router(config.router)
 if settings.enable_admin_api:
     api_router.include_router(admin.router)
+    api_router.include_router(diagnostics.router)
 api_router.include_router(memory.router)
 api_router.include_router(eval_viewer.router)
 api_router.include_router(reference_images.router)

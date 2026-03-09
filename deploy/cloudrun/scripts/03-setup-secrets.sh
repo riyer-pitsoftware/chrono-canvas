@@ -28,6 +28,7 @@ create_secret "chronocanvas-secret-key" "$(openssl rand -hex 32)"
 create_secret "chronocanvas-google-api-key" "REPLACE_ME"
 create_secret "chronocanvas-anthropic-api-key" "REPLACE_ME"
 create_secret "chronocanvas-db-password" "REPLACE_ME"  # may already exist from 02-create-infra.sh
+create_secret "chronocanvas-admin-api-key" "$(openssl rand -hex 32)"
 
 echo ""
 echo "============================================================"

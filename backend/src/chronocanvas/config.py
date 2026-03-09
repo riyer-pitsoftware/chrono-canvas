@@ -121,6 +121,10 @@ class Settings(BaseSettings):
 
     # Logging
     log_level: str = "INFO"
+    log_format: str = "json"  # "json" for structured Cloud Logging, "text" for local dev
+
+    # Admin API authentication (required when enable_admin_api=True on GCP)
+    admin_api_key: str = ""
 
     @model_validator(mode="after")
     def _reject_insecure_secret_key(self) -> "Settings":

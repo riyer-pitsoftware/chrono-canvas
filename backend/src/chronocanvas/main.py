@@ -19,7 +19,9 @@ from chronocanvas.llm.router import GeminiUnavailableError
 from chronocanvas.redis_client import close_redis
 from chronocanvas.service_registry import init_registry
 
-logging.basicConfig(level=getattr(logging, settings.log_level))
+from chronocanvas.logging_config import setup_logging
+
+setup_logging()
 logger = logging.getLogger(__name__)
 
 

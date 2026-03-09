@@ -9,8 +9,10 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
 import uuid
 from pathlib import Path
+from typing import Any
 
 from google import genai
 from google.genai import types
@@ -32,6 +34,35 @@ _ASPECT_RATIOS: list[tuple[str, float]] = [
 
 # Imagen 4 pricing (generate, fast model)
 _COST_PER_IMAGE = 0.02
+
+# Error taxonomy for structured classification
+_ERROR_CATEGORIES = {
+    "content_filter": ["content", "filtered", "safety", "blocked", "policy", "responsible ai"],
+    "rate_limit": ["rate", "resource_exhausted", "429", "quota"],
+    "timeout": ["timeout", "deadline"],
+    "unavailable": ["503", "unavailable", "service error"],
+    "permission": ["403", "forbidden", "permission", "unauthorized", "401"],
+    "invalid_request": ["400", "invalid", "bad request"],
+}
+
+
+def classify_imagen_error(exc: Exception) -> dict[str, Any]:
+    """Classify an Imagen API error into a structured error dict."""
+    err_str = str(exc).lower()
+    err_type = type(exc).__name__
+
+    category = "unknown"
+    for cat, tokens in _ERROR_CATEGORIES.items():
+        if any(tok in err_str for tok in tokens):
+            category = cat
+            break
+
+    return {
+        "category": category,
+        "error_type": err_type,
+        "message": str(exc),
+        "retryable": category in ("rate_limit", "timeout", "unavailable"),
+    }
 
 
 def _pick_aspect_ratio(width: int, height: int) -> str:
@@ -75,11 +106,12 @@ class ImagenGenerator(ImageGenerator):
         )
 
         # Retry with exponential backoff for transient errors
-        # (rate limits on free tier + 503 service unavailable)
         max_retries = 3
         request_timeout = 120  # seconds per attempt
-        _RETRYABLE = {"rate", "resource_exhausted", "429", "503", "unavailable", "timeout"}
+        retry_history: list[dict[str, Any]] = []
+
         for attempt in range(max_retries + 1):
+            attempt_start = time.time()
             try:
                 response = await asyncio.wait_for(
                     client.aio.models.generate_images(
@@ -94,6 +126,18 @@ class ImagenGenerator(ImageGenerator):
                 )
                 break
             except asyncio.TimeoutError:
+                elapsed = time.time() - attempt_start
+                error_info = {
+                    "category": "timeout",
+                    "error_type": "TimeoutError",
+                    "message": f"Imagen API did not respond within {request_timeout}s",
+                    "retryable": True,
+                }
+                retry_history.append({
+                    "attempt": attempt + 1,
+                    "elapsed_s": round(elapsed, 2),
+                    **error_info,
+                })
                 if attempt < max_retries:
                     wait = 2 ** (attempt + 1)
                     logger.warning(
@@ -105,35 +149,63 @@ class ImagenGenerator(ImageGenerator):
                     )
                     await asyncio.sleep(wait)
                     continue
-                raise TimeoutError(
+                raise ImagenError(
                     f"Imagen API did not respond after {max_retries + 1} attempts "
-                    f"({request_timeout}s timeout each)"
+                    f"({request_timeout}s timeout each)",
+                    category="timeout",
+                    retry_history=retry_history,
                 )
             except Exception as exc:
-                err_str = str(exc).lower()
-                if any(tok in err_str for tok in _RETRYABLE):
-                    if attempt < max_retries:
-                        wait = 2 ** (attempt + 1)  # 2, 4, 8 seconds
-                        logger.warning(
-                            "Imagen transient error (attempt %d/%d), retrying in %ds: %s",
-                            attempt + 1,
-                            max_retries,
-                            wait,
-                            exc,
-                        )
-                        await asyncio.sleep(wait)
-                        continue
-                raise
+                elapsed = time.time() - attempt_start
+                error_info = classify_imagen_error(exc)
+                retry_history.append({
+                    "attempt": attempt + 1,
+                    "elapsed_s": round(elapsed, 2),
+                    **error_info,
+                })
+                if error_info["retryable"] and attempt < max_retries:
+                    wait = 2 ** (attempt + 1)  # 2, 4, 8 seconds
+                    logger.warning(
+                        "Imagen %s error (attempt %d/%d), retrying in %ds: %s",
+                        error_info["category"],
+                        attempt + 1,
+                        max_retries,
+                        wait,
+                        exc,
+                    )
+                    await asyncio.sleep(wait)
+                    continue
+                raise ImagenError(
+                    str(exc),
+                    category=error_info["category"],
+                    retry_history=retry_history,
+                ) from exc
 
         if not response.generated_images:
-            raise RuntimeError("Imagen returned no images (content may have been filtered)")
+            retry_history.append({
+                "attempt": len(retry_history) + 1,
+                "elapsed_s": 0,
+                "category": "content_filter",
+                "error_type": "EmptyResponse",
+                "message": "Imagen returned no images (content may have been filtered)",
+                "retryable": False,
+            })
+            raise ImagenError(
+                "Imagen returned no images (content may have been filtered)",
+                category="content_filter",
+                retry_history=retry_history,
+            )
 
         image_bytes = response.generated_images[0].image.image_bytes
         filename = f"{uuid.uuid4().hex}.png"
         filepath = output_dir / filename
         filepath.write_bytes(image_bytes)
 
-        logger.info("Imagen image saved: %s", filepath)
+        logger.info(
+            "Imagen image saved: %s (retries=%d)",
+            filepath,
+            len(retry_history),
+        )
 
         return ImageResult(
             file_path=str(filepath),
@@ -145,8 +217,32 @@ class ImagenGenerator(ImageGenerator):
                 "model": model,
                 "aspect_ratio": aspect_ratio,
                 "cost_usd": _COST_PER_IMAGE,
+                "retry_history": retry_history,
             },
         )
 
     async def is_available(self) -> bool:
         return bool(settings.google_api_key)
+
+
+class ImagenError(RuntimeError):
+    """Structured Imagen API error with classification and retry history."""
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        category: str = "unknown",
+        retry_history: list[dict[str, Any]] | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.category = category
+        self.retry_history = retry_history or []
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "category": self.category,
+            "message": str(self),
+            "retries_attempted": len(self.retry_history),
+            "retry_history": self.retry_history,
+        }

@@ -111,3 +111,4 @@ deploy/cloudrun/.deploy-state
 .windsurf/**
 .env.hackathon
 .deploy-status.json
+.env.remote
