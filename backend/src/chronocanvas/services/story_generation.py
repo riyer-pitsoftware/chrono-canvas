@@ -235,15 +235,36 @@ async def run_story_pipeline(
 
                     await session.commit()
 
-            except Exception:
+            except Exception as exc:
                 failed = True
                 logger.exception("Story pipeline failed for %s", request_id)
                 try:
                     await session.rollback()
+
+                    # Capture structured error details from ImagenError if available
+                    from chronocanvas.imaging.imagen_client import ImagenError
+
+                    last_node = (
+                        final_state.get("current_agent", "unknown")
+                        if final_state else "unknown"
+                    )
+                    if isinstance(exc, ImagenError):
+                        error_msg = (
+                            f"[{exc.category}] {exc} "
+                            f"(retries={len(exc.retry_history)}, "
+                            f"node={last_node})"
+                        )
+                    else:
+                        error_msg = (
+                            f"Story pipeline error after node "
+                            f"{last_node}: "
+                            f"{type(exc).__name__}: {exc}"
+                        )
+
                     await repo.update(
                         request_id,
                         status=RequestStatus.FAILED,
-                        error_message="Story pipeline error",
+                        error_message=error_msg,
                     )
                     await session.commit()
                 except Exception:
