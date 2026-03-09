@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 import time
@@ -7,6 +8,9 @@ from chronocanvas.llm.base import TaskType
 from chronocanvas.llm.router import get_llm_router
 
 logger = logging.getLogger(__name__)
+
+_MAX_DECOMPOSITION_RETRIES = 3
+_RETRY_BACKOFF_BASE = 1.0  # seconds
 
 SCENE_DECOMPOSITION_PROMPT = """\
 You are Dash, a noir creative director with a seen-it-all attitude and a sharp eye for \
@@ -89,84 +93,100 @@ async def scene_decomposition_node(state: StoryState) -> StoryState:
         characters_summary=_characters_summary(characters),
     )
 
-    try:
-        rc = get_runtime_config(state)
-        router = get_llm_router()
-        response = await router.generate(
-            prompt=prompt,
-            task_type=TaskType.EXTRACTION,
-            temperature=0.5,
-            max_tokens=4000,
-            json_mode=True,
-            agent_name="scene_decomposition",
-            runtime_config=rc,
-        )
+    rc = get_runtime_config(state)
+    router = get_llm_router()
 
-        # Parse JSON from response
-        content = response.content
-        json_start = content.find("{")
-        json_end = content.rfind("}") + 1
-        if json_start == -1 or json_end == 0:
-            raise ValueError("No JSON found in scene decomposition response")
+    last_error: Exception | None = None
+    for attempt in range(_MAX_DECOMPOSITION_RETRIES):
+        try:
+            response = await router.generate(
+                prompt=prompt,
+                task_type=TaskType.EXTRACTION,
+                temperature=0.5,
+                max_tokens=4000,
+                json_mode=True,
+                agent_name="scene_decomposition",
+                runtime_config=rc,
+            )
 
-        parsed = json.loads(content[json_start:json_end])
-        scenes = parsed.get("scenes", [])
+            # Parse JSON from response
+            content = response.content
+            json_start = content.find("{")
+            json_end = content.rfind("}") + 1
+            if json_start == -1 or json_end == 0:
+                raise ValueError("No JSON found in scene decomposition response")
 
-        # Ensure scene_index is set and continuity fields have defaults
-        for i, scene in enumerate(scenes):
-            scene["scene_index"] = i
-            if "expected_state" not in scene:
-                if i == 0:
-                    scene["expected_state"] = {"note": "establishing shot — no prior state"}
-                else:
-                    scene["expected_state"] = {}
-            if "established_state" not in scene:
-                scene["established_state"] = {}
+            parsed = json.loads(content[json_start:json_end])
+            scenes = parsed.get("scenes", [])
 
-        logger.info("Decomposed into %d scenes [request_id=%s]", len(scenes), request_id)
+            # Ensure scene_index is set and continuity fields have defaults
+            for i, scene in enumerate(scenes):
+                scene["scene_index"] = i
+                if "expected_state" not in scene:
+                    if i == 0:
+                        scene["expected_state"] = {"note": "establishing shot — no prior state"}
+                    else:
+                        scene["expected_state"] = {}
+                if "established_state" not in scene:
+                    scene["established_state"] = {}
 
-        trace.append({
-            "agent": "scene_decomposition",
-            "timestamp": time.time(),
-            "scenes_count": len(scenes),
-        })
+            logger.info("Decomposed into %d scenes [request_id=%s]", len(scenes), request_id)
 
-        llm_calls.append({
-            "agent": "scene_decomposition",
-            "timestamp": time.time(),
-            "user_prompt": prompt,
-            "raw_response": content,
-            "parsed_output": parsed,
-            "provider": response.provider,
-            "model": response.model,
-            "input_tokens": response.input_tokens,
-            "output_tokens": response.output_tokens,
-            "cost": response.cost,
-            "duration_ms": response.duration_ms,
-            "requested_provider": response.requested_provider,
-            "fallback": response.fallback,
-        })
+            trace.append({
+                "agent": "scene_decomposition",
+                "timestamp": time.time(),
+                "scenes_count": len(scenes),
+                "retry_attempts": attempt,
+            })
 
-        return {
-            "current_agent": "scene_decomposition",
-            "scenes": scenes,
-            "total_scenes": len(scenes),
-            "agent_trace": trace,
-            "llm_calls": llm_calls,
-        }
+            llm_calls.append({
+                "agent": "scene_decomposition",
+                "timestamp": time.time(),
+                "user_prompt": prompt,
+                "raw_response": content,
+                "parsed_output": parsed,
+                "provider": response.provider,
+                "model": response.model,
+                "input_tokens": response.input_tokens,
+                "output_tokens": response.output_tokens,
+                "cost": response.cost,
+                "duration_ms": response.duration_ms,
+                "requested_provider": response.requested_provider,
+                "fallback": response.fallback,
+                "retry_attempts": attempt,
+            })
 
-    except Exception as e:
-        logger.exception("Scene decomposition failed [request_id=%s]", request_id)
-        trace.append({
-            "agent": "scene_decomposition",
-            "timestamp": time.time(),
-            "error": str(e),
-        })
-        return {
-            "current_agent": "scene_decomposition",
-            "scenes": [],
-            "total_scenes": 0,
-            "agent_trace": trace,
-            "llm_calls": llm_calls,
-            "error": f"Scene decomposition failed: {e}",
-        }
+            return {
+                "current_agent": "scene_decomposition",
+                "scenes": scenes,
+                "total_scenes": len(scenes),
+                "agent_trace": trace,
+                "llm_calls": llm_calls,
+            }
+
+        except Exception as e:
+            last_error = e
+            if attempt < _MAX_DECOMPOSITION_RETRIES - 1:
+                backoff = _RETRY_BACKOFF_BASE * (2 ** attempt)
+                logger.warning(
+                    "Scene decomposition failed (attempt %d/%d), retrying in %.1fs [request_id=%s]: %s",
+                    attempt + 1, _MAX_DECOMPOSITION_RETRIES, backoff, request_id, e,
+                )
+                await asyncio.sleep(backoff)
+
+    # All retries exhausted
+    logger.exception("Scene decomposition failed after %d attempts [request_id=%s]", _MAX_DECOMPOSITION_RETRIES, request_id)
+    trace.append({
+        "agent": "scene_decomposition",
+        "timestamp": time.time(),
+        "error": str(last_error),
+        "retry_attempts": _MAX_DECOMPOSITION_RETRIES,
+    })
+    return {
+        "current_agent": "scene_decomposition",
+        "scenes": [],
+        "total_scenes": 0,
+        "agent_trace": trace,
+        "llm_calls": llm_calls,
+        "error": f"Scene decomposition failed: {last_error}",
+    }

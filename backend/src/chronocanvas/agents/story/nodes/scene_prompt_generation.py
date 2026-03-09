@@ -223,6 +223,10 @@ def _character_details(characters_in_scene: list[str], all_characters: list[dict
     return "\n".join(lines) if lines else "No specific character details."
 
 
+_MAX_PROMPT_RETRIES = 3
+_RETRY_BACKOFF_BASE = 1.0  # seconds
+
+
 async def _generate_prompt_for_scene(
     scene: dict,
     characters: list[dict],
@@ -231,7 +235,10 @@ async def _generate_prompt_for_scene(
     reference_context: str = "",
     runtime_config=None,
 ) -> tuple[StoryPanel, dict | None]:
-    """Generate prompt for a single scene. Returns (panel, llm_call_record)."""
+    """Generate prompt for a single scene with retry on transient failures.
+
+    Returns (panel, llm_call_record).
+    """
     scene_index = scene.get("scene_index", 0)
     scene_chars = scene.get("characters", [])
 
@@ -245,72 +252,86 @@ async def _generate_prompt_for_scene(
     if reference_context:
         prompt += reference_context
 
-    try:
-        response = await router.generate(
-            prompt=prompt,
-            task_type=TaskType.PROMPT_GENERATION,
-            temperature=0.7,
-            max_tokens=4000,
-            json_mode=True,
-            agent_name="scene_prompt_generation",
-            runtime_config=runtime_config,
-        )
+    last_error: Exception | None = None
+    for attempt in range(_MAX_PROMPT_RETRIES):
+        try:
+            response = await router.generate(
+                prompt=prompt,
+                task_type=TaskType.PROMPT_GENERATION,
+                temperature=0.7,
+                max_tokens=4000,
+                json_mode=True,
+                agent_name="scene_prompt_generation",
+                runtime_config=runtime_config,
+            )
 
-        content = response.content
-        json_start = content.find("{")
-        json_end = content.rfind("}") + 1
-        parsed = json.loads(content[json_start:json_end])
+            content = response.content
+            json_start = content.find("{")
+            json_end = content.rfind("}") + 1
+            parsed = json.loads(content[json_start:json_end])
 
-        panel: StoryPanel = {
-            "scene_index": scene_index,
-            "description": scene.get("description", ""),
-            "characters": scene_chars,
-            "mood": scene.get("mood", ""),
-            "setting": scene.get("setting", ""),
-            "image_prompt": parsed.get("image_prompt", ""),
-            "negative_prompt": parsed.get(
-                "negative_prompt",
-                "low quality, blurry, deformed, ugly, bad anatomy",
-            ),
-            "image_path": "",
-            "status": "pending",
-        }
+            panel: StoryPanel = {
+                "scene_index": scene_index,
+                "description": scene.get("description", ""),
+                "characters": scene_chars,
+                "mood": scene.get("mood", ""),
+                "setting": scene.get("setting", ""),
+                "image_prompt": parsed.get("image_prompt", ""),
+                "negative_prompt": parsed.get(
+                    "negative_prompt",
+                    "low quality, blurry, deformed, ugly, bad anatomy",
+                ),
+                "image_path": "",
+                "status": "pending",
+            }
 
-        llm_record = {
-            "agent": "scene_prompt_generation",
-            "timestamp": time.time(),
-            "user_prompt": prompt,
-            "raw_response": content,
-            "parsed_output": parsed,
-            "provider": response.provider,
-            "model": response.model,
-            "input_tokens": response.input_tokens,
-            "output_tokens": response.output_tokens,
-            "cost": response.cost,
-            "duration_ms": response.duration_ms,
-            "requested_provider": response.requested_provider,
-            "fallback": response.fallback,
-        }
-        return panel, llm_record
+            llm_record = {
+                "agent": "scene_prompt_generation",
+                "timestamp": time.time(),
+                "user_prompt": prompt,
+                "raw_response": content,
+                "parsed_output": parsed,
+                "provider": response.provider,
+                "model": response.model,
+                "input_tokens": response.input_tokens,
+                "output_tokens": response.output_tokens,
+                "cost": response.cost,
+                "duration_ms": response.duration_ms,
+                "requested_provider": response.requested_provider,
+                "fallback": response.fallback,
+                "retry_attempts": attempt,
+            }
+            return panel, llm_record
 
-    except Exception as e:
-        logger.warning(
-            "Prompt generation failed for scene %d [request_id=%s]: %s",
-            scene_index, request_id, e,
-        )
-        panel = {
-            "scene_index": scene_index,
-            "description": scene.get("description", ""),
-            "characters": scene_chars,
-            "mood": scene.get("mood", ""),
-            "setting": scene.get("setting", ""),
-            "image_prompt": "",
-            "negative_prompt": "",
-            "image_path": "",
-            "status": "failed",
-            "error": str(e),
-        }
-        return panel, None
+        except Exception as e:
+            last_error = e
+            if attempt < _MAX_PROMPT_RETRIES - 1:
+                backoff = _RETRY_BACKOFF_BASE * (2 ** attempt)
+                logger.warning(
+                    "Prompt generation failed for scene %d (attempt %d/%d), retrying in %.1fs [request_id=%s]: %s",
+                    scene_index, attempt + 1, _MAX_PROMPT_RETRIES, backoff, request_id, e,
+                )
+                await asyncio.sleep(backoff)
+
+    # All retries exhausted
+    logger.error(
+        "Prompt generation failed for scene %d after %d attempts [request_id=%s]: %s",
+        scene_index, _MAX_PROMPT_RETRIES, request_id, last_error,
+    )
+    panel = {
+        "scene_index": scene_index,
+        "description": scene.get("description", ""),
+        "characters": scene_chars,
+        "mood": scene.get("mood", ""),
+        "setting": scene.get("setting", ""),
+        "image_prompt": "",
+        "negative_prompt": "",
+        "image_path": "",
+        "status": "failed",
+        "error": str(last_error),
+        "retry_attempts": _MAX_PROMPT_RETRIES,
+    }
+    return panel, None
 
 
 def _build_reference_context(reference_analysis: list[dict]) -> str:
