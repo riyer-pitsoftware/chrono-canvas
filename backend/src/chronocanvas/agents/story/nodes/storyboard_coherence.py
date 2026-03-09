@@ -256,8 +256,8 @@ async def storyboard_coherence_node(state: StoryState) -> StoryState:
         )
 
     except Exception as e:
-        if settings.hackathon_mode:
-            raise
+        # Coherence is additive — never kill the pipeline for it, even in hackathon mode.
+        # Images are already generated; failing here would discard all completed work.
         elapsed_ms = (time.perf_counter() - start) * 1000
         logger.warning(
             "Storyboard coherence check failed [request_id=%s]: %s",
