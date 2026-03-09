@@ -7,6 +7,7 @@ from chronocanvas.agents.story.nodes.narration_audio import narration_audio_node
 from chronocanvas.agents.story.nodes.narration_script import narration_script_node
 from chronocanvas.agents.story.nodes.reference_image_analysis import reference_image_analysis_node
 from chronocanvas.agents.story.nodes.video_assembly import video_assembly_node
+from chronocanvas.agents.story.nodes.historical_research import historical_research_node
 from chronocanvas.agents.story.nodes.scene_decomposition import scene_decomposition_node
 from chronocanvas.agents.story.nodes.scene_image_generation import scene_image_generation_node
 from chronocanvas.agents.story.nodes.prompt_validation import prompt_validation_node
@@ -65,6 +66,7 @@ def build_story_graph() -> StateGraph:
     graph.add_node("reference_image_analysis", reference_image_analysis_node)
     graph.add_node("character_extraction", character_extraction_node)
     graph.add_node("scene_decomposition", scene_decomposition_node)
+    graph.add_node("historical_research", historical_research_node)
     graph.add_node("scene_prompt_generation", scene_prompt_generation_node)
     graph.add_node("prompt_validation", prompt_validation_node)
     graph.add_node("scene_image_generation", scene_image_generation_node)
@@ -95,7 +97,8 @@ def build_story_graph() -> StateGraph:
     )
     graph.add_edge("reference_image_analysis", "character_extraction")
     graph.add_edge("character_extraction", "scene_decomposition")
-    graph.add_edge("scene_decomposition", "scene_prompt_generation")
+    graph.add_edge("scene_decomposition", "historical_research")
+    graph.add_edge("historical_research", "scene_prompt_generation")
     graph.add_edge("scene_prompt_generation", "prompt_validation")
     graph.add_edge("prompt_validation", "scene_image_generation")
     graph.add_edge("scene_image_generation", "storyboard_coherence")

@@ -18,7 +18,8 @@ interface StoryboardViewProps {
 }
 
 export function StoryboardView({ storyboard, requestId, sceneImages = [], artifacts = [] }: StoryboardViewProps) {
-  const { characters, panels, total_scenes, completed_scenes } = storyboard;
+  const { characters, panels, total_scenes, completed_scenes, grounding_sources } = storyboard;
+  const [showSources, setShowSources] = useState(false);
   const [showConversation, setShowConversation] = useState(false);
   const isComplete = completed_scenes === total_scenes && total_scenes > 0;
 
@@ -154,6 +155,46 @@ export function StoryboardView({ storyboard, requestId, sceneImages = [], artifa
               requestId={requestId}
               onApplyEdit={handleConversationEdit}
             />
+          )}
+        </div>
+      )}
+
+      {/* Historical Sources (Google Search grounding) */}
+      {grounding_sources && grounding_sources.length > 0 && (
+        <div className="border border-[var(--border)] rounded-md overflow-hidden">
+          <button
+            onClick={() => setShowSources(!showSources)}
+            className="w-full flex items-center justify-between px-4 py-2 text-sm text-[var(--muted-foreground)] hover:bg-[var(--muted)]/50 transition-colors"
+          >
+            <span>Historical Sources ({grounding_sources.length})</span>
+            <span className="text-xs">{showSources ? "Hide" : "Show"}</span>
+          </button>
+          {showSources && (
+            <div className="px-4 pb-3 space-y-2 border-t border-[var(--border)]">
+              {grounding_sources.map((source, i) => (
+                <div key={i} className="flex items-start gap-2 py-1">
+                  <span className="text-xs text-[var(--muted-foreground)] mt-0.5 shrink-0">[{i + 1}]</span>
+                  <div className="min-w-0">
+                    <a
+                      href={source.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-[var(--primary)] hover:underline break-all"
+                    >
+                      {source.title || source.url}
+                    </a>
+                    {source.snippet && (
+                      <p className="text-xs text-[var(--muted-foreground)] mt-0.5 line-clamp-2">
+                        {source.snippet}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ))}
+              <p className="text-xs text-[var(--muted-foreground)] opacity-60 italic pt-1">
+                Grounded with Google Search
+              </p>
+            </div>
           )}
         </div>
       )}

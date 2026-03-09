@@ -34,12 +34,19 @@ export interface StoryboardPanel {
   narration_audio_path?: string;
 }
 
+export interface GroundingSource {
+  title: string;
+  url: string;
+  snippet?: string;
+}
+
 export interface StoryboardData {
   characters: Array<Record<string, unknown>>;
   scenes: Array<Record<string, unknown>>;
   panels: StoryboardPanel[];
   total_scenes: number;
   completed_scenes: number;
+  grounding_sources?: GroundingSource[];
 }
 
 export interface Citation {

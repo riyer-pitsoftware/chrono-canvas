@@ -21,10 +21,13 @@ async def storyboard_export_node(state: StoryState) -> StoryState:
     export_dir = Path(settings.output_dir) / request_id / "export"
     export_dir.mkdir(parents=True, exist_ok=True)
 
+    grounding_sources = state.get("grounding_sources", [])
+
     storyboard = {
         "request_id": request_id,
         "characters": characters,
         "scenes": scenes,
+        "grounding_sources": grounding_sources,
         "panels": [
             {
                 "scene_index": p.get("scene_index"),

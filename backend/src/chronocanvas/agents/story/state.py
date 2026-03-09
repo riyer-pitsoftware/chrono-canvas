@@ -63,6 +63,10 @@ class StoryState(TypedDict, total=False):
     # Narration audio
     narration_audio_paths: list[str]
 
+    # Google Search grounding sources (populated by historical_research node)
+    grounding_sources: list[dict[str, Any]]
+    historical_context: str
+
     # Per-request configuration overrides (from UI ConfigHUD).
     # Stored as a plain dict for checkpoint serialization safety.
     runtime_config: dict[str, Any] | None

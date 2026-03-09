@@ -90,6 +90,7 @@ async def run_story_pipeline(
                             "reference_image_analysis": RequestStatus.EXTRACTING,
                             "character_extraction": RequestStatus.EXTRACTING,
                             "scene_decomposition": RequestStatus.EXTRACTING,
+                            "historical_research": RequestStatus.EXTRACTING,
                             "scene_prompt_generation": RequestStatus.GENERATING_PROMPT,
                             "scene_image_generation": RequestStatus.GENERATING_IMAGE,
                             "storyboard_coherence": RequestStatus.GENERATING_IMAGE,
@@ -167,6 +168,7 @@ async def run_story_pipeline(
                     storyboard_data = {
                         "characters": full_state.get("characters", []),
                         "scenes": full_state.get("scenes", []),
+                        "grounding_sources": full_state.get("grounding_sources", []),
                         "panels": [
                             {
                                 "scene_index": p.get("scene_index"),
