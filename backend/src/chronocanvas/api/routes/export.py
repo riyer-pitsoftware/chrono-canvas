@@ -5,7 +5,7 @@ import zipfile
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import FileResponse, RedirectResponse, StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from chronocanvas.config import settings
@@ -13,6 +13,7 @@ from chronocanvas.db.engine import get_session
 from chronocanvas.db.repositories.images import ImageRepository
 from chronocanvas.db.repositories.requests import RequestRepository
 from chronocanvas.security import confine_path
+from chronocanvas.services.storage import get_storage_backend
 
 router = APIRouter(prefix="/export", tags=["export"])
 
@@ -28,6 +29,17 @@ async def download_image(
 
     image = images[0]
     file_path = Path(image.file_path)
+
+    # Cloud mode: redirect to signed GCS URL
+    backend = get_storage_backend()
+    if backend.is_cloud():
+        try:
+            relative = str(file_path.relative_to(settings.output_dir))
+        except ValueError:
+            relative = f"{request_id}/{file_path.name}"
+        url = await backend.get_url(relative)
+        return RedirectResponse(url=url)
+
     try:
         file_path = confine_path(file_path, Path(settings.output_dir))
     except PermissionError:
@@ -44,6 +56,12 @@ async def download_image(
 
 @router.get("/{request_id}/audio/{scene_index}")
 async def download_audio(request_id: uuid.UUID, scene_index: int):
+    backend = get_storage_backend()
+    if backend.is_cloud():
+        relative = f"{request_id}/audio/scene_{scene_index}.wav"
+        url = await backend.get_url(relative)
+        return RedirectResponse(url=url)
+
     audio_path = Path(settings.output_dir) / str(request_id) / "audio" / f"scene_{scene_index}.wav"
     try:
         audio_path = confine_path(audio_path, Path(settings.output_dir))
@@ -61,6 +79,12 @@ async def download_audio(request_id: uuid.UUID, scene_index: int):
 
 @router.get("/{request_id}/video")
 async def download_video(request_id: uuid.UUID):
+    backend = get_storage_backend()
+    if backend.is_cloud():
+        relative = f"{request_id}/export/storyboard.mp4"
+        url = await backend.get_url(relative)
+        return RedirectResponse(url=url)
+
     video_path = Path(settings.output_dir) / str(request_id) / "export" / "storyboard.mp4"
     try:
         video_path = confine_path(video_path, Path(settings.output_dir))

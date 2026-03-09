@@ -5,6 +5,7 @@ from pathlib import Path
 
 from chronocanvas.agents.story.state import StoryState
 from chronocanvas.config import settings
+from chronocanvas.services.storage import get_storage_backend, upload_artifact
 
 logger = logging.getLogger(__name__)
 
@@ -53,11 +54,47 @@ async def storyboard_export_node(state: StoryState) -> StoryState:
     metadata_path = export_dir / "storyboard.json"
     metadata_path.write_text(json.dumps(storyboard, indent=2))
 
+    # Upload to GCS if in cloud mode
+    backend = get_storage_backend()
+    uploaded_count = 0
+    if backend.is_cloud():
+        try:
+            # Upload storyboard.json
+            await upload_artifact(str(metadata_path), request_id)
+
+            # Upload all panel images
+            for p in panels:
+                img_path = p.get("image_path")
+                if img_path and Path(img_path).exists():
+                    await upload_artifact(img_path, request_id)
+                    uploaded_count += 1
+
+                # Upload audio files
+                audio_path = p.get("narration_audio_path")
+                if audio_path and Path(audio_path).exists():
+                    await upload_artifact(audio_path, request_id)
+
+            # Upload video if it exists
+            video_path = export_dir / "storyboard.mp4"
+            if video_path.exists():
+                await upload_artifact(str(video_path), request_id)
+
+            logger.info(
+                "Uploaded %d artifacts to GCS [request_id=%s]",
+                uploaded_count, request_id,
+            )
+        except Exception as e:
+            logger.warning(
+                "GCS upload failed (exports may be inaccessible) [request_id=%s]: %s",
+                request_id, e,
+            )
+
     trace.append({
         "agent": "storyboard_export",
         "timestamp": time.time(),
         "export_path": str(export_dir),
         "total_panels": len(panels),
+        "gcs_uploaded": uploaded_count if backend.is_cloud() else None,
     })
 
     return {

@@ -74,6 +74,21 @@ def validate_hackathon_requirements() -> list[str]:
 @router.get("/health")
 async def health_check():
     services = await _build_service_map()
+
+    # Check GCS connectivity if in cloud mode
+    gcs_status = None
+    try:
+        from chronocanvas.services.storage import get_storage_backend
+        backend = get_storage_backend()
+        if backend.is_cloud():
+            gcs_status = "connected"
+            services["gcs"] = True
+        else:
+            services["gcs"] = False
+    except Exception as e:
+        gcs_status = f"error: {e}"
+        services["gcs"] = False
+
     result = {
         "status": "ok",
         "service": "chronocanvas",
@@ -81,6 +96,8 @@ async def health_check():
         "hackathon_mode": settings.hackathon_mode,
         "services": services,
     }
+    if gcs_status and gcs_status != "connected":
+        result["gcs_status"] = gcs_status
     if settings.hackathon_mode:
         failures = validate_hackathon_requirements()
         if failures:

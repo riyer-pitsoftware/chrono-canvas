@@ -108,6 +108,24 @@ gcloud compute networks vpc-access connectors create "${VPC_CONNECTOR}" \
   --project="${GCP_PROJECT_ID}" \
   2>/dev/null || echo "  (already exists)"
 
+# ── GCS Bucket (for export artifacts) ─────────────────────────────────
+GCS_BUCKET="${GCS_BUCKET:-chrono-canvas-exports-${GCP_PROJECT_ID}}"
+echo "=== Creating GCS bucket: ${GCS_BUCKET} ==="
+gsutil mb -p "${GCP_PROJECT_ID}" -l "${GCP_REGION}" "gs://${GCS_BUCKET}" \
+  2>/dev/null || echo "  (already exists)"
+
+# Set CORS for browser access to signed URLs
+cat > /tmp/gcs-cors.json <<CORS_EOF
+[{
+  "origin": ["*"],
+  "method": ["GET"],
+  "responseHeader": ["Content-Type"],
+  "maxAgeSeconds": 3600
+}]
+CORS_EOF
+gsutil cors set /tmp/gcs-cors.json "gs://${GCS_BUCKET}"
+echo "  CORS configured"
+
 # ── Service Account ──────────────────────────────────────────────────
 echo "=== Creating service account: ${SA_NAME} ==="
 gcloud iam service-accounts create "${SA_NAME}" \

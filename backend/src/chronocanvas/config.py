@@ -82,6 +82,10 @@ class Settings(BaseSettings):
     archive_dir: str = "./archive"
     eval_dir: str = "./eval"
 
+    # Cloud Storage (GCS) — used on Cloud Run for persistent exports
+    gcs_bucket: str = ""  # e.g. "chrono-canvas-exports"
+    gcp_project_id: str = ""  # e.g. "gen-lang-client-0925647028"
+
     # Rate Limiting
     rate_limit_rpm: int = 60
     llm_max_concurrent: int = 5

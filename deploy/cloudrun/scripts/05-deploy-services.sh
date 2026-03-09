@@ -44,10 +44,14 @@ echo ""
 
 # ── Common env vars for API and Worker ────────────────────────────────
 # Cloud SQL Auth Proxy provides a Unix socket at /cloudsql/<connection-name>
+GCS_BUCKET="${GCS_BUCKET:-chrono-canvas-exports-${GCP_PROJECT_ID}}"
+
 COMMON_ENV="\
 DATABASE_URL=postgresql+asyncpg://chronocanvas@/chronocanvas?host=/cloudsql/${DB_CONNECTION_NAME},\
 REDIS_URL=redis://${REDIS_HOST}:${REDIS_PORT}/0,\
 DEPLOYMENT_MODE=gcp,\
+GCS_BUCKET=${GCS_BUCKET},\
+GCP_PROJECT_ID=${GCP_PROJECT_ID},\
 IMAGE_PROVIDER=imagen,\
 GEMINI_MODEL=gemini-2.5-flash,\
 CLAUDE_MODEL=claude-sonnet-4-5-20250929,\
