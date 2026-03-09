@@ -309,17 +309,28 @@ async def retry_request(
             detail=f"Invalid from_step '{from_step}'. Valid: {sorted(VALID_RETRY_STEPS)}",
         )
 
+    # Route to correct pipeline based on run_type
+    run_type = request.run_type or "portrait"
+    is_story = run_type in ("creative_story", "story")
+
     try:
-        from chronocanvas.redis_client import get_redis
         from arq import create_pool
         from arq.connections import RedisSettings
 
         pool = await create_pool(RedisSettings.from_dsn(settings.redis_url))
-        job = await pool.enqueue_job(
-            "retry_generation_pipeline_task",
-            str(request_id),
-            from_step,
-        )
+        if is_story:
+            # Story pipeline: re-run from scratch (no mid-pipeline retry support)
+            job = await pool.enqueue_job(
+                "run_story_pipeline_task",
+                str(request_id),
+                request.input_text,
+            )
+        else:
+            job = await pool.enqueue_job(
+                "retry_generation_pipeline_task",
+                str(request_id),
+                from_step,
+            )
         await pool.close()
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to enqueue retry: {e}")
@@ -327,7 +338,8 @@ async def retry_request(
     return {
         "status": "enqueued",
         "request_id": str(request_id),
-        "from_step": from_step,
+        "run_type": run_type,
+        "from_step": from_step if not is_story else "full_rerun",
         "job_id": job.job_id if job else None,
     }
 
