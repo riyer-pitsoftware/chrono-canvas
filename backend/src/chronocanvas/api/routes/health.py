@@ -66,8 +66,8 @@ def validate_hackathon_requirements() -> list[str]:
         failures.append("GOOGLE_API_KEY not set — Gemini LLM, Imagen, TTS, and multimodal validation will fail")
     if settings.image_provider == "mock":
         failures.append("IMAGE_PROVIDER is 'mock' — judges will see placeholder images")
-    if settings.default_llm_provider not in ("gemini",):
-        failures.append(f"DEFAULT_LLM_PROVIDER is '{settings.default_llm_provider}' — should be 'gemini' for hackathon")
+    if not settings.hackathon_strict_gemini:
+        failures.append("HACKATHON_STRICT_GEMINI is not enabled — Gemini-only enforcement is off")
     return failures
 
 
