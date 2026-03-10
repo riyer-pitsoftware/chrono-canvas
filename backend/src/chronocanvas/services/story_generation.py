@@ -171,7 +171,7 @@ async def run_story_pipeline(
                         "grounding_sources": full_state.get("grounding_sources", []),
                         "panels": [
                             {
-                                "scene_index": p.get("scene_index"),
+                                "scene_index": p.get("scene_index", 0),
                                 "description": p.get("description"),
                                 "characters": p.get("characters", []),
                                 "mood": p.get("mood"),

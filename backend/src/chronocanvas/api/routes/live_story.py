@@ -23,9 +23,8 @@ router = APIRouter(prefix="/live-story", tags=["live-story"])
 
 # Models to try in order — first one that supports TEXT+IMAGE wins
 _MODEL_CHAIN = [
+    "gemini-2.5-flash-image",
     "gemini-2.0-flash-preview-image-generation",
-    "gemini-2.0-flash-exp",
-    "gemini-2.0-flash",
 ]
 
 DASH_SYSTEM_INSTRUCTION = """\

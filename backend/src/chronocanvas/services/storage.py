@@ -91,7 +91,8 @@ class GCSStorage(StorageBackend):
         try:
             blob = self._bucket.blob(remote_key)
             return blob.download_as_bytes()
-        except Exception:
+        except Exception as e:
+            logger.warning("GCS download failed for %s: %s", remote_key, e)
             return None
 
 

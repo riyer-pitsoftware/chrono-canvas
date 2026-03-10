@@ -31,7 +31,7 @@ async def storyboard_export_node(state: StoryState) -> StoryState:
         "grounding_sources": grounding_sources,
         "panels": [
             {
-                "scene_index": p.get("scene_index"),
+                "scene_index": p.get("scene_index", 0),
                 "description": p.get("description"),
                 "characters": p.get("characters", []),
                 "mood": p.get("mood"),
@@ -86,7 +86,9 @@ async def storyboard_export_node(state: StoryState) -> StoryState:
                 if Path(audio_path).exists():
                     try:
                         await upload_artifact(audio_path, request_id)
+                        logger.debug("Uploaded audio to GCS: %s", audio_path)
                     except Exception as e:
+                        failed_count += 1
                         logger.error("GCS upload failed for audio %s: %s", audio_path, e)
                 else:
                     logger.warning("Audio file missing, skipping GCS upload: %s", audio_path)

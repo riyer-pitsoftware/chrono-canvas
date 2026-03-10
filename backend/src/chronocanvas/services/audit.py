@@ -70,7 +70,7 @@ class AuditProjector:
             # Try storyboard_data first (new generations have narration_audio_path)
             for panel in panels:
                 if panel.get("narration_audio_path"):
-                    scene_idx = panel.get("scene_index", 0)
+                    scene_idx = panel.get("scene_index") or 0
                     narration_audio_urls.append({
                         "scene_index": scene_idx,
                         "narration_text": panel.get("narration_text", ""),
@@ -92,6 +92,18 @@ class AuditProjector:
                         narration_audio_urls.append({
                             "scene_index": scene_idx,
                             "narration_text": text,
+                            "url": f"/api/export/{request.id}/audio/{scene_idx}",
+                        })
+            # Fallback for Cloud Run: no local disk, so generate URLs for panels
+            # that have narration_text — audio files may exist in GCS even if
+            # narration_audio_path wasn't persisted in storyboard_data.
+            if not narration_audio_urls:
+                for panel in panels:
+                    if panel.get("narration_text"):
+                        scene_idx = panel.get("scene_index") or 0
+                        narration_audio_urls.append({
+                            "scene_index": scene_idx,
+                            "narration_text": panel.get("narration_text", ""),
                             "url": f"/api/export/{request.id}/audio/{scene_idx}",
                         })
 

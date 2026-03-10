@@ -1,5 +1,6 @@
 import io
 import json
+import logging
 import uuid
 import zipfile
 from pathlib import Path
@@ -14,6 +15,8 @@ from chronocanvas.db.repositories.images import ImageRepository
 from chronocanvas.db.repositories.requests import RequestRepository
 from chronocanvas.security import confine_path
 from chronocanvas.services.storage import get_storage_backend
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/export", tags=["export"])
 
@@ -61,6 +64,10 @@ async def download_audio(request_id: uuid.UUID, scene_index: int):
         relative = f"{request_id}/audio/scene_{scene_index}.wav"
         data = await backend.download(relative)
         if data is None:
+            logger.warning(
+                "Audio not found in GCS: %s [request_id=%s, scene=%d]",
+                relative, request_id, scene_index,
+            )
             raise HTTPException(status_code=404, detail="Audio file not found in GCS")
         return Response(content=data, media_type="audio/wav", headers={
             "Cache-Control": "public, max-age=3600",
