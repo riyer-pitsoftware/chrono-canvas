@@ -4,7 +4,7 @@ import uuid
 import zipfile
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from fastapi.responses import FileResponse, RedirectResponse, StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -59,8 +59,12 @@ async def download_audio(request_id: uuid.UUID, scene_index: int):
     backend = get_storage_backend()
     if backend.is_cloud():
         relative = f"{request_id}/audio/scene_{scene_index}.wav"
-        url = await backend.get_url(relative)
-        return RedirectResponse(url=url)
+        data = await backend.download(relative)
+        if data is None:
+            raise HTTPException(status_code=404, detail="Audio file not found in GCS")
+        return Response(content=data, media_type="audio/wav", headers={
+            "Cache-Control": "public, max-age=3600",
+        })
 
     audio_path = Path(settings.output_dir) / str(request_id) / "audio" / f"scene_{scene_index}.wav"
     try:
@@ -82,8 +86,12 @@ async def download_video(request_id: uuid.UUID):
     backend = get_storage_backend()
     if backend.is_cloud():
         relative = f"{request_id}/export/storyboard.mp4"
-        url = await backend.get_url(relative)
-        return RedirectResponse(url=url)
+        data = await backend.download(relative)
+        if data is None:
+            raise HTTPException(status_code=404, detail="Video not yet available")
+        return Response(content=data, media_type="video/mp4", headers={
+            "Cache-Control": "public, max-age=3600",
+        })
 
     video_path = Path(settings.output_dir) / str(request_id) / "export" / "storyboard.mp4"
     try:

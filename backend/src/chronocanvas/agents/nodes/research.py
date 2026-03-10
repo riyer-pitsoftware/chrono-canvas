@@ -76,7 +76,7 @@ async def research_node(state: AgentState) -> AgentState:
         rc.research_cache_enabled if rc and rc.research_cache_enabled is not None
         else settings.research_cache_enabled
     )
-    if cache_enabled:
+    if cache_enabled and figure_name:
         cached_data = await _get_cache_service().lookup(
             figure_name, time_period, region, settings.research_cache_threshold
         )

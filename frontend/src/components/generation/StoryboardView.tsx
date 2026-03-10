@@ -121,22 +121,41 @@ export function StoryboardView({ storyboard, requestId, sceneImages = [], artifa
         </div>
       )}
 
-      {/* Panel grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {panels.map((panel, i) => (
-          <ScenePanel
-            key={i}
-            panel={panel}
-            requestId={requestId}
-            wsImageUrl={wsImageMap.has(panel.scene_index)
-              ? `/output/${requestId}/scene_${panel.scene_index}/${wsImageMap.get(panel.scene_index)!.split("/").pop()}`
-              : undefined
-            }
-            wsAudioUrl={wsAudioMap.get(panel.scene_index)}
-            wsEditUrl={wsEditMap.get(panel.scene_index)}
-            isCompleted={panel.status === "completed" || wsImageMap.has(panel.scene_index)}
-          />
-        ))}
+      {/* Filmstrip */}
+      <div className="relative">
+        {/* Sprocket holes top */}
+        <div className="flex gap-3 px-4 py-1 bg-zinc-950 rounded-t-md overflow-hidden">
+          {Array.from({ length: 24 }).map((_, i) => (
+            <div key={i} className="w-3 h-2 rounded-sm bg-zinc-800 border border-zinc-700 shrink-0" />
+          ))}
+        </div>
+
+        <div
+          className="flex gap-4 overflow-x-auto snap-x snap-mandatory scroll-smooth px-4 py-4 bg-zinc-950"
+          style={{ scrollbarWidth: "thin", scrollbarColor: "#3f3f46 #09090b" }}
+        >
+          {panels.map((panel, i) => (
+            <ScenePanel
+              key={i}
+              panel={panel}
+              requestId={requestId}
+              wsImageUrl={wsImageMap.has(panel.scene_index)
+                ? `/output/${requestId}/scene_${panel.scene_index}/${wsImageMap.get(panel.scene_index)!.split("/").pop()}`
+                : undefined
+              }
+              wsAudioUrl={wsAudioMap.get(panel.scene_index)}
+              wsEditUrl={wsEditMap.get(panel.scene_index)}
+              isCompleted={panel.status === "completed" || wsImageMap.has(panel.scene_index)}
+            />
+          ))}
+        </div>
+
+        {/* Sprocket holes bottom */}
+        <div className="flex gap-3 px-4 py-1 bg-zinc-950 rounded-b-md overflow-hidden">
+          {Array.from({ length: 24 }).map((_, i) => (
+            <div key={i} className="w-3 h-2 rounded-sm bg-zinc-800 border border-zinc-700 shrink-0" />
+          ))}
+        </div>
       </div>
 
       {/* Conversation refinement panel */}
@@ -258,144 +277,155 @@ function ScenePanel({
   };
 
   return (
-    <Card className={isFailed ? "border-[var(--destructive)]" : ""}>
-      <CardContent className="p-4">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-sm font-medium">
-            Scene {panel.scene_index + 1}
-          </span>
-          <div className="flex items-center gap-1">
-            {isCompleted && !editMode && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-6 px-2 text-xs"
-                onClick={() => setEditMode(true)}
-                title="Edit this scene"
-              >
-                <PencilIcon className="w-3 h-3" />
-              </Button>
-            )}
-            <Badge
-              variant={isCompleted ? "secondary" : isFailed ? "destructive" : "outline"}
-            >
-              {isCompleted ? "Done" : isFailed ? "Failed" : "Generating..."}
-            </Badge>
-          </div>
-        </div>
-
-        {/* Image or placeholder */}
-        {isCompleted && displayImageUrl ? (
-          <div className="relative">
-            <img
-              src={showOriginal && originalImageUrl ? originalImageUrl : displayImageUrl}
-              alt={`Scene ${panel.scene_index + 1}`}
-              className="rounded-md w-full mb-3"
-            />
-            {/* Before/after toggle when edit exists */}
-            {wsEditUrl && originalImageUrl && (
-              <Button
-                variant="secondary"
-                size="sm"
-                className="absolute bottom-4 right-2 text-xs h-6"
-                onClick={() => setShowOriginal(!showOriginal)}
-              >
-                {showOriginal ? "Edited" : "Original"}
-              </Button>
-            )}
-          </div>
-        ) : (
-          <div className="w-full aspect-square bg-[var(--muted)] rounded-md mb-3 flex items-center justify-center">
-            {isFailed ? (
-              <span className="text-sm text-[var(--destructive)]">Generation failed</span>
+    <div className="w-[28rem] min-w-[28rem] snap-center shrink-0">
+      <Card className={`bg-zinc-900 border-zinc-800 overflow-hidden ${isFailed ? "border-[var(--destructive)]" : ""}`}>
+        <CardContent className="p-0">
+          {/* Image area — 16:9 with narration overlay */}
+          <div className="relative aspect-square bg-zinc-800">
+            {isCompleted && displayImageUrl ? (
+              <>
+                <img
+                  src={showOriginal && originalImageUrl ? originalImageUrl : displayImageUrl}
+                  alt={`Scene ${panel.scene_index + 1}`}
+                  className="absolute inset-0 w-full h-full object-cover"
+                />
+                {/* Before/after toggle when edit exists */}
+                {wsEditUrl && originalImageUrl && (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="absolute top-2 right-2 text-xs h-6 opacity-80 hover:opacity-100"
+                    onClick={() => setShowOriginal(!showOriginal)}
+                  >
+                    {showOriginal ? "Edited" : "Original"}
+                  </Button>
+                )}
+              </>
             ) : (
-              <div className="animate-pulse text-sm text-[var(--muted-foreground)]">
-                Generating image...
+              <div className="absolute inset-0 flex items-center justify-center">
+                {isFailed ? (
+                  <span className="text-sm text-[var(--destructive)]">Generation failed</span>
+                ) : (
+                  <div className="animate-pulse text-sm text-zinc-500">
+                    Generating image...
+                  </div>
+                )}
               </div>
             )}
-          </div>
-        )}
 
-        {/* Scene edit input */}
-        {editMode && (
-          <div className="mb-3 space-y-2">
-            <div className="flex gap-2 items-center">
-              <Input
-                placeholder="Describe the change... (e.g., 'make the lighting more dramatic')"
-                value={editInstruction}
-                onChange={(e) => setEditInstruction(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleEdit()}
-                disabled={isEditing}
-                className="flex-1 text-sm"
-              />
-              <VoiceInputButton
-                onTranscript={(text) => setEditInstruction(text)}
-                disabled={isEditing}
-              />
+            {/* Narration text overlay — subtitle style */}
+            {panel.narration_text && (
+              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent px-4 pt-8 pb-3">
+                <div className="flex items-end gap-2">
+                  <p className="font-serif italic text-sm text-zinc-100 leading-relaxed flex-1 drop-shadow-lg">
+                    &ldquo;{panel.narration_text}&rdquo;
+                  </p>
+                  <LiveVoiceNarration text={panel.narration_text} />
+                </div>
+              </div>
+            )}
+
+            {/* Scene number + status badge overlay */}
+            <div className="absolute top-2 left-2 flex items-center gap-2">
+              <span className="text-xs font-mono font-bold text-white bg-black/60 px-2 py-0.5 rounded">
+                {panel.scene_index + 1}
+              </span>
+              {isCompleted && !editMode && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 w-6 p-0 text-white bg-black/40 hover:bg-black/60"
+                  onClick={() => setEditMode(true)}
+                  title="Edit this scene"
+                >
+                  <PencilIcon className="w-3 h-3" />
+                </Button>
+              )}
             </div>
-            <div className="flex gap-2">
-              <Button
-                size="sm"
-                onClick={handleEdit}
-                disabled={isEditing || !editInstruction.trim()}
-              >
-                {isEditing ? "Editing..." : "Apply Edit"}
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => { setEditMode(false); setEditInstruction(""); }}
-              >
-                Cancel
-              </Button>
+            <div className="absolute top-2 right-2">
+              {!isCompleted && (
+                <Badge
+                  variant={isFailed ? "destructive" : "outline"}
+                  className="text-xs bg-black/50 border-zinc-600"
+                >
+                  {isFailed ? "Failed" : "Generating..."}
+                </Badge>
+              )}
             </div>
           </div>
-        )}
 
-        {/* Narration audio player */}
-        {(wsAudioUrl || panel.narration_audio_path) ? (
-          <div className="mb-2">
-            <audio
-              controls
-              className="w-full h-8"
-              src={wsAudioUrl ?? `/api/export/${requestId}/audio/${panel.scene_index}`}
-            >
-              Your browser does not support audio playback.
-            </audio>
+          {/* Below-image content area */}
+          <div className="p-3 space-y-2">
+            {/* Scene edit input */}
+            {editMode && (
+              <div className="space-y-2">
+                <div className="flex gap-2 items-center">
+                  <Input
+                    placeholder="Describe the change..."
+                    value={editInstruction}
+                    onChange={(e) => setEditInstruction(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleEdit()}
+                    disabled={isEditing}
+                    className="flex-1 text-sm bg-zinc-800 border-zinc-700"
+                  />
+                  <VoiceInputButton
+                    onTranscript={(text) => setEditInstruction(text)}
+                    disabled={isEditing}
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    onClick={handleEdit}
+                    disabled={isEditing || !editInstruction.trim()}
+                  >
+                    {isEditing ? "Editing..." : "Apply Edit"}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => { setEditMode(false); setEditInstruction(""); }}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Narration audio player */}
+            {(wsAudioUrl || panel.narration_audio_path) ? (
+              <audio
+                controls
+                className="w-full h-8"
+                src={wsAudioUrl ?? `/api/export/${requestId}/audio/${panel.scene_index}`}
+              >
+                Your browser does not support audio playback.
+              </audio>
+            ) : isCompleted && panel.narration_text ? (
+              <div className="text-xs text-zinc-500 animate-pulse">
+                Generating audio...
+              </div>
+            ) : null}
+
+            {/* Scene description */}
+            <p className="text-xs text-zinc-400 leading-relaxed">{panel.description}</p>
+
+            {/* Metadata badges */}
+            <div className="flex flex-wrap gap-1">
+              {panel.mood && (
+                <Badge variant="outline" className="text-xs border-zinc-700 text-zinc-400">{panel.mood}</Badge>
+              )}
+              {panel.setting && (
+                <Badge variant="outline" className="text-xs border-zinc-700 text-zinc-400">{panel.setting}</Badge>
+              )}
+              {panel.characters?.map((name, ci) => (
+                <Badge key={ci} variant="secondary" className="text-xs">{name}</Badge>
+              ))}
+            </div>
           </div>
-        ) : isCompleted && panel.narration_text ? (
-          <div className="mb-2 text-xs text-[var(--muted-foreground)] animate-pulse">
-            Generating audio...
-          </div>
-        ) : null}
-
-        {/* Narration text + Live Voice narration */}
-        {panel.narration_text && (
-          <div className="flex items-start gap-2 mb-2">
-            <p className="text-sm italic text-[var(--muted-foreground)] flex-1">
-              &ldquo;{panel.narration_text}&rdquo;
-            </p>
-            <LiveVoiceNarration text={panel.narration_text} />
-          </div>
-        )}
-
-        {/* Scene description */}
-        <p className="text-sm mb-2">{panel.description}</p>
-
-        {/* Metadata */}
-        <div className="flex flex-wrap gap-1">
-          {panel.mood && (
-            <Badge variant="outline" className="text-xs">{panel.mood}</Badge>
-          )}
-          {panel.setting && (
-            <Badge variant="outline" className="text-xs">{panel.setting}</Badge>
-          )}
-          {panel.characters?.map((name, ci) => (
-            <Badge key={ci} variant="secondary" className="text-xs">{name}</Badge>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 

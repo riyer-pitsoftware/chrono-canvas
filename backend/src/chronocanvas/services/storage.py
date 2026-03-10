@@ -29,6 +29,10 @@ class StorageBackend(ABC):
     def is_cloud(self) -> bool:
         ...
 
+    async def download(self, remote_key: str) -> bytes | None:
+        """Download file contents. Returns None if not found."""
+        return None
+
 
 class LocalStorage(StorageBackend):
     """No-op storage — returns local paths for Docker dev."""
@@ -55,11 +59,7 @@ class GCSStorage(StorageBackend):
         logger.info("GCS storage initialized: bucket=%s", bucket_name)
 
     async def upload(self, local_path: str, remote_key: str) -> str:
-        """Upload file to GCS and return a signed URL (1 hour expiry)."""
-        import datetime
-
-        from google.cloud import storage as gcs
-
+        """Upload file to GCS and return the gs:// path."""
         blob = self._bucket.blob(remote_key)
 
         # Detect content type
@@ -76,27 +76,23 @@ class GCSStorage(StorageBackend):
         content_type = content_types.get(suffix, "application/octet-stream")
 
         blob.upload_from_filename(local_path, content_type=content_type)
-
-        url = blob.generate_signed_url(
-            version="v4",
-            expiration=datetime.timedelta(hours=1),
-            method="GET",
-        )
         logger.debug("Uploaded %s → gs://%s/%s", local_path, self._bucket_name, remote_key)
-        return url
+        return f"gs://{self._bucket_name}/{remote_key}"
 
     async def get_url(self, remote_key: str) -> str:
-        import datetime
-
-        blob = self._bucket.blob(remote_key)
-        return blob.generate_signed_url(
-            version="v4",
-            expiration=datetime.timedelta(hours=1),
-            method="GET",
-        )
+        """Return a gs:// URI — actual serving is done via blob proxy in main.py."""
+        return f"gs://{self._bucket_name}/{remote_key}"
 
     def is_cloud(self) -> bool:
         return True
+
+    async def download(self, remote_key: str) -> bytes | None:
+        """Download blob contents from GCS."""
+        try:
+            blob = self._bucket.blob(remote_key)
+            return blob.download_as_bytes()
+        except Exception:
+            return None
 
 
 # Singleton

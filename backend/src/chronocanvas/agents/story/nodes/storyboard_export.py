@@ -57,37 +57,52 @@ async def storyboard_export_node(state: StoryState) -> StoryState:
     # Upload to GCS if in cloud mode
     backend = get_storage_backend()
     uploaded_count = 0
+    skipped_count = 0
+    failed_count = 0
     if backend.is_cloud():
+        # Upload storyboard.json
         try:
-            # Upload storyboard.json
             await upload_artifact(str(metadata_path), request_id)
-
-            # Upload all panel images
-            for p in panels:
-                img_path = p.get("image_path")
-                if img_path and Path(img_path).exists():
-                    await upload_artifact(img_path, request_id)
-                    uploaded_count += 1
-
-                # Upload audio files
-                audio_path = p.get("narration_audio_path")
-                if audio_path and Path(audio_path).exists():
-                    await upload_artifact(audio_path, request_id)
-
-            # Upload video if it exists
-            video_path = export_dir / "storyboard.mp4"
-            if video_path.exists():
-                await upload_artifact(str(video_path), request_id)
-
-            logger.info(
-                "Uploaded %d artifacts to GCS [request_id=%s]",
-                uploaded_count, request_id,
-            )
         except Exception as e:
-            logger.warning(
-                "GCS upload failed (exports may be inaccessible) [request_id=%s]: %s",
-                request_id, e,
-            )
+            logger.error("GCS upload failed for storyboard.json [request_id=%s]: %s", request_id, e)
+
+        # Upload all panel images and audio
+        for p in panels:
+            img_path = p.get("image_path")
+            if img_path:
+                if Path(img_path).exists():
+                    try:
+                        await upload_artifact(img_path, request_id)
+                        uploaded_count += 1
+                    except Exception as e:
+                        failed_count += 1
+                        logger.error("GCS upload failed for image %s: %s", img_path, e)
+                else:
+                    skipped_count += 1
+                    logger.warning("Image file missing, skipping GCS upload: %s", img_path)
+
+            audio_path = p.get("narration_audio_path")
+            if audio_path:
+                if Path(audio_path).exists():
+                    try:
+                        await upload_artifact(audio_path, request_id)
+                    except Exception as e:
+                        logger.error("GCS upload failed for audio %s: %s", audio_path, e)
+                else:
+                    logger.warning("Audio file missing, skipping GCS upload: %s", audio_path)
+
+        # Upload video if it exists
+        video_path = export_dir / "storyboard.mp4"
+        if video_path.exists():
+            try:
+                await upload_artifact(str(video_path), request_id)
+            except Exception as e:
+                logger.error("GCS upload failed for video: %s", e)
+
+        logger.info(
+            "GCS upload complete [request_id=%s]: %d uploaded, %d skipped (missing), %d failed",
+            request_id, uploaded_count, skipped_count, failed_count,
+        )
 
     trace.append({
         "agent": "storyboard_export",

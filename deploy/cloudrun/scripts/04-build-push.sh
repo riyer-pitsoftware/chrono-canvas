@@ -13,6 +13,9 @@
 set -euo pipefail
 source "$(dirname "$0")/00-env.sh"
 
+# Ensure we're at repo root (Dockerfiles use paths relative to it)
+cd "$(git rev-parse --show-toplevel)"
+
 # Build vendor wheels (neo-modules etc.)
 echo "=== Building vendor wheels ==="
 bash "$(git rev-parse --show-toplevel)/scripts/build-vendor-wheels.sh"
