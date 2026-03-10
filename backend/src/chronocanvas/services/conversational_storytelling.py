@@ -60,10 +60,12 @@ class ConversationSession:
 
         # Add story overview
         char_names = [c.get("name", f"Character {i}") for i, c in enumerate(characters)]
-        parts.append(types.Part.from_text(
-            text=f"Current storyboard has {len(panels)} scenes.\n"
-            f"Characters: {', '.join(char_names)}\n\n"
-        ))
+        parts.append(
+            types.Part.from_text(
+                text=f"Current storyboard has {len(panels)} scenes.\n"
+                f"Characters: {', '.join(char_names)}\n\n"
+            )
+        )
 
         # Add each scene with image
         for panel in panels:
@@ -72,19 +74,22 @@ class ConversationSession:
             mood = panel.get("mood", "")
             narration = panel.get("narration_text", "")
 
-            parts.append(types.Part.from_text(
-                text=f"Scene {scene_idx}: {desc}\n"
-                f"Mood: {mood}\n"
-                f"Narration: {narration}\n"
-            ))
+            parts.append(
+                types.Part.from_text(
+                    text=f"Scene {scene_idx}: {desc}\nMood: {mood}\nNarration: {narration}\n"
+                )
+            )
 
             # Include image if available
             image_path = panel.get("image_path", "")
             if image_path and Path(image_path).exists():
                 image_bytes = Path(image_path).read_bytes()
-                parts.append(types.Part.from_bytes(
-                    data=image_bytes, mime_type="image/png",
-                ))
+                parts.append(
+                    types.Part.from_bytes(
+                        data=image_bytes,
+                        mime_type="image/png",
+                    )
+                )
 
         return parts
 
@@ -102,14 +107,18 @@ class ConversationSession:
             # Replay history
             for entry in self.history:
                 role = entry["role"]
-                contents.append(types.Content(
-                    role=role,
-                    parts=[types.Part.from_text(text=entry["text"])],
-                ))
-            contents.append(types.Content(
-                role="user",
-                parts=[types.Part.from_text(text=user_message)],
-            ))
+                contents.append(
+                    types.Content(
+                        role=role,
+                        parts=[types.Part.from_text(text=entry["text"])],
+                    )
+                )
+            contents.append(
+                types.Content(
+                    role="user",
+                    parts=[types.Part.from_text(text=user_message)],
+                )
+            )
 
         start = time.perf_counter()
         response = await gemini_generate_with_timeout(
@@ -133,11 +142,15 @@ class ConversationSession:
         raw_text = response.text or "{}"
         json_start = raw_text.find("{")
         json_end = raw_text.rfind("}") + 1
-        parsed = json.loads(raw_text[json_start:json_end]) if json_start >= 0 else {
-            "action": "discuss",
-            "message": raw_text,
-            "scene_suggestions": [],
-        }
+        parsed = (
+            json.loads(raw_text[json_start:json_end])
+            if json_start >= 0
+            else {
+                "action": "discuss",
+                "message": raw_text,
+                "scene_suggestions": [],
+            }
+        )
 
         # Update history
         self.history.append({"role": "user", "text": user_message})

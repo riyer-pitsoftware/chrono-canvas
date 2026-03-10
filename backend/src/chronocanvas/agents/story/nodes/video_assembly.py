@@ -26,7 +26,8 @@ async def _check_ffmpeg() -> bool:
     """Check if ffmpeg is available."""
     try:
         proc = await asyncio.create_subprocess_exec(
-            "ffmpeg", "-version",
+            "ffmpeg",
+            "-version",
             stdout=asyncio.subprocess.DEVNULL,
             stderr=asyncio.subprocess.DEVNULL,
         )
@@ -56,9 +57,9 @@ async def _create_slideshow(
         inputs.extend(["-loop", "1", "-t", str(SECONDS_PER_PANEL), "-i", img_path])
         # Alternate zoom direction for visual interest
         if i % 2 == 0:
-            zoom_expr = f"min(zoom+0.0005,1.15)"
+            zoom_expr = "min(zoom+0.0005,1.15)"
         else:
-            zoom_expr = f"if(eq(on,1),1.15,max(zoom-0.0005,1.0))"
+            zoom_expr = "if(eq(on,1),1.15,max(zoom-0.0005,1.0))"
         filter_parts.append(
             f"[{i}:v]scale=1920:1080:force_original_aspect_ratio=decrease,"
             f"pad=1920:1080:(ow-iw)/2:(oh-ih)/2,"
@@ -70,15 +71,25 @@ async def _create_slideshow(
     concat_inputs = "".join(f"[v{i}]" for i in range(n))
     filter_complex = ";".join(filter_parts) + f";{concat_inputs}concat=n={n}:v=1:a=0[outv]"
 
-    cmd = ["ffmpeg", "-y"] + inputs + [
-        "-filter_complex", filter_complex,
-        "-map", "[outv]",
-        "-c:v", "libx264",
-        "-preset", "fast",
-        "-crf", "23",
-        "-pix_fmt", "yuv420p",
-        output_path,
-    ]
+    cmd = (
+        ["ffmpeg", "-y"]
+        + inputs
+        + [
+            "-filter_complex",
+            filter_complex,
+            "-map",
+            "[outv]",
+            "-c:v",
+            "libx264",
+            "-preset",
+            "fast",
+            "-crf",
+            "23",
+            "-pix_fmt",
+            "yuv420p",
+            output_path,
+        ]
+    )
 
     proc = await asyncio.create_subprocess_exec(
         *cmd,
@@ -102,6 +113,7 @@ async def _mux_audio(
     if not audio_paths:
         # No audio — just copy video
         import shutil
+
         shutil.copy2(video_path, output_path)
         return True
 
@@ -112,12 +124,11 @@ async def _mux_audio(
         if Path(ap).exists():
             audio_inputs.extend(["-i", ap])
             # Pad each audio clip to match panel duration
-            filter_parts.append(
-                f"[{i}:a]apad=whole_dur={SECONDS_PER_PANEL}[a{i}]"
-            )
+            filter_parts.append(f"[{i}:a]apad=whole_dur={SECONDS_PER_PANEL}[a{i}]")
 
     if not audio_inputs:
         import shutil
+
         shutil.copy2(video_path, output_path)
         return True
 
@@ -127,11 +138,17 @@ async def _mux_audio(
 
     # First create concatenated audio
     audio_concat_path = output_path.replace(".mp4", "_audio.wav")
-    cmd_audio = ["ffmpeg", "-y"] + audio_inputs + [
-        "-filter_complex", filter_complex,
-        "-map", "[outa]",
-        audio_concat_path,
-    ]
+    cmd_audio = (
+        ["ffmpeg", "-y"]
+        + audio_inputs
+        + [
+            "-filter_complex",
+            filter_complex,
+            "-map",
+            "[outa]",
+            audio_concat_path,
+        ]
+    )
 
     proc = await asyncio.create_subprocess_exec(
         *cmd_audio,
@@ -142,16 +159,22 @@ async def _mux_audio(
     if proc.returncode != 0:
         logger.warning("Audio concat failed: %s", stderr.decode()[-300:])
         import shutil
+
         shutil.copy2(video_path, output_path)
         return True
 
     # Then mux video + audio
     cmd_mux = [
-        "ffmpeg", "-y",
-        "-i", video_path,
-        "-i", audio_concat_path,
-        "-c:v", "copy",
-        "-c:a", "aac",
+        "ffmpeg",
+        "-y",
+        "-i",
+        video_path,
+        "-i",
+        audio_concat_path,
+        "-c:v",
+        "copy",
+        "-c:a",
+        "aac",
         "-shortest",
         output_path,
     ]
@@ -169,6 +192,7 @@ async def _mux_audio(
     if proc.returncode != 0:
         logger.warning("Audio mux failed: %s", stderr.decode()[-300:])
         import shutil
+
         shutil.copy2(video_path, output_path)
 
     return True
@@ -179,18 +203,21 @@ async def video_assembly_node(state: StoryState) -> StoryState:
     panels = list(state.get("panels", []))
     logger.info(
         "Video assembly: %d panels [request_id=%s]",
-        len(panels), request_id,
+        len(panels),
+        request_id,
     )
 
     trace = list(state.get("agent_trace", []))
 
     if not settings.video_assembly_enabled:
-        trace.append({
-            "agent": "video_assembly",
-            "timestamp": time.time(),
-            "skipped": True,
-            "reason": "Video assembly disabled",
-        })
+        trace.append(
+            {
+                "agent": "video_assembly",
+                "timestamp": time.time(),
+                "skipped": True,
+                "reason": "Video assembly disabled",
+            }
+        )
         return {
             "current_agent": "video_assembly",
             "agent_trace": trace,
@@ -198,12 +225,14 @@ async def video_assembly_node(state: StoryState) -> StoryState:
 
     if not await _check_ffmpeg():
         logger.warning("ffmpeg not available, skipping video assembly [request_id=%s]", request_id)
-        trace.append({
-            "agent": "video_assembly",
-            "timestamp": time.time(),
-            "skipped": True,
-            "reason": "ffmpeg not available",
-        })
+        trace.append(
+            {
+                "agent": "video_assembly",
+                "timestamp": time.time(),
+                "skipped": True,
+                "reason": "ffmpeg not available",
+            }
+        )
         return {
             "current_agent": "video_assembly",
             "agent_trace": trace,
@@ -215,12 +244,14 @@ async def video_assembly_node(state: StoryState) -> StoryState:
     )
 
     if len(completed_panels) < 2:
-        trace.append({
-            "agent": "video_assembly",
-            "timestamp": time.time(),
-            "skipped": True,
-            "reason": f"Only {len(completed_panels)} completed panels",
-        })
+        trace.append(
+            {
+                "agent": "video_assembly",
+                "timestamp": time.time(),
+                "skipped": True,
+                "reason": f"Only {len(completed_panels)} completed panels",
+            }
+        )
         return {
             "current_agent": "video_assembly",
             "agent_trace": trace,
@@ -267,30 +298,38 @@ async def video_assembly_node(state: StoryState) -> StoryState:
             mime_type="video/mp4",
         )
 
-        trace.append({
-            "agent": "video_assembly",
-            "timestamp": time.time(),
-            "panels_used": len(completed_panels),
-            "video_path": final_path,
-            "duration_ms": elapsed_ms,
-        })
+        trace.append(
+            {
+                "agent": "video_assembly",
+                "timestamp": time.time(),
+                "panels_used": len(completed_panels),
+                "video_path": final_path,
+                "duration_ms": elapsed_ms,
+            }
+        )
 
         logger.info(
             "Video assembly complete: %d panels → %s (%.0fms) [request_id=%s]",
-            len(completed_panels), final_path, elapsed_ms, request_id,
+            len(completed_panels),
+            final_path,
+            elapsed_ms,
+            request_id,
         )
 
     except Exception as e:
         elapsed_ms = (time.perf_counter() - start) * 1000
         logger.warning(
             "Video assembly failed [request_id=%s]: %s",
-            request_id, e,
+            request_id,
+            e,
         )
-        trace.append({
-            "agent": "video_assembly",
-            "timestamp": time.time(),
-            "error": str(e),
-        })
+        trace.append(
+            {
+                "agent": "video_assembly",
+                "timestamp": time.time(),
+                "error": str(e),
+            }
+        )
 
     return {
         "current_agent": "video_assembly",

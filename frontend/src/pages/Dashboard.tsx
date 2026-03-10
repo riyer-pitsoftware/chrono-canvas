@@ -1,9 +1,9 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { useFigures } from "@/api/hooks/useFigures";
-import { useGenerations } from "@/api/hooks/useGeneration";
-import { useCostSummary } from "@/api/hooks/useAgents";
-import { useNavigation } from "@/stores/navigation";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { useFigures } from '@/api/hooks/useFigures';
+import { useGenerations } from '@/api/hooks/useGeneration';
+import { useCostSummary } from '@/api/hooks/useAgents';
+import { useNavigation } from '@/stores/navigation';
 
 export function Dashboard() {
   const figures = useFigures();
@@ -19,19 +19,19 @@ export function Dashboard() {
         <Card>
           <CardHeader>
             <CardDescription>Total Figures</CardDescription>
-            <CardTitle>{figures.data?.total ?? "..."}</CardTitle>
+            <CardTitle>{figures.data?.total ?? '...'}</CardTitle>
           </CardHeader>
         </Card>
         <Card>
           <CardHeader>
             <CardDescription>Generations</CardDescription>
-            <CardTitle>{generations.data?.total ?? "..."}</CardTitle>
+            <CardTitle>{generations.data?.total ?? '...'}</CardTitle>
           </CardHeader>
         </Card>
         <Card>
           <CardHeader>
             <CardDescription>LLM Costs</CardDescription>
-            <CardTitle>${costs.data?.total_cost.toFixed(4) ?? "..."}</CardTitle>
+            <CardTitle>${costs.data?.total_cost.toFixed(4) ?? '...'}</CardTitle>
           </CardHeader>
         </Card>
       </div>
@@ -42,7 +42,9 @@ export function Dashboard() {
         </CardHeader>
         <CardContent>
           {generations.data?.items.length === 0 && (
-            <p className="text-[var(--muted-foreground)]">No generations yet. Start one from the Generate page.</p>
+            <p className="text-[var(--muted-foreground)]">
+              No generations yet. Start one from the Generate page.
+            </p>
           )}
           <div className="space-y-3">
             {generations.data?.items.slice(0, 5).map((gen) => (
@@ -57,7 +59,15 @@ export function Dashboard() {
                     {new Date(gen.created_at).toLocaleDateString()}
                   </p>
                 </div>
-                <Badge variant={gen.status === "completed" ? "success" : gen.status === "failed" ? "destructive" : "secondary"}>
+                <Badge
+                  variant={
+                    gen.status === 'completed'
+                      ? 'success'
+                      : gen.status === 'failed'
+                        ? 'destructive'
+                        : 'secondary'
+                  }
+                >
                   {gen.status}
                 </Badge>
               </div>

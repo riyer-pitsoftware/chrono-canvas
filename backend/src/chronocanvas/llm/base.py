@@ -41,8 +41,7 @@ class LLMProvider(ABC):
         temperature: float = 0.7,
         max_tokens: int = 2000,
         json_mode: bool = False,
-    ) -> LLMResponse:
-        ...
+    ) -> LLMResponse: ...
 
     async def generate_stream(
         self,
@@ -80,5 +79,4 @@ class LLMProvider(ABC):
         )
 
     @abstractmethod
-    async def is_available(self) -> bool:
-        ...
+    async def is_available(self) -> bool: ...

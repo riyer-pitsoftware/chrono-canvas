@@ -68,19 +68,21 @@ async def get_recent_failures(
     for req in failures:
         # Extract imagen-specific error details from agent_trace if available
         imagen_error = _extract_imagen_error(req)
-        items.append({
-            "id": str(req.id),
-            "input_text": req.input_text[:100],
-            "run_type": req.run_type or "portrait",
-            "status": req.status,
-            "current_agent": req.current_agent,
-            "error_message": req.error_message,
-            "imagen_error": imagen_error,
-            "llm_calls_count": len(req.llm_calls or []),
-            "llm_costs": req.llm_costs,
-            "created_at": req.created_at.isoformat() if req.created_at else None,
-            "updated_at": req.updated_at.isoformat() if req.updated_at else None,
-        })
+        items.append(
+            {
+                "id": str(req.id),
+                "input_text": req.input_text[:100],
+                "run_type": req.run_type or "portrait",
+                "status": req.status,
+                "current_agent": req.current_agent,
+                "error_message": req.error_message,
+                "imagen_error": imagen_error,
+                "llm_calls_count": len(req.llm_calls or []),
+                "llm_costs": req.llm_costs,
+                "created_at": req.created_at.isoformat() if req.created_at else None,
+                "updated_at": req.updated_at.isoformat() if req.updated_at else None,
+            }
+        )
 
     # Summary stats
     error_categories: dict[str, int] = {}
@@ -136,19 +138,23 @@ async def get_imagen_errors(
         )
         if is_imagen and len(imagen_failures) < limit:
             imagen_error = _extract_imagen_error(req)
-            imagen_failures.append({
-                "id": str(req.id),
-                "input_text": req.input_text[:100],
-                "error_message": req.error_message,
-                "imagen_error": imagen_error,
-                "current_agent": req.current_agent,
-                "created_at": req.created_at.isoformat() if req.created_at else None,
-            })
+            imagen_failures.append(
+                {
+                    "id": str(req.id),
+                    "input_text": req.input_text[:100],
+                    "error_message": req.error_message,
+                    "imagen_error": imagen_error,
+                    "current_agent": req.current_agent,
+                    "created_at": req.created_at.isoformat() if req.created_at else None,
+                }
+            )
 
     # Category breakdown
     categories: dict[str, int] = {}
     for f in imagen_failures:
-        cat = (f.get("imagen_error") or {}).get("category", _guess_error_category(f.get("error_message", "")))
+        cat = (f.get("imagen_error") or {}).get(
+            "category", _guess_error_category(f.get("error_message", ""))
+        )
         categories[cat] = categories.get(cat, 0) + 1
 
     return {
@@ -212,7 +218,11 @@ async def deep_health_check(
             "available_models": imagen_models[:5],
         }
     except Exception as e:
-        checks["imagen"] = {"status": "error", "error": str(e), "latency_ms": round((time.time() - t0) * 1000, 1)}
+        checks["imagen"] = {
+            "status": "error",
+            "error": str(e),
+            "latency_ms": round((time.time() - t0) * 1000, 1),
+        }
 
     # Recent failure stats from DB
     try:
@@ -222,19 +232,25 @@ async def deep_health_check(
         cutoff_24h = datetime.now(timezone.utc) - timedelta(hours=24)
 
         count_1h = await session.scalar(
-            select(func.count()).select_from(GenerationRequest).where(
+            select(func.count())
+            .select_from(GenerationRequest)
+            .where(
                 GenerationRequest.status == RequestStatus.FAILED,
                 GenerationRequest.updated_at >= cutoff_1h,
             )
         )
         count_24h = await session.scalar(
-            select(func.count()).select_from(GenerationRequest).where(
+            select(func.count())
+            .select_from(GenerationRequest)
+            .where(
                 GenerationRequest.status == RequestStatus.FAILED,
                 GenerationRequest.updated_at >= cutoff_24h,
             )
         )
         total_24h = await session.scalar(
-            select(func.count()).select_from(GenerationRequest).where(
+            select(func.count())
+            .select_from(GenerationRequest)
+            .where(
                 GenerationRequest.updated_at >= cutoff_24h,
             )
         )
@@ -246,9 +262,15 @@ async def deep_health_check(
     except Exception as e:
         checks["failure_rate"] = {"status": "error", "error": str(e)}
 
-    overall = "ok" if all(
-        c.get("status") == "ok" for c in checks.values() if isinstance(c, dict) and "status" in c
-    ) else "degraded"
+    overall = (
+        "ok"
+        if all(
+            c.get("status") == "ok"
+            for c in checks.values()
+            if isinstance(c, dict) and "status" in c
+        )
+        else "degraded"
+    )
 
     return {"status": overall, "checks": checks}
 
@@ -357,7 +379,9 @@ async def get_request_stats(
     status_counts = {}
     for status in RequestStatus:
         count = await session.scalar(
-            select(func.count()).select_from(GenerationRequest).where(
+            select(func.count())
+            .select_from(GenerationRequest)
+            .where(
                 GenerationRequest.status == status,
             )
         )
@@ -365,7 +389,9 @@ async def get_request_stats(
 
     cutoff_24h = datetime.now(timezone.utc) - timedelta(hours=24)
     recent_count = await session.scalar(
-        select(func.count()).select_from(GenerationRequest).where(
+        select(func.count())
+        .select_from(GenerationRequest)
+        .where(
             GenerationRequest.created_at >= cutoff_24h,
         )
     )

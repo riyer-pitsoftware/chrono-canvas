@@ -1,7 +1,7 @@
-import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 
-export type Mode = "gcp" | "local";
+export type Mode = 'gcp' | 'local';
 
 export interface ConfigState {
   mode: Mode;
@@ -38,18 +38,18 @@ export interface ConfigState {
 }
 
 const GCP_DEFAULTS = {
-  llmProvider: "gemini",
-  llmModel: "gemini-2.5-flash",
-  imageProvider: "imagen",
+  llmProvider: 'gemini',
+  llmModel: 'gemini-2.5-flash',
+  imageProvider: 'imagen',
   strictGemini: true,
   ttsEnabled: true,
   facefusionEnabled: false,
 };
 
 const LOCAL_DEFAULTS = {
-  llmProvider: "ollama",
-  llmModel: "llama3.1:8b",
-  imageProvider: "comfyui",
+  llmProvider: 'ollama',
+  llmModel: 'llama3.1:8b',
+  imageProvider: 'comfyui',
   strictGemini: false,
   ttsEnabled: false,
   facefusionEnabled: false,
@@ -58,19 +58,19 @@ const LOCAL_DEFAULTS = {
 export const useConfigStore = create<ConfigState>()(
   persist(
     (set, get) => ({
-      mode: "gcp",
-      llmProvider: "gemini",
-      llmModel: "gemini-2.5-flash",
+      mode: 'gcp',
+      llmProvider: 'gemini',
+      llmModel: 'gemini-2.5-flash',
       strictGemini: true,
       agentRouting: {},
-      imageProvider: "imagen",
+      imageProvider: 'imagen',
       ttsEnabled: true,
       facefusionEnabled: false,
       validationRetryEnabled: true,
       researchCacheEnabled: true,
 
       setMode: (mode) => {
-        const defaults = mode === "gcp" ? GCP_DEFAULTS : LOCAL_DEFAULTS;
+        const defaults = mode === 'gcp' ? GCP_DEFAULTS : LOCAL_DEFAULTS;
         set({ mode, ...defaults });
       },
       setLlmProvider: (llmProvider) => set({ llmProvider }),
@@ -80,10 +80,8 @@ export const useConfigStore = create<ConfigState>()(
       setImageProvider: (imageProvider) => set({ imageProvider }),
       setTtsEnabled: (ttsEnabled) => set({ ttsEnabled }),
       setFacefusionEnabled: (facefusionEnabled) => set({ facefusionEnabled }),
-      setValidationRetryEnabled: (validationRetryEnabled) =>
-        set({ validationRetryEnabled }),
-      setResearchCacheEnabled: (researchCacheEnabled) =>
-        set({ researchCacheEnabled }),
+      setValidationRetryEnabled: (validationRetryEnabled) => set({ validationRetryEnabled }),
+      setResearchCacheEnabled: (researchCacheEnabled) => set({ researchCacheEnabled }),
 
       toPayload: () => {
         const s = get();
@@ -105,6 +103,6 @@ export const useConfigStore = create<ConfigState>()(
         };
       },
     }),
-    { name: "chrono-config-hud" },
+    { name: 'chrono-config-hud' },
   ),
 );

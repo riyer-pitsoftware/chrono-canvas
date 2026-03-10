@@ -6,6 +6,7 @@ requests before any expensive processing begins.
 Optional LLM-based moderation can be layered on top in future by checking
 settings.content_moderation_llm_enabled.
 """
+
 from __future__ import annotations
 
 import re
@@ -49,9 +50,7 @@ _BLOCKLIST_PATTERNS: list[str] = [
     r"\bgenerate\s+(fake\s+id|fake\s+passport|forged\s+document)\b",
 ]
 
-_COMPILED: list[re.Pattern[str]] = [
-    re.compile(p, re.IGNORECASE) for p in _BLOCKLIST_PATTERNS
-]
+_COMPILED: list[re.Pattern[str]] = [re.compile(p, re.IGNORECASE) for p in _BLOCKLIST_PATTERNS]
 
 POLICY_SUMMARY = (
     "This tool is for historical and educational portrait generation only. "
@@ -82,9 +81,6 @@ def check_input(text: str) -> tuple[bool, str]:
 
     violation = _find_violation(text)
     if violation:
-        return False, (
-            "Your request was blocked by the content policy. "
-            + POLICY_SUMMARY
-        )
+        return False, ("Your request was blocked by the content policy. " + POLICY_SUMMARY)
 
     return True, ""

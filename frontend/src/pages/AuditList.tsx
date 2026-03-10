@@ -1,9 +1,9 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { useGenerations, useDeleteGeneration } from "@/api/hooks/useGeneration";
-import { useNavigation } from "@/stores/navigation";
-import { Trash2 } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { useGenerations, useDeleteGeneration } from '@/api/hooks/useGeneration';
+import { useNavigation } from '@/stores/navigation';
+import { Trash2 } from 'lucide-react';
 
 export function AuditList() {
   const { data, isLoading, error } = useGenerations(0, 50);
@@ -17,9 +17,12 @@ export function AuditList() {
 
   const statusColor = (status: string) => {
     switch (status) {
-      case "completed": return "success" as const;
-      case "failed": return "destructive" as const;
-      default: return "secondary" as const;
+      case 'completed':
+        return 'success' as const;
+      case 'failed':
+        return 'destructive' as const;
+      default:
+        return 'secondary' as const;
     }
   };
 
@@ -48,8 +51,8 @@ export function AuditList() {
                 </thead>
                 <tbody>
                   {items.map((item) => {
-                    const totalCost = item.agent_trace
-                      ?.reduce((sum, t) => sum + (Number(t.llm_cost) || 0), 0) ?? 0;
+                    const totalCost =
+                      item.agent_trace?.reduce((sum, t) => sum + (Number(t.llm_cost) || 0), 0) ?? 0;
                     return (
                       <tr
                         key={item.id}
@@ -58,7 +61,7 @@ export function AuditList() {
                       >
                         <td className="py-2 pr-4 max-w-xs truncate">
                           {item.input_text.length > 60
-                            ? item.input_text.slice(0, 60) + "..."
+                            ? item.input_text.slice(0, 60) + '...'
                             : item.input_text}
                         </td>
                         <td className="py-2 pr-4">
@@ -68,7 +71,7 @@ export function AuditList() {
                           {new Date(item.created_at).toLocaleDateString()}
                         </td>
                         <td className="py-2 pr-4 text-[var(--muted-foreground)]">
-                          {totalCost > 0 ? `$${totalCost.toFixed(6)}` : "—"}
+                          {totalCost > 0 ? `$${totalCost.toFixed(6)}` : '—'}
                         </td>
                         <td className="py-2">
                           <Button
@@ -77,7 +80,9 @@ export function AuditList() {
                             className="h-8 w-8 text-[var(--muted-foreground)] hover:text-[var(--destructive)]"
                             onClick={(e) => {
                               e.stopPropagation();
-                              if (window.confirm("Delete this generation? This cannot be undone.")) {
+                              if (
+                                window.confirm('Delete this generation? This cannot be undone.')
+                              ) {
                                 deleteGeneration.mutate(item.id);
                               }
                             }}

@@ -1,30 +1,30 @@
-import { useState } from "react";
-import type { LLMCallDetail } from "@/api/types";
+import { useState } from 'react';
+import type { LLMCallDetail } from '@/api/types';
 
 // ── Color palette — one per agent ────────────────────────────────────────────
 
 const AGENT_COLORS: Record<string, string> = {
   // Portrait pipeline
-  orchestrator:     "#6366f1", // indigo
-  extraction:       "#0ea5e9", // sky
-  research:         "#10b981", // emerald
-  face_search:      "#84cc16", // lime
-  prompt_generation:"#f59e0b", // amber
-  image_generation: "#f97316", // orange
-  validation:       "#ef4444", // red
-  facial_compositing: "#ec4899", // pink
-  export:           "#8b5cf6", // violet
+  orchestrator: '#6366f1', // indigo
+  extraction: '#0ea5e9', // sky
+  research: '#10b981', // emerald
+  face_search: '#84cc16', // lime
+  prompt_generation: '#f59e0b', // amber
+  image_generation: '#f97316', // orange
+  validation: '#ef4444', // red
+  facial_compositing: '#ec4899', // pink
+  export: '#8b5cf6', // violet
   // Story pipeline
-  story_orchestrator:      "#6366f1", // indigo
-  character_extraction:    "#0ea5e9", // sky
-  scene_decomposition:     "#10b981", // emerald
-  scene_prompt_generation: "#f59e0b", // amber
-  scene_image_generation:  "#f97316", // orange
-  storyboard_coherence:    "#ef4444", // red
-  storyboard_export:       "#8b5cf6", // violet
+  story_orchestrator: '#6366f1', // indigo
+  character_extraction: '#0ea5e9', // sky
+  scene_decomposition: '#10b981', // emerald
+  scene_prompt_generation: '#f59e0b', // amber
+  scene_image_generation: '#f97316', // orange
+  storyboard_coherence: '#ef4444', // red
+  storyboard_export: '#8b5cf6', // violet
 };
 
-const DEFAULT_COLOR = "#94a3b8";
+const DEFAULT_COLOR = '#94a3b8';
 
 function agentColor(agent: string) {
   return AGENT_COLORS[agent] ?? DEFAULT_COLOR;
@@ -35,10 +35,10 @@ function fmtDuration(ms: number) {
 }
 
 function fmtCost(cost: number) {
-  if (cost === 0) return "$0";
+  if (cost === 0) return '$0';
   if (cost < 0.000001) return `$${(cost * 1e9).toFixed(1)}n`;
-  if (cost < 0.001)    return `$${(cost * 1e6).toFixed(2)}μ`;
-  if (cost < 1)        return `$${cost.toFixed(6)}`;
+  if (cost < 0.001) return `$${(cost * 1e6).toFixed(2)}μ`;
+  if (cost < 1) return `$${cost.toFixed(6)}`;
   return `$${cost.toFixed(4)}`;
 }
 
@@ -64,10 +64,28 @@ function aggregate(calls: LLMCallDetail[]): AgentMetrics[] {
     }
   }
   // Return in pipeline order
-  const PORTRAIT_ORDER = ["orchestrator","extraction","research","face_search","prompt_generation","image_generation","validation","facial_compositing","export"];
-  const STORY_ORDER = ["story_orchestrator","character_extraction","scene_decomposition","scene_prompt_generation","scene_image_generation","storyboard_coherence","storyboard_export"];
+  const PORTRAIT_ORDER = [
+    'orchestrator',
+    'extraction',
+    'research',
+    'face_search',
+    'prompt_generation',
+    'image_generation',
+    'validation',
+    'facial_compositing',
+    'export',
+  ];
+  const STORY_ORDER = [
+    'story_orchestrator',
+    'character_extraction',
+    'scene_decomposition',
+    'scene_prompt_generation',
+    'scene_image_generation',
+    'storyboard_coherence',
+    'storyboard_export',
+  ];
   // Auto-detect: if any story agent is present, use story order
-  const hasStoryAgent = [...map.keys()].some(k => STORY_ORDER.includes(k));
+  const hasStoryAgent = [...map.keys()].some((k) => STORY_ORDER.includes(k));
   const ORDER = hasStoryAgent ? STORY_ORDER : PORTRAIT_ORDER;
   return [...map.values()].sort((a, b) => {
     const ai = ORDER.indexOf(a.agent);
@@ -78,7 +96,12 @@ function aggregate(calls: LLMCallDetail[]): AgentMetrics[] {
 
 // ── Stacked bar ───────────────────────────────────────────────────────────────
 
-function StackedBar({ metrics, totalMs, activeAgent, onHover }: {
+function StackedBar({
+  metrics,
+  totalMs,
+  activeAgent,
+  onHover,
+}: {
   metrics: AgentMetrics[];
   totalMs: number;
   activeAgent: string | null;
@@ -97,8 +120,8 @@ function StackedBar({ metrics, totalMs, activeAgent, onHover }: {
                 width: `${pct}%`,
                 backgroundColor: agentColor(m.agent),
                 opacity: activeAgent && !isActive ? 0.4 : 1,
-                minWidth: pct > 0 ? "2px" : 0,
-                transition: "opacity 150ms",
+                minWidth: pct > 0 ? '2px' : 0,
+                transition: 'opacity 150ms',
               }}
               onMouseEnter={() => onHover(m.agent)}
               onMouseLeave={() => onHover(null)}
@@ -116,7 +139,7 @@ function StackedBar({ metrics, totalMs, activeAgent, onHover }: {
           return (
             <div
               key={m.agent}
-              style={{ width: `${pct}%`, minWidth: pct > 0 ? "2px" : 0 }}
+              style={{ width: `${pct}%`, minWidth: pct > 0 ? '2px' : 0 }}
               className="overflow-hidden"
             >
               {pct >= 8 && (
@@ -135,22 +158,22 @@ function StackedBar({ metrics, totalMs, activeAgent, onHover }: {
 // ── Breakdown table ───────────────────────────────────────────────────────────
 
 const AGENT_LABELS: Record<string, string> = {
-  orchestrator: "Orchestrator",
-  extraction: "Extraction",
-  research: "Research",
-  face_search: "Face Search",
-  prompt_generation: "Prompt Generation",
-  image_generation: "Image Generation",
-  validation: "Validation",
-  facial_compositing: "Facial Compositing",
-  export: "Export",
-  story_orchestrator: "Orchestrator",
-  character_extraction: "Character Extraction",
-  scene_decomposition: "Scene Decomposition",
-  scene_prompt_generation: "Prompt Generation",
-  scene_image_generation: "Image Generation",
-  storyboard_coherence: "Coherence Check",
-  storyboard_export: "Export",
+  orchestrator: 'Orchestrator',
+  extraction: 'Extraction',
+  research: 'Research',
+  face_search: 'Face Search',
+  prompt_generation: 'Prompt Generation',
+  image_generation: 'Image Generation',
+  validation: 'Validation',
+  facial_compositing: 'Facial Compositing',
+  export: 'Export',
+  story_orchestrator: 'Orchestrator',
+  character_extraction: 'Character Extraction',
+  scene_decomposition: 'Scene Decomposition',
+  scene_prompt_generation: 'Prompt Generation',
+  scene_image_generation: 'Image Generation',
+  storyboard_coherence: 'Coherence Check',
+  storyboard_export: 'Export',
 };
 
 function MiniBar({ pct, color }: { pct: number; color: string }) {
@@ -164,7 +187,13 @@ function MiniBar({ pct, color }: { pct: number; color: string }) {
   );
 }
 
-function BreakdownTable({ metrics, totalMs, totalCost, activeAgent, onHover }: {
+function BreakdownTable({
+  metrics,
+  totalMs,
+  totalCost,
+  activeAgent,
+  onHover,
+}: {
   metrics: AgentMetrics[];
   totalMs: number;
   totalCost: number;
@@ -185,9 +214,9 @@ function BreakdownTable({ metrics, totalMs, totalCost, activeAgent, onHover }: {
       </thead>
       <tbody>
         {metrics.map((m) => {
-          const durPct  = totalMs   > 0 ? (m.duration_ms / totalMs)   * 100 : 0;
-          const costPct = totalCost > 0 ? (m.cost        / totalCost) * 100 : 0;
-          const color   = agentColor(m.agent);
+          const durPct = totalMs > 0 ? (m.duration_ms / totalMs) * 100 : 0;
+          const costPct = totalCost > 0 ? (m.cost / totalCost) * 100 : 0;
+          const color = agentColor(m.agent);
           const isActive = activeAgent === m.agent;
 
           return (
@@ -195,7 +224,7 @@ function BreakdownTable({ metrics, totalMs, totalCost, activeAgent, onHover }: {
               key={m.agent}
               onMouseEnter={() => onHover(m.agent)}
               onMouseLeave={() => onHover(null)}
-              className={`transition-colors rounded-md ${isActive ? "bg-[var(--accent)]" : "hover:bg-[var(--accent)/50]"}`}
+              className={`transition-colors rounded-md ${isActive ? 'bg-[var(--accent)]' : 'hover:bg-[var(--accent)/50]'}`}
             >
               <td className="py-1.5 pr-3">
                 <div className="flex items-center gap-2">
@@ -203,9 +232,7 @@ function BreakdownTable({ metrics, totalMs, totalCost, activeAgent, onHover }: {
                     className="inline-block w-2.5 h-2.5 rounded-sm shrink-0"
                     style={{ backgroundColor: color }}
                   />
-                  <span className="font-medium truncate">
-                    {AGENT_LABELS[m.agent] ?? m.agent}
-                  </span>
+                  <span className="font-medium truncate">{AGENT_LABELS[m.agent] ?? m.agent}</span>
                 </div>
               </td>
               <td className="text-right py-1.5 tabular-nums text-xs text-[var(--muted-foreground)]">
@@ -246,7 +273,9 @@ function BreakdownTable({ metrics, totalMs, totalCost, activeAgent, onHover }: {
 function StatPill({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
     <div className="flex-1 min-w-32 rounded-md border border-[var(--border)] bg-[var(--muted)] px-3 py-2">
-      <p className="text-[10px] uppercase tracking-wide text-[var(--muted-foreground)] font-medium">{label}</p>
+      <p className="text-[10px] uppercase tracking-wide text-[var(--muted-foreground)] font-medium">
+        {label}
+      </p>
       <p className="text-sm font-bold mt-0.5">{value}</p>
       {sub && <p className="text-[10px] text-[var(--muted-foreground)] mt-0.5">{sub}</p>}
     </div>
@@ -259,17 +288,15 @@ export function CostTimeline({ llmCalls }: { llmCalls: LLMCallDetail[] }) {
   const [activeAgent, setActiveAgent] = useState<string | null>(null);
 
   if (!llmCalls || llmCalls.length === 0) {
-    return (
-      <p className="text-sm text-[var(--muted-foreground)]">No LLM call data available.</p>
-    );
+    return <p className="text-sm text-[var(--muted-foreground)]">No LLM call data available.</p>;
   }
 
-  const metrics  = aggregate(llmCalls);
-  const totalMs  = metrics.reduce((s, m) => s + m.duration_ms, 0);
+  const metrics = aggregate(llmCalls);
+  const totalMs = metrics.reduce((s, m) => s + m.duration_ms, 0);
   const totalCost = metrics.reduce((s, m) => s + m.cost, 0);
 
-  const slowest    = [...metrics].sort((a, b) => b.duration_ms - a.duration_ms)[0];
-  const costliest  = [...metrics].sort((a, b) => b.cost - a.cost)[0];
+  const slowest = [...metrics].sort((a, b) => b.duration_ms - a.duration_ms)[0];
+  const costliest = [...metrics].sort((a, b) => b.cost - a.cost)[0];
 
   return (
     <div className="space-y-5">
@@ -278,12 +305,12 @@ export function CostTimeline({ llmCalls }: { llmCalls: LLMCallDetail[] }) {
         <StatPill
           label="Total Time (LLM)"
           value={fmtDuration(totalMs)}
-          sub={`${metrics.length} agent${metrics.length !== 1 ? "s" : ""}`}
+          sub={`${metrics.length} agent${metrics.length !== 1 ? 's' : ''}`}
         />
         <StatPill
           label="Total Cost"
           value={fmtCost(totalCost)}
-          sub={`${llmCalls.length} call${llmCalls.length !== 1 ? "s" : ""}`}
+          sub={`${llmCalls.length} call${llmCalls.length !== 1 ? 's' : ''}`}
         />
         <StatPill
           label="Slowest Step"
@@ -292,8 +319,8 @@ export function CostTimeline({ llmCalls }: { llmCalls: LLMCallDetail[] }) {
         />
         <StatPill
           label="Most Expensive"
-          value={totalCost > 0 ? (AGENT_LABELS[costliest.agent] ?? costliest.agent) : "—"}
-          sub={totalCost > 0 ? fmtCost(costliest.cost) : "all free"}
+          value={totalCost > 0 ? (AGENT_LABELS[costliest.agent] ?? costliest.agent) : '—'}
+          sub={totalCost > 0 ? fmtCost(costliest.cost) : 'all free'}
         />
       </div>
 

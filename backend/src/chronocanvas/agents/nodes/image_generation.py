@@ -17,7 +17,8 @@ def _get_generator(runtime_config=None):
         return factory(runtime_config=runtime_config)
     if settings.hackathon_mode:
         raise RuntimeError(
-            "HACKATHON MODE: Image generation falling back to mock — service registry not initialized"
+            "HACKATHON MODE: Image generation falling back"
+            " to mock — service registry not initialized"
         )
     # Fallback before registry init (tests, CLI)
     from chronocanvas.imaging.mock_generator import MockImageGenerator
@@ -45,12 +46,15 @@ async def image_generation_node(state: AgentState) -> AgentState:
     height = (rc.portrait_height if rc and rc.portrait_height else None) or settings.portrait_height
 
     async def on_progress(step: int, total: int) -> None:
-        await publish_progress(channel, {
-            "type": "image_progress",
-            "agent": "image_generation",
-            "step": step,
-            "total": total,
-        })
+        await publish_progress(
+            channel,
+            {
+                "type": "image_progress",
+                "agent": "image_generation",
+                "step": step,
+                "total": total,
+            },
+        )
 
     try:
         result = await generator.generate(
@@ -75,12 +79,14 @@ async def image_generation_node(state: AgentState) -> AgentState:
         )
 
         trace = state.get("agent_trace", [])
-        trace.append({
-            "agent": "image_generation",
-            "timestamp": time.time(),
-            "provider": result.provider,
-            "file_path": result.file_path,
-        })
+        trace.append(
+            {
+                "agent": "image_generation",
+                "timestamp": time.time(),
+                "provider": result.provider,
+                "file_path": result.file_path,
+            }
+        )
 
         return {
             "current_agent": "image_generation",
@@ -94,11 +100,13 @@ async def image_generation_node(state: AgentState) -> AgentState:
     except Exception as e:
         logger.error("Image generation failed [request_id=%s]: %s", request_id, e)
         trace = state.get("agent_trace", [])
-        trace.append({
-            "agent": "image_generation",
-            "timestamp": time.time(),
-            "error": str(e),
-        })
+        trace.append(
+            {
+                "agent": "image_generation",
+                "timestamp": time.time(),
+                "error": str(e),
+            }
+        )
         return {
             "current_agent": "image_generation",
             "error": f"Image generation failed: {e}",

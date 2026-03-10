@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef } from 'react';
 
 interface StreamingTextProps {
   agent: string;
@@ -7,18 +7,18 @@ interface StreamingTextProps {
 }
 
 const AGENT_LABELS: Record<string, string> = {
-  research: "Research Agent",
-  prompt_generation: "Prompt Generation Agent",
-  extraction: "Extraction Agent",
-  validation: "Validation Agent",
-  orchestrator: "Orchestrator",
+  research: 'Research Agent',
+  prompt_generation: 'Prompt Generation Agent',
+  extraction: 'Extraction Agent',
+  validation: 'Validation Agent',
+  orchestrator: 'Orchestrator',
 };
 
 export function StreamingText({ agent, text, isStreaming }: StreamingTextProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }, [text]);
 
   if (!text) return null;

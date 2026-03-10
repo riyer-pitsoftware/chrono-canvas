@@ -62,14 +62,17 @@ async def image_to_story_node(state: StoryState) -> StoryState:
     if not image_path or not Path(image_path).exists():
         logger.warning(
             "Image-to-Story: image not found at %s, skipping [request_id=%s]",
-            image_path, request_id,
+            image_path,
+            request_id,
         )
-        trace.append({
-            "agent": "image_to_story",
-            "timestamp": time.time(),
-            "skipped": True,
-            "reason": "Image file not found",
-        })
+        trace.append(
+            {
+                "agent": "image_to_story",
+                "timestamp": time.time(),
+                "skipped": True,
+                "reason": "Image file not found",
+            }
+        )
         return {
             "current_agent": "image_to_story",
             "agent_trace": trace,
@@ -83,9 +86,7 @@ async def image_to_story_node(state: StoryState) -> StoryState:
         types.Part.from_bytes(data=image_bytes, mime_type=image_mime),
     ]
     if original_text.strip():
-        parts.append(types.Part.from_text(
-            text=f"\nUser guidance: {original_text}"
-        ))
+        parts.append(types.Part.from_text(text=f"\nUser guidance: {original_text}"))
 
     client = genai.Client(api_key=settings.google_api_key)
     model = settings.gemini_model
@@ -120,32 +121,38 @@ async def image_to_story_node(state: StoryState) -> StoryState:
         # Prepend title to synopsis for a richer input_text
         enriched_text = f"{title}\n\n{synopsis}" if title else synopsis
 
-        llm_calls.append({
-            "agent": "image_to_story",
-            "timestamp": time.time(),
-            "provider": "gemini",
-            "model": model,
-            "input_tokens": input_tokens,
-            "output_tokens": output_tokens,
-            "cost": cost,
-            "duration_ms": elapsed_ms,
-            "raw_response": raw_text[:500],
-            "requested_provider": "gemini",
-            "fallback": False,
-        })
+        llm_calls.append(
+            {
+                "agent": "image_to_story",
+                "timestamp": time.time(),
+                "provider": "gemini",
+                "model": model,
+                "input_tokens": input_tokens,
+                "output_tokens": output_tokens,
+                "cost": cost,
+                "duration_ms": elapsed_ms,
+                "raw_response": raw_text[:500],
+                "requested_provider": "gemini",
+                "fallback": False,
+            }
+        )
 
-        trace.append({
-            "agent": "image_to_story",
-            "timestamp": time.time(),
-            "title": title,
-            "num_characters": len(concept.get("characters", [])),
-            "num_scenes": concept.get("num_scenes", 0),
-            "mood": concept.get("mood", ""),
-        })
+        trace.append(
+            {
+                "agent": "image_to_story",
+                "timestamp": time.time(),
+                "title": title,
+                "num_characters": len(concept.get("characters", [])),
+                "num_scenes": concept.get("num_scenes", 0),
+                "mood": concept.get("mood", ""),
+            }
+        )
 
         logger.info(
             "Image-to-Story: extracted concept '%s' with %d characters [request_id=%s]",
-            title, len(concept.get("characters", [])), request_id,
+            title,
+            len(concept.get("characters", [])),
+            request_id,
         )
 
         return {
@@ -159,13 +166,17 @@ async def image_to_story_node(state: StoryState) -> StoryState:
     except Exception as e:
         elapsed_ms = (time.perf_counter() - start) * 1000
         logger.warning(
-            "Image-to-Story failed [request_id=%s]: %s", request_id, e,
+            "Image-to-Story failed [request_id=%s]: %s",
+            request_id,
+            e,
         )
-        trace.append({
-            "agent": "image_to_story",
-            "timestamp": time.time(),
-            "error": str(e),
-        })
+        trace.append(
+            {
+                "agent": "image_to_story",
+                "timestamp": time.time(),
+                "error": str(e),
+            }
+        )
         # Non-fatal: fall through with original text
         return {
             "current_agent": "image_to_story",

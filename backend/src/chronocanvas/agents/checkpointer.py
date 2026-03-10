@@ -49,7 +49,7 @@ def _pg_conninfo() -> str:
     # Strip the SQLAlchemy dialect prefix
     for prefix in ("postgresql+asyncpg://", "postgres+asyncpg://"):
         if url.startswith(prefix):
-            return "postgresql://" + url[len(prefix):]
+            return "postgresql://" + url[len(prefix) :]
     # Already a plain psycopg URL
     return url
 
@@ -83,9 +83,7 @@ async def init_checkpointer() -> None:
         checkpointer = saver
         logger.info("Durable Postgres checkpointer initialised")
     except Exception as exc:
-        raise CheckpointerInitError(
-            f"Failed to initialise Postgres checkpointer: {exc}"
-        ) from exc
+        raise CheckpointerInitError(f"Failed to initialise Postgres checkpointer: {exc}") from exc
 
 
 async def close_checkpointer() -> None:

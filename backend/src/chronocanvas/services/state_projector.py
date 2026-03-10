@@ -14,10 +14,16 @@ _STATUS_MAP: dict[str, RequestStatus] = {
 }
 
 # Keys excluded from per-node state snapshots (noisy, large, or redundant)
-_SNAPSHOT_EXCLUDE = frozenset({
-    "llm_calls", "agent_trace", "request_id", "error",
-    "should_regenerate", "retry_count",
-})
+_SNAPSHOT_EXCLUDE = frozenset(
+    {
+        "llm_calls",
+        "agent_trace",
+        "request_id",
+        "error",
+        "should_regenerate",
+        "retry_count",
+    }
+)
 
 
 class RequestStateProjector:

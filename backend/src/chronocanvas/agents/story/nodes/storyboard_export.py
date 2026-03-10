@@ -103,16 +103,21 @@ async def storyboard_export_node(state: StoryState) -> StoryState:
 
         logger.info(
             "GCS upload complete [request_id=%s]: %d uploaded, %d skipped (missing), %d failed",
-            request_id, uploaded_count, skipped_count, failed_count,
+            request_id,
+            uploaded_count,
+            skipped_count,
+            failed_count,
         )
 
-    trace.append({
-        "agent": "storyboard_export",
-        "timestamp": time.time(),
-        "export_path": str(export_dir),
-        "total_panels": len(panels),
-        "gcs_uploaded": uploaded_count if backend.is_cloud() else None,
-    })
+    trace.append(
+        {
+            "agent": "storyboard_export",
+            "timestamp": time.time(),
+            "export_path": str(export_dir),
+            "total_panels": len(panels),
+            "gcs_uploaded": uploaded_count if backend.is_cloud() else None,
+        }
+    )
 
     return {
         "current_agent": "storyboard_export",

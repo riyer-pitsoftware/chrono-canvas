@@ -133,11 +133,13 @@ class ImagenGenerator(ImageGenerator):
                     "message": f"Imagen API did not respond within {request_timeout}s",
                     "retryable": True,
                 }
-                retry_history.append({
-                    "attempt": attempt + 1,
-                    "elapsed_s": round(elapsed, 2),
-                    **error_info,
-                })
+                retry_history.append(
+                    {
+                        "attempt": attempt + 1,
+                        "elapsed_s": round(elapsed, 2),
+                        **error_info,
+                    }
+                )
                 if attempt < max_retries:
                     wait = 2 ** (attempt + 1)
                     logger.warning(
@@ -158,11 +160,13 @@ class ImagenGenerator(ImageGenerator):
             except Exception as exc:
                 elapsed = time.time() - attempt_start
                 error_info = classify_imagen_error(exc)
-                retry_history.append({
-                    "attempt": attempt + 1,
-                    "elapsed_s": round(elapsed, 2),
-                    **error_info,
-                })
+                retry_history.append(
+                    {
+                        "attempt": attempt + 1,
+                        "elapsed_s": round(elapsed, 2),
+                        **error_info,
+                    }
+                )
                 if error_info["retryable"] and attempt < max_retries:
                     wait = 2 ** (attempt + 1)  # 2, 4, 8 seconds
                     logger.warning(
@@ -182,14 +186,16 @@ class ImagenGenerator(ImageGenerator):
                 ) from exc
 
         if not response.generated_images:
-            retry_history.append({
-                "attempt": len(retry_history) + 1,
-                "elapsed_s": 0,
-                "category": "content_filter",
-                "error_type": "EmptyResponse",
-                "message": "Imagen returned no images (content may have been filtered)",
-                "retryable": False,
-            })
+            retry_history.append(
+                {
+                    "attempt": len(retry_history) + 1,
+                    "elapsed_s": 0,
+                    "category": "content_filter",
+                    "error_type": "EmptyResponse",
+                    "message": "Imagen returned no images (content may have been filtered)",
+                    "retryable": False,
+                }
+            )
             raise ImagenError(
                 "Imagen returned no images (content may have been filtered)",
                 category="content_filter",

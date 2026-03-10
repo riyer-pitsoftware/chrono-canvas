@@ -4,6 +4,7 @@ Run with:
     cd backend
     PYTHONPATH=src pytest tests/test_checkpointer.py -v
 """
+
 import os
 
 import pytest

@@ -60,3 +60,9 @@ line-length = 100
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W"]
+
+[tool.ruff.lint.per-file-ignores]
+# Prompt template files contain long lines inside triple-quoted strings
+"src/chronocanvas/agents/story/nodes/scene_decomposition.py" = ["E501"]
+"src/chronocanvas/agents/story/nodes/scene_prompt_generation.py" = ["E501"]
+"src/chronocanvas/agents/story/nodes/storyboard_coherence.py" = ["E501"]

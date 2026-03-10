@@ -59,8 +59,16 @@ class RetryCoordinator:
                 if entry.get("agent") == predecessor and entry.get("state_snapshot"):
                     snapshot = entry["state_snapshot"]
                     # Merge any namespaced sub-dicts from the snapshot
-                    for key in ("extraction", "research", "prompt", "image",
-                                "validation", "face", "compositing", "export"):
+                    for key in (
+                        "extraction",
+                        "research",
+                        "prompt",
+                        "image",
+                        "validation",
+                        "face",
+                        "compositing",
+                        "export",
+                    ):
                         if key in snapshot and key not in state:
                             state[key] = snapshot[key]  # type: ignore[literal-required]
                     # Merge flat control fields

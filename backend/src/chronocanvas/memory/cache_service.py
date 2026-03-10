@@ -73,6 +73,7 @@ class ResearchCacheService:
         """Clear all cache entries."""
         async with async_session() as session:
             from sqlalchemy import delete
+
             result = await session.execute(delete(ResearchCache))
             await session.commit()
             return result.rowcount

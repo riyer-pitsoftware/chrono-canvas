@@ -22,9 +22,7 @@ router = APIRouter(prefix="/export", tags=["export"])
 
 
 @router.get("/{request_id}/download")
-async def download_image(
-    request_id: uuid.UUID, session: AsyncSession = Depends(get_session)
-):
+async def download_image(request_id: uuid.UUID, session: AsyncSession = Depends(get_session)):
     repo = ImageRepository(session)
     images = await repo.list_by_request(request_id)
     if not images:
@@ -66,12 +64,18 @@ async def download_audio(request_id: uuid.UUID, scene_index: int):
         if data is None:
             logger.warning(
                 "Audio not found in GCS: %s [request_id=%s, scene=%d]",
-                relative, request_id, scene_index,
+                relative,
+                request_id,
+                scene_index,
             )
             raise HTTPException(status_code=404, detail="Audio file not found in GCS")
-        return Response(content=data, media_type="audio/wav", headers={
-            "Cache-Control": "public, max-age=3600",
-        })
+        return Response(
+            content=data,
+            media_type="audio/wav",
+            headers={
+                "Cache-Control": "public, max-age=3600",
+            },
+        )
 
     audio_path = Path(settings.output_dir) / str(request_id) / "audio" / f"scene_{scene_index}.wav"
     try:
@@ -96,9 +100,13 @@ async def download_video(request_id: uuid.UUID):
         data = await backend.download(relative)
         if data is None:
             raise HTTPException(status_code=404, detail="Video not yet available")
-        return Response(content=data, media_type="video/mp4", headers={
-            "Cache-Control": "public, max-age=3600",
-        })
+        return Response(
+            content=data,
+            media_type="video/mp4",
+            headers={
+                "Cache-Control": "public, max-age=3600",
+            },
+        )
 
     video_path = Path(settings.output_dir) / str(request_id) / "export" / "storyboard.mp4"
     try:
@@ -130,9 +138,7 @@ async def get_export_metadata(request_id: uuid.UUID):
 
 
 @router.get("/{request_id}/bundle")
-async def download_bundle(
-    request_id: uuid.UUID, session: AsyncSession = Depends(get_session)
-):
+async def download_bundle(request_id: uuid.UUID, session: AsyncSession = Depends(get_session)):
     """Download a zip bundle containing citations.json, story.md, and scene frames."""
     repo = RequestRepository(session)
     gen_request = await repo.get(request_id)
@@ -199,9 +205,7 @@ async def download_bundle(
         for i, panel in enumerate(panels):
             image_path_str = panel.get("image_path")
             if not image_path_str:
-                image_path_str = str(
-                    output_base / str(request_id) / f"scene_{i}.png"
-                )
+                image_path_str = str(output_base / str(request_id) / f"scene_{i}.png")
 
             image_path = Path(image_path_str)
             if not image_path.is_absolute():

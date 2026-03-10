@@ -1,7 +1,7 @@
-import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import type { LLMCallDetail } from "@/api/types";
+import { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import type { LLMCallDetail } from '@/api/types';
 import {
   CheckCircle,
   XCircle,
@@ -13,53 +13,113 @@ import {
   DollarSign,
   Cpu,
   Eye,
-} from "lucide-react";
+} from 'lucide-react';
 
 // ── Pipeline step definitions ─────────────────────────────────────────────────
 
 const PORTRAIT_STEPS = [
-  { key: "extraction", label: "Extraction", description: "Parse figure name, era, and context from input" },
-  { key: "research", label: "Research", description: "Gather historical context via grounded search" },
-  { key: "face_search", label: "Face Search", description: "Find reference face image online" },
-  { key: "prompt_generation", label: "Prompt Generation", description: "Craft image generation prompt from research" },
-  { key: "image_generation", label: "Image Generation", description: "Generate portrait via Imagen" },
-  { key: "validation", label: "Validation", description: "AI quality assessment of output" },
-  { key: "facial_compositing", label: "Facial Compositing", description: "Composite reference face onto portrait" },
-  { key: "export", label: "Export", description: "Save final output artifacts" },
+  {
+    key: 'extraction',
+    label: 'Extraction',
+    description: 'Parse figure name, era, and context from input',
+  },
+  {
+    key: 'research',
+    label: 'Research',
+    description: 'Gather historical context via grounded search',
+  },
+  { key: 'face_search', label: 'Face Search', description: 'Find reference face image online' },
+  {
+    key: 'prompt_generation',
+    label: 'Prompt Generation',
+    description: 'Craft image generation prompt from research',
+  },
+  {
+    key: 'image_generation',
+    label: 'Image Generation',
+    description: 'Generate portrait via Imagen',
+  },
+  { key: 'validation', label: 'Validation', description: 'AI quality assessment of output' },
+  {
+    key: 'facial_compositing',
+    label: 'Facial Compositing',
+    description: 'Composite reference face onto portrait',
+  },
+  { key: 'export', label: 'Export', description: 'Save final output artifacts' },
 ] as const;
 
 const STORY_STEPS = [
-  { key: "story_orchestrator", label: "Orchestrator", description: "Plan the storyboard structure" },
-  { key: "image_to_story", label: "Image to Story", description: "Extract narrative from uploaded image" },
-  { key: "reference_image_analysis", label: "Ref Image Analysis", description: "Analyze reference images for style cues" },
-  { key: "character_extraction", label: "Character Extraction", description: "Identify characters and traits from input" },
-  { key: "scene_decomposition", label: "Scene Decomposition", description: "Break narrative into visual scenes" },
-  { key: "scene_prompt_generation", label: "Prompt Generation", description: "Generate image prompts per scene" },
-  { key: "scene_image_generation", label: "Image Generation", description: "Generate scene images via Imagen" },
-  { key: "storyboard_coherence", label: "Coherence Check", description: "Multimodal consistency review across panels" },
-  { key: "narration_script", label: "Narration Script", description: "Write voice-over narration text" },
-  { key: "narration_audio", label: "Narration Audio", description: "Synthesize narration via TTS" },
-  { key: "video_assembly", label: "Video Assembly", description: "Combine panels + audio into video" },
-  { key: "storyboard_export", label: "Export", description: "Save storyboard artifacts" },
+  {
+    key: 'story_orchestrator',
+    label: 'Orchestrator',
+    description: 'Plan the storyboard structure',
+  },
+  {
+    key: 'image_to_story',
+    label: 'Image to Story',
+    description: 'Extract narrative from uploaded image',
+  },
+  {
+    key: 'reference_image_analysis',
+    label: 'Ref Image Analysis',
+    description: 'Analyze reference images for style cues',
+  },
+  {
+    key: 'character_extraction',
+    label: 'Character Extraction',
+    description: 'Identify characters and traits from input',
+  },
+  {
+    key: 'scene_decomposition',
+    label: 'Scene Decomposition',
+    description: 'Break narrative into visual scenes',
+  },
+  {
+    key: 'scene_prompt_generation',
+    label: 'Prompt Generation',
+    description: 'Generate image prompts per scene',
+  },
+  {
+    key: 'scene_image_generation',
+    label: 'Image Generation',
+    description: 'Generate scene images via Imagen',
+  },
+  {
+    key: 'storyboard_coherence',
+    label: 'Coherence Check',
+    description: 'Multimodal consistency review across panels',
+  },
+  {
+    key: 'narration_script',
+    label: 'Narration Script',
+    description: 'Write voice-over narration text',
+  },
+  { key: 'narration_audio', label: 'Narration Audio', description: 'Synthesize narration via TTS' },
+  {
+    key: 'video_assembly',
+    label: 'Video Assembly',
+    description: 'Combine panels + audio into video',
+  },
+  { key: 'storyboard_export', label: 'Export', description: 'Save storyboard artifacts' },
 ] as const;
 
 // ── Provider badge colors ─────────────────────────────────────────────────────
 
 const PROVIDER_STYLES: Record<string, string> = {
-  gemini: "bg-blue-900/40 text-blue-300 border-blue-700/50",
-  imagen: "bg-purple-900/40 text-purple-300 border-purple-700/50",
-  "google-tts": "bg-teal-900/40 text-teal-300 border-teal-700/50",
-  openai: "bg-green-900/40 text-green-300 border-green-700/50",
-  mock: "bg-gray-700/40 text-gray-300 border-gray-600/50",
+  gemini: 'bg-blue-900/40 text-blue-300 border-blue-700/50',
+  imagen: 'bg-purple-900/40 text-purple-300 border-purple-700/50',
+  'google-tts': 'bg-teal-900/40 text-teal-300 border-teal-700/50',
+  openai: 'bg-green-900/40 text-green-300 border-green-700/50',
+  mock: 'bg-gray-700/40 text-gray-300 border-gray-600/50',
 };
 
 function providerBadgeClass(provider: string | null): string {
-  if (!provider) return "bg-gray-700/40 text-gray-300 border-gray-600/50";
+  if (!provider) return 'bg-gray-700/40 text-gray-300 border-gray-600/50';
   const key = provider.toLowerCase();
   for (const [k, v] of Object.entries(PROVIDER_STYLES)) {
     if (key.includes(k)) return v;
   }
-  return "bg-gray-700/40 text-gray-300 border-gray-600/50";
+  return 'bg-gray-700/40 text-gray-300 border-gray-600/50';
 }
 
 // ── Formatting helpers ────────────────────────────────────────────────────────
@@ -71,14 +131,14 @@ function fmtDuration(ms: number): string {
 }
 
 function fmtCost(cost: number): string {
-  if (cost === 0) return "$0.00";
+  if (cost === 0) return '$0.00';
   if (cost < 0.01) return `$${cost.toFixed(4)}`;
   return `$${cost.toFixed(2)}`;
 }
 
 // ── Step status derivation ────────────────────────────────────────────────────
 
-type StepStatus = "completed" | "failed" | "skipped" | "pending";
+type StepStatus = 'completed' | 'failed' | 'skipped' | 'pending';
 
 interface StepData {
   status: StepStatus;
@@ -102,17 +162,17 @@ function deriveStepData(
   const calls = llmCalls.filter((c) => c.agent === stepKey);
 
   // Determine status
-  let status: StepStatus = "pending";
+  let status: StepStatus = 'pending';
   if (traceEntry) {
     if (traceEntry.skipped) {
-      status = "skipped";
+      status = 'skipped';
     } else if (traceEntry.error) {
-      status = "failed";
+      status = 'failed';
     } else {
-      status = "completed";
+      status = 'completed';
     }
   } else if (calls.length > 0) {
-    status = "completed";
+    status = 'completed';
   }
 
   // Aggregate metrics from LLM calls
@@ -124,35 +184,46 @@ function deriveStepData(
   // Provider: use the first call's provider, or infer from step key
   let provider = calls[0]?.provider ?? null;
   let model = calls[0]?.model ?? null;
-  if (!provider && status === "completed") {
-    if (stepKey.includes("image_generation")) {
-      provider = "imagen";
-      model = "imagen-4.0-fast";
-    } else if (stepKey === "narration_audio") {
-      provider = "google-tts";
-    } else if (stepKey === "video_assembly") {
-      provider = "ffmpeg";
-    } else if (stepKey === "facial_compositing") {
-      provider = "facefusion";
-    } else if (stepKey === "face_search") {
-      provider = "google-search";
+  if (!provider && status === 'completed') {
+    if (stepKey.includes('image_generation')) {
+      provider = 'imagen';
+      model = 'imagen-4.0-fast';
+    } else if (stepKey === 'narration_audio') {
+      provider = 'google-tts';
+    } else if (stepKey === 'video_assembly') {
+      provider = 'ffmpeg';
+    } else if (stepKey === 'facial_compositing') {
+      provider = 'facefusion';
+    } else if (stepKey === 'face_search') {
+      provider = 'google-search';
     }
   }
 
-  const cacheHit = stepKey === "research" && traceEntry?.cache_hit === true;
+  const cacheHit = stepKey === 'research' && traceEntry?.cache_hit === true;
 
-  return { status, provider, model, duration_ms, cost, callCount: calls.length, inputTokens, outputTokens, calls, cacheHit };
+  return {
+    status,
+    provider,
+    model,
+    duration_ms,
+    cost,
+    callCount: calls.length,
+    inputTokens,
+    outputTokens,
+    calls,
+    cacheHit,
+  };
 }
 
 // ── Step row component ────────────────────────────────────────────────────────
 
 function StatusIcon({ status }: { status: StepStatus }) {
   switch (status) {
-    case "completed":
+    case 'completed':
       return <CheckCircle className="w-4 h-4 text-green-400" />;
-    case "failed":
+    case 'failed':
       return <XCircle className="w-4 h-4 text-red-400" />;
-    case "skipped":
+    case 'skipped':
       return <MinusCircle className="w-4 h-4 text-gray-500" />;
     default:
       return <div className="w-4 h-4 rounded-full border-2 border-gray-600" />;
@@ -172,23 +243,24 @@ function StepRow({
   isExpanded: boolean;
   onToggle: () => void;
 }) {
-  const hasDetail = data.calls.length > 0 || data.status === "completed";
+  const hasDetail = data.calls.length > 0 || data.status === 'completed';
 
   return (
     <div className="border-b border-gray-800/60 last:border-b-0">
       <button
         onClick={hasDetail ? onToggle : undefined}
         className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${
-          hasDetail ? "hover:bg-white/[0.03] cursor-pointer" : "cursor-default opacity-60"
+          hasDetail ? 'hover:bg-white/[0.03] cursor-pointer' : 'cursor-default opacity-60'
         }`}
       >
         {/* Expand chevron */}
         <div className="w-4 flex-shrink-0">
-          {hasDetail && (
-            isExpanded
-              ? <ChevronDown className="w-4 h-4 text-gray-400" />
-              : <ChevronRight className="w-4 h-4 text-gray-400" />
-          )}
+          {hasDetail &&
+            (isExpanded ? (
+              <ChevronDown className="w-4 h-4 text-gray-400" />
+            ) : (
+              <ChevronRight className="w-4 h-4 text-gray-400" />
+            ))}
         </div>
 
         {/* Status icon */}
@@ -205,10 +277,10 @@ function StepRow({
         </div>
 
         {/* Provider pill */}
-        {data.provider && data.status !== "skipped" && (
+        {data.provider && data.status !== 'skipped' && (
           <Badge className={`text-[10px] border ${providerBadgeClass(data.provider)}`}>
             {data.provider}
-            {data.model ? ` / ${data.model.replace(/^.*\//, "").slice(0, 20)}` : ""}
+            {data.model ? ` / ${data.model.replace(/^.*\//, '').slice(0, 20)}` : ''}
           </Badge>
         )}
 
@@ -238,7 +310,7 @@ function StepRow({
             >
               <div className="flex items-center justify-between">
                 <span className="text-gray-300 font-medium">
-                  Call {data.calls.length > 1 ? `${i + 1}/${data.calls.length}` : ""}
+                  Call {data.calls.length > 1 ? `${i + 1}/${data.calls.length}` : ''}
                 </span>
                 <div className="flex items-center gap-3 text-gray-500 tabular-nums">
                   <span>{call.input_tokens + call.output_tokens} tokens</span>
@@ -258,7 +330,7 @@ function StepRow({
       )}
 
       {/* Expanded detail for non-LLM completed steps */}
-      {isExpanded && data.calls.length === 0 && data.status === "completed" && (
+      {isExpanded && data.calls.length === 0 && data.status === 'completed' && (
         <div className="px-4 pb-3 ml-11">
           <p className="text-xs text-gray-500">{description}</p>
           {data.provider && (
@@ -293,13 +365,13 @@ export function TrustCard({
   status,
   totalCost,
   totalDurationMs,
-  className = "",
+  className = '',
   defaultCollapsed = false,
 }: TrustCardProps) {
   const [collapsed, setCollapsed] = useState(defaultCollapsed);
   const [expandedSteps, setExpandedSteps] = useState<Set<string>>(new Set());
 
-  const steps = runType === "creative_story" ? STORY_STEPS : PORTRAIT_STEPS;
+  const steps = runType === 'creative_story' ? STORY_STEPS : PORTRAIT_STEPS;
 
   // Build step data for each pipeline stage
   const stepDataMap = new Map<string, StepData>();
@@ -308,9 +380,9 @@ export function TrustCard({
   }
 
   // Aggregate totals
-  const completedCount = [...stepDataMap.values()].filter((d) => d.status === "completed").length;
-  const skippedCount = [...stepDataMap.values()].filter((d) => d.status === "skipped").length;
-  const failedCount = [...stepDataMap.values()].filter((d) => d.status === "failed").length;
+  const completedCount = [...stepDataMap.values()].filter((d) => d.status === 'completed').length;
+  const skippedCount = [...stepDataMap.values()].filter((d) => d.status === 'skipped').length;
+  const failedCount = [...stepDataMap.values()].filter((d) => d.status === 'failed').length;
   const totalLLMCalls = llmCalls.length;
   const aggregateCost = totalCost ?? llmCalls.reduce((s, c) => s + c.cost, 0);
   const aggregateDuration = totalDurationMs ?? llmCalls.reduce((s, c) => s + c.duration_ms, 0);
@@ -323,7 +395,7 @@ export function TrustCard({
   }
   // Add non-LLM providers from step data
   for (const d of stepDataMap.values()) {
-    if (d.provider && d.status === "completed") providers.add(d.provider);
+    if (d.provider && d.status === 'completed') providers.add(d.provider);
   }
 
   const toggleStep = (key: string) => {
@@ -336,9 +408,7 @@ export function TrustCard({
   };
 
   return (
-    <Card
-      className={`bg-gray-950 border-gray-800 text-gray-100 overflow-hidden ${className}`}
-    >
+    <Card className={`bg-gray-950 border-gray-800 text-gray-100 overflow-hidden ${className}`}>
       {/* Header */}
       <CardHeader className="pb-3">
         <button
@@ -377,11 +447,11 @@ export function TrustCard({
               value={`${completedCount} done`}
               sub={
                 [
-                  skippedCount > 0 ? `${skippedCount} skipped` : "",
-                  failedCount > 0 ? `${failedCount} failed` : "",
+                  skippedCount > 0 ? `${skippedCount} skipped` : '',
+                  failedCount > 0 ? `${failedCount} failed` : '',
                 ]
                   .filter(Boolean)
-                  .join(", ") || "none skipped"
+                  .join(', ') || 'none skipped'
               }
             />
             <StatBox
@@ -400,7 +470,7 @@ export function TrustCard({
               icon={<DollarSign className="w-3.5 h-3.5 text-green-400" />}
               label="Cost"
               value={fmtCost(aggregateCost)}
-              sub={[...providers].join(", ") || "n/a"}
+              sub={[...providers].join(', ') || 'n/a'}
             />
           </div>
 
@@ -411,10 +481,7 @@ export function TrustCard({
                 Providers:
               </span>
               {[...providers].map((p) => (
-                <Badge
-                  key={p}
-                  className={`text-[10px] border ${providerBadgeClass(p)}`}
-                >
+                <Badge key={p} className={`text-[10px] border ${providerBadgeClass(p)}`}>
                   {p}
                 </Badge>
               ))}
@@ -426,7 +493,7 @@ export function TrustCard({
             {steps.map((step) => {
               const data = stepDataMap.get(step.key)!;
               // Skip steps that are pending and were never reached
-              if (data.status === "pending" && status === "completed") return null;
+              if (data.status === 'pending' && status === 'completed') return null;
               return (
                 <StepRow
                   key={step.key}

@@ -192,18 +192,28 @@ class ComfyUIClient(ImageGenerator):
         model = settings.comfyui_model
         if model == "sdxl":
             workflow = _build_sdxl_workflow(
-                prompt, negative_prompt, width, height, seed,
+                prompt,
+                negative_prompt,
+                width,
+                height,
+                seed,
                 settings.comfyui_sdxl_checkpoint,
             )
         else:
             workflow = _build_flux_workflow(
-                prompt, negative_prompt, width, height, seed,
+                prompt,
+                negative_prompt,
+                width,
+                height,
+                seed,
             )
 
         async with httpx.AsyncClient(timeout=600.0) as client:
             if on_progress is not None:
                 image_data = await self._generate_and_track_progress(
-                    client, workflow, on_progress,
+                    client,
+                    workflow,
+                    on_progress,
                 )
             else:
                 payload = {"prompt": workflow}
@@ -244,11 +254,7 @@ class ComfyUIClient(ImageGenerator):
         import websockets  # available via uvicorn[standard] / explicit dep
 
         client_id = uuid.uuid4().hex
-        ws_url = (
-            self.base_url
-            .replace("http://", "ws://")
-            .replace("https://", "wss://")
-        )
+        ws_url = self.base_url.replace("http://", "ws://").replace("https://", "wss://")
         ws_url = f"{ws_url}/ws?clientId={client_id}"
         payload = {"prompt": workflow, "client_id": client_id}
 
@@ -288,24 +294,18 @@ class ComfyUIClient(ImageGenerator):
             return await self._poll_and_download(client, prompt_id)
 
         except Exception as e:
-            logger.warning(
-                "ComfyUI WS progress tracking failed (%s); falling back to polling", e
-            )
+            logger.warning("ComfyUI WS progress tracking failed (%s); falling back to polling", e)
             if prompt_id is not None:
                 # Prompt was already submitted — poll for the result
                 return await self._poll_and_download(client, prompt_id)
 
             # Prompt was never submitted — submit without progress tracking
-            resp = await client.post(
-                f"{self.base_url}/prompt", json={"prompt": workflow}
-            )
+            resp = await client.post(f"{self.base_url}/prompt", json={"prompt": workflow})
             resp.raise_for_status()
             prompt_id = resp.json()["prompt_id"]
             return await self._poll_and_download(client, prompt_id)
 
-    async def _poll_and_download(
-        self, client: httpx.AsyncClient, prompt_id: str
-    ) -> bytes:
+    async def _poll_and_download(self, client: httpx.AsyncClient, prompt_id: str) -> bytes:
         """Poll /history until the prompt completes, then download the image."""
         timeout = 600.0
         interval = 1.0
@@ -332,9 +332,7 @@ class ComfyUIClient(ImageGenerator):
             await asyncio.sleep(interval)
             elapsed += interval
 
-        raise TimeoutError(
-            f"ComfyUI prompt {prompt_id} did not complete within {timeout}s"
-        )
+        raise TimeoutError(f"ComfyUI prompt {prompt_id} did not complete within {timeout}s")
 
     async def _download_image(
         self,

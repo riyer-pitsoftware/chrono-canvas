@@ -10,12 +10,7 @@ class FigureRepository(BaseRepository[Figure]):
         super().__init__(session, Figure)
 
     async def search(self, query: str, offset: int = 0, limit: int = 50) -> list[Figure]:
-        stmt = (
-            select(Figure)
-            .where(Figure.name.ilike(f"%{query}%"))
-            .offset(offset)
-            .limit(limit)
-        )
+        stmt = select(Figure).where(Figure.name.ilike(f"%{query}%")).offset(offset).limit(limit)
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
 
@@ -25,11 +20,6 @@ class FigureRepository(BaseRepository[Figure]):
         return result.scalar_one_or_none()
 
     async def list_by_period(self, period_id, offset: int = 0, limit: int = 50) -> list[Figure]:
-        stmt = (
-            select(Figure)
-            .where(Figure.period_id == period_id)
-            .offset(offset)
-            .limit(limit)
-        )
+        stmt = select(Figure).where(Figure.period_id == period_id).offset(offset).limit(limit)
         result = await self.session.execute(stmt)
         return list(result.scalars().all())

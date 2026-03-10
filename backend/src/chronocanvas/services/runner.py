@@ -63,9 +63,7 @@ class GenerationRunner:
 
                     if current_agent == "validation":
                         self._recorder.on_validation(node_state)
-                        val_results = node_state.get("validation", {}).get(
-                            "validation_results"
-                        )
+                        val_results = node_state.get("validation", {}).get("validation_results")
                         if val_results:
                             await save_validation_results(
                                 self._session,

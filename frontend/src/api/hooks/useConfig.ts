@@ -1,5 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
-import { api } from "../client";
+import { useQuery } from '@tanstack/react-query';
+import { api } from '../client';
 
 interface ServiceMap {
   llm: Record<string, boolean>;
@@ -12,15 +12,15 @@ interface ServiceMap {
 interface HealthResponse {
   status: string;
   service: string;
-  deployment_mode: "gcp" | "local" | "hybrid";
+  deployment_mode: 'gcp' | 'local' | 'hybrid';
   hackathon_mode: boolean;
   services: ServiceMap;
 }
 
 export function useHealth() {
   return useQuery({
-    queryKey: ["health"],
-    queryFn: () => api.get<HealthResponse>("/health"),
+    queryKey: ['health'],
+    queryFn: () => api.get<HealthResponse>('/health'),
     staleTime: 30_000,
     refetchOnWindowFocus: true,
   });
@@ -28,7 +28,7 @@ export function useHealth() {
 
 export function useDeploymentMode() {
   const { data } = useHealth();
-  return data?.deployment_mode ?? "hybrid";
+  return data?.deployment_mode ?? 'hybrid';
 }
 
 export function useHackathonMode() {
@@ -46,8 +46,6 @@ interface ConfigValidation {
   errors: Array<{ channel: string; provider: string; error: string }>;
 }
 
-export async function validateConfig(
-  payload: Record<string, unknown>,
-): Promise<ConfigValidation> {
-  return api.post<ConfigValidation>("/config/validate", payload);
+export async function validateConfig(payload: Record<string, unknown>): Promise<ConfigValidation> {
+  return api.post<ConfigValidation>('/config/validate', payload);
 }

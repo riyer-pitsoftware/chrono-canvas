@@ -21,21 +21,43 @@ from chronocanvas.services.state_projector import RequestStateProjector
 
 logger = logging.getLogger(__name__)
 
-VALID_RETRY_STEPS = frozenset([
-    # Portrait pipeline
-    "orchestrator", "extraction", "research", "prompt_generation",
-    "image_generation", "validation", "facial_compositing", "export",
-    # Story pipeline
-    "story_orchestrator", "image_to_story", "reference_image_analysis",
-    "character_extraction", "scene_decomposition", "scene_prompt_generation",
-    "scene_image_generation", "storyboard_coherence", "narration_script",
-    "narration_audio", "video_assembly", "storyboard_export",
-])
+VALID_RETRY_STEPS = frozenset(
+    [
+        # Portrait pipeline
+        "orchestrator",
+        "extraction",
+        "research",
+        "prompt_generation",
+        "image_generation",
+        "validation",
+        "facial_compositing",
+        "export",
+        # Story pipeline
+        "story_orchestrator",
+        "image_to_story",
+        "reference_image_analysis",
+        "character_extraction",
+        "scene_decomposition",
+        "scene_prompt_generation",
+        "scene_image_generation",
+        "storyboard_coherence",
+        "narration_script",
+        "narration_audio",
+        "video_assembly",
+        "storyboard_export",
+    ]
+)
 
 # Steps that require clearing existing image records before retrying
-_STEPS_CLEAR_IMAGES = frozenset([
-    "orchestrator", "extraction", "research", "prompt_generation", "image_generation",
-])
+_STEPS_CLEAR_IMAGES = frozenset(
+    [
+        "orchestrator",
+        "extraction",
+        "research",
+        "prompt_generation",
+        "image_generation",
+    ]
+)
 
 _STATUS_MAP: dict[str, RequestStatus] = {
     "orchestrator": RequestStatus.PENDING,
@@ -79,11 +101,14 @@ async def run_generation_pipeline(
         try:
             await repo.update(request_id, status=RequestStatus.EXTRACTING)
             await session.commit()
-            await publisher.publish(channel, {
-                "status": "extracting",
-                "agent": "extraction",
-                "message": "Extracting figure details...",
-            })
+            await publisher.publish(
+                channel,
+                {
+                    "status": "extracting",
+                    "agent": "extraction",
+                    "message": "Extracting figure details...",
+                },
+            )
 
             rule_repo = ValidationRuleRepository(session)
             setting_repo = AdminSettingRepository(session)
@@ -160,11 +185,14 @@ async def retry_generation_pipeline(
                     await session.delete(img)
 
             await session.commit()
-            await publisher.publish(channel, {
-                "status": retry_status,
-                "agent": from_step,
-                "message": f"Retrying from {from_step}...",
-            })
+            await publisher.publish(
+                channel,
+                {
+                    "status": retry_status,
+                    "agent": from_step,
+                    "message": f"Retrying from {from_step}...",
+                },
+            )
 
             runner = _make_runner(repo, session, _graph)
 
@@ -192,7 +220,8 @@ async def retry_generation_pipeline(
                     logger.info(
                         "Checkpoint missing for %s (server may have restarted); "
                         "reconstructing state from DB (from_step=%s)",
-                        request_id, from_step,
+                        request_id,
+                        from_step,
                     )
                     update_values = coordinator.rebuild_state_from_db(request, from_step)
 

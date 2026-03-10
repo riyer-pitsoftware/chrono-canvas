@@ -1,25 +1,26 @@
-import { useState } from "react";
-import { ChevronDown, ChevronRight } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import type { StateSnapshot } from "@/api/types";
+import { useState } from 'react';
+import { ChevronDown, ChevronRight } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import type { StateSnapshot } from '@/api/types';
 
 const AGENT_LABELS: Record<string, string> = {
-  orchestrator: "Orchestrator",
-  extraction: "Extraction",
-  research: "Research",
-  face_search: "Face Search",
-  prompt_generation: "Prompt Generation",
-  image_generation: "Image Generation",
-  validation: "Validation",
-  facial_compositing: "Facial Compositing",
-  export: "Export",
+  orchestrator: 'Orchestrator',
+  extraction: 'Extraction',
+  research: 'Research',
+  face_search: 'Face Search',
+  prompt_generation: 'Prompt Generation',
+  image_generation: 'Image Generation',
+  validation: 'Validation',
+  facial_compositing: 'Facial Compositing',
+  export: 'Export',
 };
 
 // ── JSON syntax highlighting ──────────────────────────────────────────────────
 
 function highlight(json: string): string {
-  return json
-    .replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?)/g, (match) => {
+  return json.replace(
+    /("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?)/g,
+    (match) => {
       if (/^"/.test(match)) {
         if (/:$/.test(match)) return `<span class="json-key">${match}</span>`;
         return `<span class="json-string">${match}</span>`;
@@ -27,7 +28,8 @@ function highlight(json: string): string {
       if (/true|false/.test(match)) return `<span class="json-bool">${match}</span>`;
       if (/null/.test(match)) return `<span class="json-null">${match}</span>`;
       return `<span class="json-number">${match}</span>`;
-    });
+    },
+  );
 }
 
 function JsonView({ data }: { data: Record<string, unknown> }) {
@@ -109,9 +111,7 @@ function DiffView({
         </div>
       )}
       {unchanged.length > 0 && (
-        <p className="text-xs text-[var(--muted-foreground)]">
-          Unchanged: {unchanged.join(", ")}
-        </p>
+        <p className="text-xs text-[var(--muted-foreground)]">Unchanged: {unchanged.join(', ')}</p>
       )}
     </div>
   );
@@ -129,7 +129,7 @@ function SnapshotRow({
   index: number;
 }) {
   const [open, setOpen] = useState(false);
-  const [tab, setTab] = useState<"full" | "diff">("diff");
+  const [tab, setTab] = useState<'full' | 'diff'>('diff');
 
   const { added, changed } = computeDiff(prev?.snapshot ?? null, snapshot.snapshot);
   const changeCount = Object.keys(added).length + Object.keys(changed).length;
@@ -140,7 +140,11 @@ function SnapshotRow({
         onClick={() => setOpen((v) => !v)}
         className="w-full flex items-center gap-3 p-3 text-left hover:bg-[var(--accent)] transition-colors"
       >
-        {open ? <ChevronDown className="w-4 h-4 shrink-0" /> : <ChevronRight className="w-4 h-4 shrink-0" />}
+        {open ? (
+          <ChevronDown className="w-4 h-4 shrink-0" />
+        ) : (
+          <ChevronRight className="w-4 h-4 shrink-0" />
+        )}
         <span className="text-xs text-[var(--muted-foreground)] w-5 shrink-0">{index + 1}</span>
         <span className="font-medium text-sm">
           {AGENT_LABELS[snapshot.agent] ?? snapshot.agent}
@@ -148,7 +152,7 @@ function SnapshotRow({
         <div className="ml-auto flex gap-2">
           {changeCount > 0 && (
             <Badge variant="outline" className="text-xs">
-              {changeCount} change{changeCount !== 1 ? "s" : ""}
+              {changeCount} change{changeCount !== 1 ? 's' : ''}
             </Badge>
           )}
           <Badge variant="secondary" className="text-xs">
@@ -161,22 +165,22 @@ function SnapshotRow({
         <div className="border-t px-3 pb-3 pt-2 space-y-3">
           {/* Tab switcher */}
           <div className="flex gap-1">
-            {(["diff", "full"] as const).map((t) => (
+            {(['diff', 'full'] as const).map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
                 className={`text-xs px-3 py-1 rounded-md transition-colors ${
                   tab === t
-                    ? "bg-[var(--primary)] text-[var(--primary-foreground)]"
-                    : "bg-[var(--muted)] hover:bg-[var(--accent)]"
+                    ? 'bg-[var(--primary)] text-[var(--primary-foreground)]'
+                    : 'bg-[var(--muted)] hover:bg-[var(--accent)]'
                 }`}
               >
-                {t === "diff" ? "Diff" : "Full State"}
+                {t === 'diff' ? 'Diff' : 'Full State'}
               </button>
             ))}
           </div>
 
-          {tab === "diff" ? (
+          {tab === 'diff' ? (
             <DiffView prev={prev?.snapshot ?? null} curr={snapshot.snapshot} />
           ) : (
             <JsonView data={snapshot.snapshot} />
@@ -193,7 +197,8 @@ export function StateInspector({ snapshots }: { snapshots: StateSnapshot[] }) {
   if (snapshots.length === 0) {
     return (
       <p className="text-sm text-[var(--muted-foreground)]">
-        No state snapshots available. Only generations run after this feature was added will have snapshots.
+        No state snapshots available. Only generations run after this feature was added will have
+        snapshots.
       </p>
     );
   }

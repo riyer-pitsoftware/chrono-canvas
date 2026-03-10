@@ -108,21 +108,23 @@ async def _validate_panel(panel, router, request_id, runtime_config):
         json_end = content.rfind("}") + 1
         scores = json.loads(content[json_start:json_end])
 
-        llm_calls.append({
-            "agent": "prompt_validation",
-            "timestamp": time.time(),
-            "user_prompt": val_prompt,
-            "raw_response": content,
-            "parsed_output": scores,
-            "provider": response.provider,
-            "model": response.model,
-            "input_tokens": response.input_tokens,
-            "output_tokens": response.output_tokens,
-            "cost": response.cost,
-            "duration_ms": response.duration_ms,
-            "requested_provider": response.requested_provider,
-            "fallback": response.fallback,
-        })
+        llm_calls.append(
+            {
+                "agent": "prompt_validation",
+                "timestamp": time.time(),
+                "user_prompt": val_prompt,
+                "raw_response": content,
+                "parsed_output": scores,
+                "provider": response.provider,
+                "model": response.model,
+                "input_tokens": response.input_tokens,
+                "output_tokens": response.output_tokens,
+                "cost": response.cost,
+                "duration_ms": response.duration_ms,
+                "requested_provider": response.requested_provider,
+                "fallback": response.fallback,
+            }
+        )
 
         overall = float(scores.get("overall", 1.0))
         issues = scores.get("issues", [])
@@ -130,7 +132,9 @@ async def _validate_panel(panel, router, request_id, runtime_config):
     except Exception as e:
         logger.warning(
             "Prompt validation scoring failed for scene %s [request_id=%s]: %s",
-            panel.get("scene_index", "?"), request_id, e,
+            panel.get("scene_index", "?"),
+            request_id,
+            e,
         )
         # Non-fatal: let the prompt through unmodified
         return panel, llm_calls
@@ -139,13 +143,17 @@ async def _validate_panel(panel, router, request_id, runtime_config):
     if overall >= 0.7:
         logger.info(
             "Prompt validation passed for scene %s (score=%.2f) [request_id=%s]",
-            panel.get("scene_index", "?"), overall, request_id,
+            panel.get("scene_index", "?"),
+            overall,
+            request_id,
         )
         return panel, llm_calls
 
     logger.info(
         "Prompt validation failed for scene %s (score=%.2f), repairing [request_id=%s]",
-        panel.get("scene_index", "?"), overall, request_id,
+        panel.get("scene_index", "?"),
+        overall,
+        request_id,
     )
 
     repair_prompt = REPAIR_PROMPT.format(
@@ -154,7 +162,9 @@ async def _validate_panel(panel, router, request_id, runtime_config):
         characters=", ".join(characters) if characters else "none",
         mood=panel.get("mood", ""),
         setting=panel.get("setting", ""),
-        issues="\n".join(f"- {i}" for i in issues) if issues else "- General quality below threshold",
+        issues="\n".join(f"- {i}" for i in issues)
+        if issues
+        else "- General quality below threshold",
     )
 
     try:
@@ -179,26 +189,30 @@ async def _validate_panel(panel, router, request_id, runtime_config):
             panel = dict(panel)  # shallow copy to avoid mutating original
             panel["image_prompt"] = new_prompt
 
-        llm_calls.append({
-            "agent": "prompt_validation_repair",
-            "timestamp": time.time(),
-            "user_prompt": repair_prompt,
-            "raw_response": repair_content,
-            "parsed_output": repaired,
-            "provider": repair_response.provider,
-            "model": repair_response.model,
-            "input_tokens": repair_response.input_tokens,
-            "output_tokens": repair_response.output_tokens,
-            "cost": repair_response.cost,
-            "duration_ms": repair_response.duration_ms,
-            "requested_provider": repair_response.requested_provider,
-            "fallback": repair_response.fallback,
-        })
+        llm_calls.append(
+            {
+                "agent": "prompt_validation_repair",
+                "timestamp": time.time(),
+                "user_prompt": repair_prompt,
+                "raw_response": repair_content,
+                "parsed_output": repaired,
+                "provider": repair_response.provider,
+                "model": repair_response.model,
+                "input_tokens": repair_response.input_tokens,
+                "output_tokens": repair_response.output_tokens,
+                "cost": repair_response.cost,
+                "duration_ms": repair_response.duration_ms,
+                "requested_provider": repair_response.requested_provider,
+                "fallback": repair_response.fallback,
+            }
+        )
 
     except Exception as e:
         logger.warning(
             "Prompt repair failed for scene %s [request_id=%s]: %s — keeping original",
-            panel.get("scene_index", "?"), request_id, e,
+            panel.get("scene_index", "?"),
+            request_id,
+            e,
         )
 
     return panel, llm_calls
@@ -215,7 +229,8 @@ async def prompt_validation_node(state: StoryState) -> StoryState:
     panels = list(state.get("panels", []))
     logger.info(
         "Prompt validation: checking %d panels [request_id=%s]",
-        len(panels), request_id,
+        len(panels),
+        request_id,
     )
 
     if not panels:
@@ -226,10 +241,9 @@ async def prompt_validation_node(state: StoryState) -> StoryState:
     trace = list(state.get("agent_trace", []))
     llm_calls = list(state.get("llm_calls", []))
 
-    results = await asyncio.gather(*(
-        _validate_panel(panel, router, request_id, rc)
-        for panel in panels
-    ))
+    results = await asyncio.gather(
+        *(_validate_panel(panel, router, request_id, rc) for panel in panels)
+    )
 
     validated_panels = []
     repaired_count = 0
@@ -240,12 +254,14 @@ async def prompt_validation_node(state: StoryState) -> StoryState:
         if len(panel_llm_calls) == 2:
             repaired_count += 1
 
-    trace.append({
-        "agent": "prompt_validation",
-        "timestamp": time.time(),
-        "panels_checked": len(panels),
-        "panels_repaired": repaired_count,
-    })
+    trace.append(
+        {
+            "agent": "prompt_validation",
+            "timestamp": time.time(),
+            "panels_checked": len(panels),
+            "panels_repaired": repaired_count,
+        }
+    )
 
     return {
         "current_agent": "prompt_validation",

@@ -72,7 +72,7 @@ class Settings(BaseSettings):
     secret_key: str = _INSECURE_DEFAULT_KEY
 
     # Content Moderation
-    content_moderation_enabled: bool = True   # default-on keyword input validation
+    content_moderation_enabled: bool = True  # default-on keyword input validation
     # Optional layers (all off by default):
     # ENABLE_PUBLIC_DOMAIN_CHECK, ENABLE_PROMPT_GUARDRAIL via separate flags when implemented
 
@@ -92,12 +92,12 @@ class Settings(BaseSettings):
 
     # Research Cache (pgvector + sentence-transformers)
     research_cache_enabled: bool = True
-    research_cache_threshold: float = 0.85   # cosine similarity threshold for a cache hit
+    research_cache_threshold: float = 0.85  # cosine similarity threshold for a cache hit
     research_cache_model: str = "all-MiniLM-L6-v2"
 
     # Invariant checks (runtime validation of pipeline contracts)
-    invariant_checks_enabled: bool = True    # run pre/postcondition checks on pipeline nodes
-    invariant_strict: bool = False           # raise on violation (True) vs log warning (False)
+    invariant_checks_enabled: bool = True  # run pre/postcondition checks on pipeline nodes
+    invariant_strict: bool = False  # raise on violation (True) vs log warning (False)
 
     # TTS (narration audio via Gemini TTS)
     tts_enabled: bool = True
@@ -116,7 +116,9 @@ class Settings(BaseSettings):
     hackathon_mode: bool = False  # When True, UI defaults to Story Director
 
     # Hackathon strict Gemini mode
-    hackathon_strict_gemini: bool = False  # When True, fail fast instead of falling back away from Gemini
+    hackathon_strict_gemini: bool = (
+        False  # When True, fail fast instead of falling back away from Gemini
+    )
 
     # Production feature flags — disable non-essential endpoints on GCP
     enable_admin_api: bool = True

@@ -16,10 +16,9 @@ from chronocanvas.api.router import api_router
 from chronocanvas.api.websocket import generation_websocket
 from chronocanvas.config import settings
 from chronocanvas.llm.router import GeminiUnavailableError
+from chronocanvas.logging_config import setup_logging
 from chronocanvas.redis_client import close_redis
 from chronocanvas.service_registry import init_registry
-
-from chronocanvas.logging_config import setup_logging
 
 setup_logging()
 logger = logging.getLogger(__name__)
@@ -40,11 +39,13 @@ async def lifespan(app: FastAPI):
     logger.info("ChronoCanvas starting up")
     # Ensure output directories exist
     import os
+
     os.makedirs(settings.output_dir, exist_ok=True)
     os.makedirs(settings.upload_dir, exist_ok=True)
 
     # Connect to Redis with retry (Cloud SQL proxy / VPC may need a moment)
     import asyncio
+
     for attempt in range(5):
         try:
             app.state.arq_pool = await create_pool(RedisSettings.from_dsn(settings.redis_url))
@@ -66,11 +67,15 @@ async def lifespan(app: FastAPI):
     recompile_graph()
     if settings.hackathon_mode:
         from chronocanvas.api.routes.health import validate_hackathon_requirements
+
         failures = validate_hackathon_requirements()
         for f in failures:
             logger.error("HACKATHON PREFLIGHT FAIL: %s", f)
         if failures:
-            logger.error("Hackathon mode is ON but critical services are misconfigured. Fix the above issues.")
+            logger.error(
+                "Hackathon mode is ON but critical services"
+                " are misconfigured. Fix the above issues."
+            )
     yield
     logger.info("ChronoCanvas shutting down")
     await close_checkpointer()
@@ -128,19 +133,28 @@ def create_app() -> FastAPI:
                 return Response(status_code=404, content="Not found")
             suffix = Path(file_path).suffix.lower()
             content_types = {
-                ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
-                ".wav": "audio/wav", ".mp4": "video/mp4", ".json": "application/json",
+                ".png": "image/png",
+                ".jpg": "image/jpeg",
+                ".jpeg": "image/jpeg",
+                ".wav": "audio/wav",
+                ".mp4": "video/mp4",
+                ".json": "application/json",
             }
             ct = content_types.get(suffix, "application/octet-stream")
-            return Response(content=data, media_type=ct, headers={
-                "Cache-Control": "public, max-age=3600",
-            })
+            return Response(
+                content=data,
+                media_type=ct,
+                headers={
+                    "Cache-Control": "public, max-age=3600",
+                },
+            )
     else:
         app.mount("/output", StaticFiles(directory=settings.output_dir), name="output")
     app.mount("/uploads", StaticFiles(directory=settings.upload_dir), name="uploads")
 
     # Eval run assets (images, etc.) — only mount if eval/runs exists
     import os
+
     eval_runs_dir = os.path.join(settings.eval_dir, "runs")
     if os.path.isdir(eval_runs_dir):
         app.mount("/eval-assets", StaticFiles(directory=eval_runs_dir), name="eval-assets")

@@ -1,4 +1,7 @@
-"""Scene editor — Gemini vision sees current image + edit instruction → revised prompt → Imagen regen."""
+"""Scene editor — Gemini vision sees current image + edit instruction.
+
+Revised prompt leads to Imagen regen.
+"""
 
 import json
 import logging
@@ -57,10 +60,12 @@ async def edit_scene(
     model = settings.gemini_model
 
     parts: list[types.Part] = [
-        types.Part.from_text(text=SCENE_EDIT_PROMPT.format(
-            instruction=instruction,
-            description=current_description,
-        )),
+        types.Part.from_text(
+            text=SCENE_EDIT_PROMPT.format(
+                instruction=instruction,
+                description=current_description,
+            )
+        ),
     ]
 
     if current_image_path and Path(current_image_path).exists():
@@ -93,16 +98,18 @@ async def edit_scene(
     revised_prompt = parsed.get("revised_prompt", "")
     change_summary = parsed.get("change_summary", "")
 
-    llm_calls.append({
-        "agent": "scene_editor",
-        "timestamp": time.time(),
-        "provider": "gemini",
-        "model": model,
-        "input_tokens": input_tokens,
-        "output_tokens": output_tokens,
-        "cost": cost,
-        "duration_ms": elapsed_ms,
-    })
+    llm_calls.append(
+        {
+            "agent": "scene_editor",
+            "timestamp": time.time(),
+            "provider": "gemini",
+            "model": model,
+            "input_tokens": input_tokens,
+            "output_tokens": output_tokens,
+            "cost": cost,
+            "duration_ms": elapsed_ms,
+        }
+    )
 
     if not revised_prompt:
         raise ValueError("Gemini returned no revised prompt")
@@ -141,7 +148,9 @@ async def edit_scene(
 
     logger.info(
         "Scene edit complete: scene %d, '%s' [request_id=%s]",
-        scene_index, change_summary, request_id,
+        scene_index,
+        change_summary,
+        request_id,
     )
 
     return {

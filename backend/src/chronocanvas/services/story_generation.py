@@ -15,10 +15,15 @@ from chronocanvas.services.progress import ProgressPublisher
 logger = logging.getLogger(__name__)
 
 # Keys excluded from per-node state snapshots (noisy, large, or redundant)
-_SNAPSHOT_EXCLUDE = frozenset({
-    "llm_calls", "agent_trace", "request_id", "error",
-    "input_text",
-})
+_SNAPSHOT_EXCLUDE = frozenset(
+    {
+        "llm_calls",
+        "agent_trace",
+        "request_id",
+        "error",
+        "input_text",
+    }
+)
 
 
 async def run_story_pipeline(
@@ -34,6 +39,7 @@ async def run_story_pipeline(
 ) -> None:
     if graph is None:
         from chronocanvas.agents.story.graph import get_compiled_story_graph
+
         graph = get_compiled_story_graph()
 
     _sf = session_factory if session_factory is not None else _default_session_factory
@@ -45,11 +51,14 @@ async def run_story_pipeline(
         try:
             await repo.update(request_id, status=RequestStatus.EXTRACTING)
             await session.commit()
-            await publisher.publish(channel, {
-                "status": "extracting",
-                "agent": "character_extraction",
-                "message": "Extracting characters from story...",
-            })
+            await publisher.publish(
+                channel,
+                {
+                    "status": "extracting",
+                    "agent": "character_extraction",
+                    "message": "Extracting characters from story...",
+                },
+            )
 
             rc = RuntimeConfig.from_request_payload(config_payload)
 
@@ -105,8 +114,7 @@ async def run_story_pipeline(
                         agent_trace = node_state.get("agent_trace")
                         if agent_trace is not None:
                             snapshot = {
-                                k: v for k, v in node_state.items()
-                                if k not in _SNAPSHOT_EXCLUDE
+                                k: v for k, v in node_state.items() if k not in _SNAPSHOT_EXCLUDE
                             }
                             agent_trace = list(agent_trace)
                             for entry in reversed(agent_trace):
@@ -144,10 +152,13 @@ async def run_story_pipeline(
 
                         try:
                             status = update_kwargs.get(
-                                "status", agent_status,
+                                "status",
+                                agent_status,
                             )
                             await publisher.publish_agent(
-                                channel, current_agent, status,
+                                channel,
+                                current_agent,
+                                status,
                             )
                         except Exception:
                             logger.warning(
@@ -224,16 +235,18 @@ async def run_story_pipeline(
                     rid = uuid.UUID(request_id)
                     for panel in full_state.get("panels", []):
                         if panel.get("status") == "completed" and panel.get("image_path"):
-                            session.add(GeneratedImage(
-                                request_id=rid,
-                                figure_id=None,
-                                file_path=panel["image_path"],
-                                prompt_used=panel.get("image_prompt", ""),
-                                provider=panel.get("provider", "imagen"),
-                                width=panel.get("width", 768),
-                                height=panel.get("height", 768),
-                                validation_score=None,
-                            ))
+                            session.add(
+                                GeneratedImage(
+                                    request_id=rid,
+                                    figure_id=None,
+                                    file_path=panel["image_path"],
+                                    prompt_used=panel.get("image_prompt", ""),
+                                    provider=panel.get("provider", "imagen"),
+                                    width=panel.get("width", 768),
+                                    height=panel.get("height", 768),
+                                    validation_score=None,
+                                )
+                            )
 
                     await session.commit()
 
@@ -247,8 +260,7 @@ async def run_story_pipeline(
                     from chronocanvas.imaging.imagen_client import ImagenError
 
                     last_node = (
-                        final_state.get("current_agent", "unknown")
-                        if final_state else "unknown"
+                        final_state.get("current_agent", "unknown") if final_state else "unknown"
                     )
                     if isinstance(exc, ImagenError):
                         error_msg = (

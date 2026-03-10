@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from 'react';
 
 /**
  * PatienceMeter — an honest progress bar for unpredictable async work.
@@ -41,9 +41,9 @@ const PHASE_BUDGETS: Record<string, number> = {
 const DEFAULT_BUDGET = 60;
 
 function getBarColor(pct: number): string {
-  if (pct < 0.5) return "var(--patience-blue, #3b82f6)";
-  if (pct < 0.8) return "var(--patience-amber, #f59e0b)";
-  return "var(--patience-red, #ef4444)";
+  if (pct < 0.5) return 'var(--patience-blue, #3b82f6)';
+  if (pct < 0.8) return 'var(--patience-amber, #f59e0b)';
+  return 'var(--patience-red, #ef4444)';
 }
 
 function formatElapsed(ms: number): string {
@@ -55,7 +55,7 @@ function formatElapsed(ms: number): string {
 
 interface PatienceMeterProps {
   phase: string;
-  status: "pending" | "running" | "completed" | "error";
+  status: 'pending' | 'running' | 'completed' | 'error';
   /** Elapsed ms from agent_trace (for completed phases) */
   elapsedMs?: number;
 }
@@ -67,7 +67,7 @@ export function PatienceMeter({ phase, status, elapsedMs }: PatienceMeterProps) 
   const rafRef = useRef<number>(0);
 
   useEffect(() => {
-    if (status !== "running") {
+    if (status !== 'running') {
       startRef.current = null;
       cancelAnimationFrame(rafRef.current);
       setElapsed(0);
@@ -89,28 +89,26 @@ export function PatienceMeter({ phase, status, elapsedMs }: PatienceMeterProps) 
   const pct = Math.min(elapsed / (budget * 1000), 1);
   const completedPct = elapsedMs != null ? Math.min(elapsedMs / (budget * 1000), 1) : 0;
 
-  if (status === "pending") {
-    return (
-      <div className="mt-1 h-1 w-full rounded-full bg-[var(--muted)] opacity-40" />
-    );
+  if (status === 'pending') {
+    return <div className="mt-1 h-1 w-full rounded-full bg-[var(--muted)] opacity-40" />;
   }
 
-  if (status === "error") {
+  if (status === 'error') {
     return (
       <div className="mt-1 h-1 w-full rounded-full bg-[var(--muted)] overflow-hidden">
-        <div className="h-full rounded-full bg-red-500" style={{ width: "100%" }} />
+        <div className="h-full rounded-full bg-red-500" style={{ width: '100%' }} />
       </div>
     );
   }
 
-  if (status === "completed") {
+  if (status === 'completed') {
     return (
       <div className="mt-1 h-1 w-full rounded-full bg-[var(--muted)] overflow-hidden">
         <div
           className="h-full rounded-full transition-all duration-500 ease-out"
           style={{
             width: `${Math.max(completedPct * 100, 8)}%`,
-            backgroundColor: "var(--patience-green, #22c55e)",
+            backgroundColor: 'var(--patience-green, #22c55e)',
           }}
         />
       </div>

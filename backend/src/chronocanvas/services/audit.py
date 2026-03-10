@@ -71,11 +71,13 @@ class AuditProjector:
             for panel in panels:
                 if panel.get("narration_audio_path"):
                     scene_idx = panel.get("scene_index") or 0
-                    narration_audio_urls.append({
-                        "scene_index": scene_idx,
-                        "narration_text": panel.get("narration_text", ""),
-                        "url": f"/api/export/{request.id}/audio/{scene_idx}",
-                    })
+                    narration_audio_urls.append(
+                        {
+                            "scene_index": scene_idx,
+                            "narration_text": panel.get("narration_text", ""),
+                            "url": f"/api/export/{request.id}/audio/{scene_idx}",
+                        }
+                    )
             # Fallback: scan disk for audio files from older generations
             if not narration_audio_urls:
                 audio_dir = Path(settings.output_dir) / str(request.id) / "audio"
@@ -89,11 +91,13 @@ class AuditProjector:
                         text = ""
                         if scene_idx < len(panels):
                             text = panels[scene_idx].get("narration_text", "")
-                        narration_audio_urls.append({
-                            "scene_index": scene_idx,
-                            "narration_text": text,
-                            "url": f"/api/export/{request.id}/audio/{scene_idx}",
-                        })
+                        narration_audio_urls.append(
+                            {
+                                "scene_index": scene_idx,
+                                "narration_text": text,
+                                "url": f"/api/export/{request.id}/audio/{scene_idx}",
+                            }
+                        )
             # Fallback for Cloud Run: no local disk, so generate URLs for panels
             # that have narration_text — audio files may exist in GCS even if
             # narration_audio_path wasn't persisted in storyboard_data.
@@ -101,11 +105,13 @@ class AuditProjector:
                 for panel in panels:
                     if panel.get("narration_text"):
                         scene_idx = panel.get("scene_index") or 0
-                        narration_audio_urls.append({
-                            "scene_index": scene_idx,
-                            "narration_text": panel.get("narration_text", ""),
-                            "url": f"/api/export/{request.id}/audio/{scene_idx}",
-                        })
+                        narration_audio_urls.append(
+                            {
+                                "scene_index": scene_idx,
+                                "narration_text": panel.get("narration_text", ""),
+                                "url": f"/api/export/{request.id}/audio/{scene_idx}",
+                            }
+                        )
 
         return AuditDetailResponse(
             id=request.id,

@@ -63,7 +63,9 @@ def validate_hackathon_requirements() -> list[str]:
     """
     failures = []
     if not settings.google_api_key:
-        failures.append("GOOGLE_API_KEY not set — Gemini LLM, Imagen, TTS, and multimodal validation will fail")
+        failures.append(
+            "GOOGLE_API_KEY not set — Gemini LLM, Imagen, TTS, and multimodal validation will fail"
+        )
     if settings.image_provider == "mock":
         failures.append("IMAGE_PROVIDER is 'mock' — judges will see placeholder images")
     if not settings.hackathon_strict_gemini:
@@ -79,6 +81,7 @@ async def health_check():
     gcs_status = None
     try:
         from chronocanvas.services.storage import get_storage_backend
+
         backend = get_storage_backend()
         if backend.is_cloud():
             gcs_status = "connected"

@@ -51,7 +51,9 @@ def _build_category_list(rule_weights: dict[str, float]) -> str:
         rule_weights = {k: 0.25 for k in list(_DEFAULT_CATEGORY_DESCRIPTIONS)[:4]}
     lines = []
     for i, category in enumerate(rule_weights, 1):
-        desc = _DEFAULT_CATEGORY_DESCRIPTIONS.get(category, f"Evaluate {category.replace('_', ' ')}")
+        desc = _DEFAULT_CATEGORY_DESCRIPTIONS.get(
+            category, f"Evaluate {category.replace('_', ' ')}"
+        )
         lines.append(f"{i}. {category}: {desc}")
     return "\n".join(lines)
 
@@ -90,8 +92,13 @@ async def validation_node(state: AgentState) -> AgentState:
     except json.JSONDecodeError:
         data = {
             "results": [
-                {"category": "overall", "rule_name": "parse_error", "passed": True, "score": 75.0,
-                 "details": "Could not parse validation; defaulting to pass."}
+                {
+                    "category": "overall",
+                    "rule_name": "parse_error",
+                    "passed": True,
+                    "score": 75.0,
+                    "details": "Could not parse validation; defaulting to pass.",
+                }
             ],
             "overall_score": 75.0,
             "passed": True,
@@ -116,42 +123,43 @@ async def validation_node(state: AgentState) -> AgentState:
     passed = overall_score >= pass_threshold
 
     trace = state.get("agent_trace", [])
-    trace.append({
-        "agent": "validation",
-        "timestamp": time.time(),
-        "score": overall_score,
-        "passed": passed,
-        "llm_cost": response.cost,
-    })
+    trace.append(
+        {
+            "agent": "validation",
+            "timestamp": time.time(),
+            "score": overall_score,
+            "passed": passed,
+            "llm_cost": response.cost,
+        }
+    )
 
     llm_calls = list(state.get("llm_calls", []))
-    llm_calls.append({
-        "agent": "validation",
-        "timestamp": time.time(),
-        "system_prompt": response.system_prompt,
-        "user_prompt": response.user_prompt,
-        "raw_response": response.content,
-        "parsed_output": data,
-        "provider": response.provider,
-        "model": response.model,
-        "input_tokens": response.input_tokens,
-        "output_tokens": response.output_tokens,
-        "cost": response.cost,
-        "duration_ms": response.duration_ms,
-        "requested_provider": response.requested_provider,
-        "fallback": response.fallback,
-    })
+    llm_calls.append(
+        {
+            "agent": "validation",
+            "timestamp": time.time(),
+            "system_prompt": response.system_prompt,
+            "user_prompt": response.user_prompt,
+            "raw_response": response.content,
+            "parsed_output": data,
+            "provider": response.provider,
+            "model": response.model,
+            "input_tokens": response.input_tokens,
+            "output_tokens": response.output_tokens,
+            "cost": response.cost,
+            "duration_ms": response.duration_ms,
+            "requested_provider": response.requested_provider,
+            "fallback": response.fallback,
+        }
+    )
 
     retry_count = state.get("retry_count", 0)
     retry_enabled = (
-        rc.validation_retry_enabled if rc and rc.validation_retry_enabled is not None
+        rc.validation_retry_enabled
+        if rc and rc.validation_retry_enabled is not None
         else settings.validation_retry_enabled
     )
-    should_regenerate = (
-        not passed
-        and retry_count < 2
-        and retry_enabled
-    )
+    should_regenerate = not passed and retry_count < 2 and retry_enabled
 
     return {
         "current_agent": "validation",

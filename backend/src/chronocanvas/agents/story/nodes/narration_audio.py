@@ -24,7 +24,9 @@ from chronocanvas.services.progress import ProgressPublisher
 logger = logging.getLogger(__name__)
 
 
-def _write_wav(pcm_data: bytes, sample_rate: int, num_channels: int, sample_width: int, path: Path) -> None:
+def _write_wav(
+    pcm_data: bytes, sample_rate: int, num_channels: int, sample_width: int, path: Path
+) -> None:
     """Write raw PCM data as a WAV file."""
     data_size = len(pcm_data)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -53,26 +55,26 @@ async def narration_audio_node(state: StoryState) -> StoryState:
     panels = list(state.get("panels", []))
     logger.info(
         "Narration audio: synthesizing for %d panels [request_id=%s]",
-        len(panels), request_id,
+        len(panels),
+        request_id,
     )
 
     trace = list(state.get("agent_trace", []))
     llm_calls = list(state.get("llm_calls", []))
 
     # Filter to panels that have narration text
-    panels_with_text = [
-        (i, p) for i, p in enumerate(panels)
-        if p.get("narration_text")
-    ]
+    panels_with_text = [(i, p) for i, p in enumerate(panels) if p.get("narration_text")]
 
     if not panels_with_text:
         logger.info("Skipping narration audio: no panels with narration text")
-        trace.append({
-            "agent": "narration_audio",
-            "timestamp": time.time(),
-            "skipped": True,
-            "reason": "No panels with narration text",
-        })
+        trace.append(
+            {
+                "agent": "narration_audio",
+                "timestamp": time.time(),
+                "skipped": True,
+                "reason": "No panels with narration text",
+            }
+        )
         return {
             "current_agent": "narration_audio",
             "agent_trace": trace,
@@ -126,7 +128,8 @@ async def narration_audio_node(state: StoryState) -> StoryState:
             if audio_part is None:
                 logger.warning(
                     "No audio in TTS response for scene %d [request_id=%s]",
-                    scene_idx, request_id,
+                    scene_idx,
+                    request_id,
                 )
                 continue
 
@@ -162,43 +165,53 @@ async def narration_audio_node(state: StoryState) -> StoryState:
                 input_tokens = response.usage_metadata.prompt_token_count or 0
                 output_tokens = response.usage_metadata.candidates_token_count or 0
 
-            llm_calls.append({
-                "agent": "narration_audio",
-                "timestamp": time.time(),
-                "provider": "gemini",
-                "model": model,
-                "input_tokens": input_tokens,
-                "output_tokens": output_tokens,
-                "cost": 0,  # TTS pricing TBD
-                "duration_ms": elapsed_ms,
-                "requested_provider": "gemini",
-                "fallback": False,
-            })
+            llm_calls.append(
+                {
+                    "agent": "narration_audio",
+                    "timestamp": time.time(),
+                    "provider": "gemini",
+                    "model": model,
+                    "input_tokens": input_tokens,
+                    "output_tokens": output_tokens,
+                    "cost": 0,  # TTS pricing TBD
+                    "duration_ms": elapsed_ms,
+                    "requested_provider": "gemini",
+                    "fallback": False,
+                }
+            )
 
             logger.info(
                 "Synthesized audio for scene %d (%.0fms) [request_id=%s]",
-                scene_idx, elapsed_ms, request_id,
+                scene_idx,
+                elapsed_ms,
+                request_id,
             )
 
         except Exception as e:
             elapsed_ms = (time.perf_counter() - start) * 1000
             logger.warning(
                 "TTS failed for scene %d [request_id=%s]: %s",
-                scene_idx, request_id, e,
+                scene_idx,
+                request_id,
+                e,
             )
             # Non-fatal: skip this panel's audio
 
-    trace.append({
-        "agent": "narration_audio",
-        "timestamp": time.time(),
-        "panels_synthesized": synthesized_count,
-        "total_with_text": len(panels_with_text),
-        "audio_dir": str(audio_dir),
-    })
+    trace.append(
+        {
+            "agent": "narration_audio",
+            "timestamp": time.time(),
+            "panels_synthesized": synthesized_count,
+            "total_with_text": len(panels_with_text),
+            "audio_dir": str(audio_dir),
+        }
+    )
 
     logger.info(
         "Narration audio complete: %d/%d panels [request_id=%s]",
-        synthesized_count, len(panels_with_text), request_id,
+        synthesized_count,
+        len(panels_with_text),
+        request_id,
     )
 
     return {

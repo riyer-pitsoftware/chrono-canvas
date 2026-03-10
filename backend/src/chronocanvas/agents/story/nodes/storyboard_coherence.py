@@ -74,10 +74,12 @@ def _build_multimodal_content(panels: list[dict]) -> list[types.Part]:
     """Build a list of Gemini content parts: text descriptions interleaved with images."""
     parts: list[types.Part] = []
 
-    parts.append(types.Part.from_text(
-        text=f"I have a storyboard with {len(panels)} scenes. "
-        "Review each image and its description for visual coherence:\n\n"
-    ))
+    parts.append(
+        types.Part.from_text(
+            text=f"I have a storyboard with {len(panels)} scenes. "
+            "Review each image and its description for visual coherence:\n\n"
+        )
+    )
 
     for panel in panels:
         scene_idx = panel.get("scene_index", "?")
@@ -89,14 +91,16 @@ def _build_multimodal_content(panels: list[dict]) -> list[types.Part]:
         established_state = panel.get("established_state", {})
 
         # Add text context for this scene
-        parts.append(types.Part.from_text(
-            text=f"\n--- Scene {scene_idx} ---\n"
-            f"Description: {description}\n"
-            f"Mood: {mood}\n"
-            f"Setting: {setting}\n"
-            f"Expected state (from prior scene): {json.dumps(expected_state)}\n"
-            f"Established state (for next scene): {json.dumps(established_state)}\n"
-        ))
+        parts.append(
+            types.Part.from_text(
+                text=f"\n--- Scene {scene_idx} ---\n"
+                f"Description: {description}\n"
+                f"Mood: {mood}\n"
+                f"Setting: {setting}\n"
+                f"Expected state (from prior scene): {json.dumps(expected_state)}\n"
+                f"Established state (for next scene): {json.dumps(established_state)}\n"
+            )
+        )
 
         # Add the image if it exists
         if image_path and Path(image_path).exists():
@@ -105,12 +109,14 @@ def _build_multimodal_content(panels: list[dict]) -> list[types.Part]:
         else:
             parts.append(types.Part.from_text(text="[Image not available]\n"))
 
-    parts.append(types.Part.from_text(
-        text="\n\nNow analyze all scenes together for coherence. "
-        "Pay special attention to continuity: compare each scene's expected_state "
-        "against the previous scene's established_state and flag any breaks. "
-        "Output ONLY the JSON structure described in your instructions."
-    ))
+    parts.append(
+        types.Part.from_text(
+            text="\n\nNow analyze all scenes together for coherence. "
+            "Pay special attention to continuity: compare each scene's expected_state "
+            "against the previous scene's established_state and flag any breaks. "
+            "Output ONLY the JSON structure described in your instructions."
+        )
+    )
 
     return parts
 
@@ -120,7 +126,8 @@ async def storyboard_coherence_node(state: StoryState) -> StoryState:
     panels = list(state.get("panels", []))
     logger.info(
         "Storyboard coherence: reviewing %d panels [request_id=%s]",
-        len(panels), request_id,
+        len(panels),
+        request_id,
     )
 
     trace = list(state.get("agent_trace", []))
@@ -132,12 +139,14 @@ async def storyboard_coherence_node(state: StoryState) -> StoryState:
     if len(completed_panels) < 2:
         # Not enough panels to assess coherence — skip
         logger.info("Skipping coherence check: only %d completed panels", len(completed_panels))
-        trace.append({
-            "agent": "storyboard_coherence",
-            "timestamp": time.time(),
-            "skipped": True,
-            "reason": f"Only {len(completed_panels)} completed panels",
-        })
+        trace.append(
+            {
+                "agent": "storyboard_coherence",
+                "timestamp": time.time(),
+                "skipped": True,
+                "reason": f"Only {len(completed_panels)} completed panels",
+            }
+        )
         return {
             "current_agent": "storyboard_coherence",
             "agent_trace": trace,
@@ -178,10 +187,7 @@ async def storyboard_coherence_node(state: StoryState) -> StoryState:
         coherence_data = json.loads(raw_text[json_start:json_end]) if json_start >= 0 else {}
 
         overall = coherence_data.get("overall", {})
-        panel_assessments = {
-            p.get("scene_index"): p
-            for p in coherence_data.get("panels", [])
-        }
+        panel_assessments = {p.get("scene_index"): p for p in coherence_data.get("panels", [])}
 
         # Annotate panels with coherence scores and continuity breaks
         for panel in panels:
@@ -197,32 +203,36 @@ async def storyboard_coherence_node(state: StoryState) -> StoryState:
                     f"[continuity] {b}" for b in continuity_breaks
                 ]
 
-        llm_calls.append({
-            "agent": "storyboard_coherence",
-            "timestamp": time.time(),
-            "provider": "gemini",
-            "model": model,
-            "input_tokens": input_tokens,
-            "output_tokens": output_tokens,
-            "cost": cost,
-            "duration_ms": elapsed_ms,
-            "raw_response": raw_text[:500],
-            "requested_provider": "gemini",
-            "fallback": False,
-        })
+        llm_calls.append(
+            {
+                "agent": "storyboard_coherence",
+                "timestamp": time.time(),
+                "provider": "gemini",
+                "model": model,
+                "input_tokens": input_tokens,
+                "output_tokens": output_tokens,
+                "cost": cost,
+                "duration_ms": elapsed_ms,
+                "raw_response": raw_text[:500],
+                "requested_provider": "gemini",
+                "fallback": False,
+            }
+        )
 
-        trace.append({
-            "agent": "storyboard_coherence",
-            "timestamp": time.time(),
-            "panels_reviewed": len(completed_panels),
-            "narrative_flow_score": overall.get("narrative_flow_score"),
-            "style_consistency_score": overall.get("style_consistency_score"),
-            "character_consistency_score": overall.get("character_consistency_score"),
-            "palette_harmony_score": overall.get("palette_harmony_score"),
-            "continuity_score": overall.get("continuity_score"),
-            "summary": overall.get("summary", ""),
-            "suggested_order": overall.get("suggested_order"),
-        })
+        trace.append(
+            {
+                "agent": "storyboard_coherence",
+                "timestamp": time.time(),
+                "panels_reviewed": len(completed_panels),
+                "narrative_flow_score": overall.get("narrative_flow_score"),
+                "style_consistency_score": overall.get("style_consistency_score"),
+                "character_consistency_score": overall.get("character_consistency_score"),
+                "palette_harmony_score": overall.get("palette_harmony_score"),
+                "continuity_score": overall.get("continuity_score"),
+                "summary": overall.get("summary", ""),
+                "suggested_order": overall.get("suggested_order"),
+            }
+        )
 
         # Check if character consistency or continuity warrants regeneration
         char_score = overall.get("character_consistency_score", 1.0)
@@ -243,7 +253,10 @@ async def storyboard_coherence_node(state: StoryState) -> StoryState:
             logger.info(
                 "Consistency scores (char=%.2f, continuity=%.2f) below threshold "
                 "— flagging scenes %s for regen [request_id=%s]",
-                char_score, continuity_score, regen_scenes, request_id,
+                char_score,
+                continuity_score,
+                regen_scenes,
+                request_id,
             )
 
         logger.info(
@@ -261,16 +274,19 @@ async def storyboard_coherence_node(state: StoryState) -> StoryState:
         elapsed_ms = (time.perf_counter() - start) * 1000
         logger.warning(
             "Storyboard coherence check failed [request_id=%s]: %s",
-            request_id, e,
+            request_id,
+            e,
         )
         regen_scenes = []
         # Non-fatal: coherence is additive, don't fail the pipeline
-        trace.append({
-            "agent": "storyboard_coherence",
-            "timestamp": time.time(),
-            "error": str(e),
-            "panels_reviewed": len(completed_panels),
-        })
+        trace.append(
+            {
+                "agent": "storyboard_coherence",
+                "timestamp": time.time(),
+                "error": str(e),
+                "panels_reviewed": len(completed_panels),
+            }
+        )
 
     result: dict = {
         "current_agent": "storyboard_coherence",

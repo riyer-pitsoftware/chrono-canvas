@@ -22,6 +22,7 @@ def _get_cache_service():
     get_registry().research_cache = cache
     return cache
 
+
 RESEARCH_PROMPT = """You are a historical research expert. Research the following historical figure
 for the purpose of generating an accurate portrait.
 
@@ -73,7 +74,8 @@ async def research_node(state: AgentState) -> AgentState:
 
     # Check cache first
     cache_enabled = (
-        rc.research_cache_enabled if rc and rc.research_cache_enabled is not None
+        rc.research_cache_enabled
+        if rc and rc.research_cache_enabled is not None
         else settings.research_cache_enabled
     )
     if cache_enabled and figure_name:
@@ -127,36 +129,38 @@ async def research_node(state: AgentState) -> AgentState:
 
         # Store in cache (skip if figure_name is empty — NOT NULL constraint)
         if cache_enabled and figure_name:
-            await _get_cache_service().store(
-                figure_name, time_period, region, data, response.cost
-            )
+            await _get_cache_service().store(figure_name, time_period, region, data, response.cost)
 
     trace = state.get("agent_trace", [])
-    trace.append({
-        "agent": "research",
-        "timestamp": time.time(),
-        "cache_hit": cache_hit,
-        **({"llm_cost": response.cost} if response else {}),
-    })
+    trace.append(
+        {
+            "agent": "research",
+            "timestamp": time.time(),
+            "cache_hit": cache_hit,
+            **({"llm_cost": response.cost} if response else {}),
+        }
+    )
 
     llm_calls = list(state.get("llm_calls", []))
     if response:
-        llm_calls.append({
-            "agent": "research",
-            "timestamp": time.time(),
-            "system_prompt": response.system_prompt,
-            "user_prompt": response.user_prompt,
-            "raw_response": response.content,
-            "parsed_output": data,
-            "provider": response.provider,
-            "model": response.model,
-            "input_tokens": response.input_tokens,
-            "output_tokens": response.output_tokens,
-            "cost": response.cost,
-            "duration_ms": response.duration_ms,
-            "requested_provider": response.requested_provider,
-            "fallback": response.fallback,
-        })
+        llm_calls.append(
+            {
+                "agent": "research",
+                "timestamp": time.time(),
+                "system_prompt": response.system_prompt,
+                "user_prompt": response.user_prompt,
+                "raw_response": response.content,
+                "parsed_output": data,
+                "provider": response.provider,
+                "model": response.model,
+                "input_tokens": response.input_tokens,
+                "output_tokens": response.output_tokens,
+                "cost": response.cost,
+                "duration_ms": response.duration_ms,
+                "requested_provider": response.requested_provider,
+                "fallback": response.fallback,
+            }
+        )
 
     return {
         "current_agent": "research",

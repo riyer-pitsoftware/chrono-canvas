@@ -71,11 +71,13 @@ IMPORTANT: This is for SDXL with Juggernaut XL checkpoint which excels at photor
 
 Return ONLY the prompt text, no explanations."""
 
+
 def _get_prompt_template() -> str:
     """Select prompt template based on configured image provider."""
     if settings.image_provider == "imagen":
         return IMAGEN_PROMPT_TEMPLATE
     return SDXL_PROMPT_TEMPLATE
+
 
 NEGATIVE_PROMPT = (
     "painting, illustration, drawing, art, sketch, cartoon, anime, 3d render, "
@@ -116,29 +118,33 @@ async def prompt_generation_node(state: AgentState) -> AgentState:
     )
 
     trace = state.get("agent_trace", [])
-    trace.append({
-        "agent": "prompt_generation",
-        "timestamp": time.time(),
-        "llm_cost": response.cost,
-    })
+    trace.append(
+        {
+            "agent": "prompt_generation",
+            "timestamp": time.time(),
+            "llm_cost": response.cost,
+        }
+    )
 
     llm_calls = list(state.get("llm_calls", []))
-    llm_calls.append({
-        "agent": "prompt_generation",
-        "timestamp": time.time(),
-        "system_prompt": response.system_prompt,
-        "user_prompt": response.user_prompt,
-        "raw_response": response.content,
-        "parsed_output": response.content.strip(),
-        "provider": response.provider,
-        "model": response.model,
-        "input_tokens": response.input_tokens,
-        "output_tokens": response.output_tokens,
-        "cost": response.cost,
-        "duration_ms": response.duration_ms,
-        "requested_provider": response.requested_provider,
-        "fallback": response.fallback,
-    })
+    llm_calls.append(
+        {
+            "agent": "prompt_generation",
+            "timestamp": time.time(),
+            "system_prompt": response.system_prompt,
+            "user_prompt": response.user_prompt,
+            "raw_response": response.content,
+            "parsed_output": response.content.strip(),
+            "provider": response.provider,
+            "model": response.model,
+            "input_tokens": response.input_tokens,
+            "output_tokens": response.output_tokens,
+            "cost": response.cost,
+            "duration_ms": response.duration_ms,
+            "requested_provider": response.requested_provider,
+            "fallback": response.fallback,
+        }
+    )
 
     return {
         "current_agent": "prompt_generation",

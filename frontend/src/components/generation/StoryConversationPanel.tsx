@@ -1,10 +1,10 @@
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { VoiceInputButton } from "@/components/generation/VoiceInputButton";
-import { api } from "@/api/client";
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { VoiceInputButton } from '@/components/generation/VoiceInputButton';
+import { api } from '@/api/client';
 
 interface SceneSuggestion {
   scene_index: number;
@@ -13,7 +13,7 @@ interface SceneSuggestion {
 }
 
 interface ChatMessage {
-  role: "user" | "assistant";
+  role: 'user' | 'assistant';
   text: string;
   action?: string;
   suggestions?: SceneSuggestion[];
@@ -26,14 +26,14 @@ interface StoryConversationPanelProps {
 
 export function StoryConversationPanel({ requestId, onApplyEdit }: StoryConversationPanelProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [input, setInput] = useState("");
+  const [input, setInput] = useState('');
   const [isSending, setIsSending] = useState(false);
 
   const sendMessage = async (text: string) => {
     if (!text.trim()) return;
-    const userMsg: ChatMessage = { role: "user", text };
+    const userMsg: ChatMessage = { role: 'user', text };
     setMessages((prev) => [...prev, userMsg]);
-    setInput("");
+    setInput('');
     setIsSending(true);
 
     try {
@@ -44,7 +44,7 @@ export function StoryConversationPanel({ requestId, onApplyEdit }: StoryConversa
       }>(`/conversation/${requestId}/chat`, { message: text });
 
       const assistantMsg: ChatMessage = {
-        role: "assistant",
+        role: 'assistant',
         text: result.message,
         action: result.action,
         suggestions: result.scene_suggestions,
@@ -53,7 +53,7 @@ export function StoryConversationPanel({ requestId, onApplyEdit }: StoryConversa
     } catch (err) {
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", text: `Error: ${err instanceof Error ? err.message : "Failed"}` },
+        { role: 'assistant', text: `Error: ${err instanceof Error ? err.message : 'Failed'}` },
       ]);
     }
     setIsSending(false);
@@ -68,16 +68,17 @@ export function StoryConversationPanel({ requestId, onApplyEdit }: StoryConversa
         <div className="space-y-3 max-h-80 overflow-y-auto mb-3">
           {messages.length === 0 && (
             <p className="text-sm text-[var(--muted-foreground)]">
-              Ask Gemini to refine your storyboard — suggest scene changes, new scenes, or discuss the story.
+              Ask Gemini to refine your storyboard — suggest scene changes, new scenes, or discuss
+              the story.
             </p>
           )}
           {messages.map((msg, i) => (
-            <div key={i} className={`text-sm ${msg.role === "user" ? "text-right" : ""}`}>
+            <div key={i} className={`text-sm ${msg.role === 'user' ? 'text-right' : ''}`}>
               <div
                 className={`inline-block rounded-lg px-3 py-2 max-w-[85%] ${
-                  msg.role === "user"
-                    ? "bg-[var(--primary)] text-[var(--primary-foreground)]"
-                    : "bg-[var(--muted)]"
+                  msg.role === 'user'
+                    ? 'bg-[var(--primary)] text-[var(--primary-foreground)]'
+                    : 'bg-[var(--muted)]'
                 }`}
               >
                 {msg.text}
@@ -127,14 +128,11 @@ export function StoryConversationPanel({ requestId, onApplyEdit }: StoryConversa
             placeholder="Suggest a change..."
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && sendMessage(input)}
+            onKeyDown={(e) => e.key === 'Enter' && sendMessage(input)}
             disabled={isSending}
             className="flex-1 text-sm"
           />
-          <VoiceInputButton
-            onTranscript={(text) => sendMessage(text)}
-            disabled={isSending}
-          />
+          <VoiceInputButton onTranscript={(text) => sendMessage(text)} disabled={isSending} />
           <Button
             size="sm"
             onClick={() => sendMessage(input)}

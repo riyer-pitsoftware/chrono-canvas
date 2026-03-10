@@ -261,7 +261,9 @@ async def flag_validation(
 @router.post("/archive")
 async def archive_old_images(
     older_than_days: int = Query(default=2, ge=0, description="Archive requests older than N days"),
-    dry_run: bool = Query(default=False, description="Preview what would be archived without making changes"),
+    dry_run: bool = Query(
+        default=False, description="Preview what would be archived without making changes"
+    ),
     session: AsyncSession = Depends(get_session),
 ):
     from chronocanvas.services.archiver import archive_old_requests

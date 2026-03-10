@@ -123,20 +123,24 @@ async def live_story(req: LiveStoryRequest):
             elif part.inline_data is not None:
                 image_count += 1
                 b64 = base64.b64encode(part.inline_data.data).decode("ascii")
-                yield _sse({
-                    "type": "image",
-                    "content": b64,
-                    "mime_type": part.inline_data.mime_type or "image/png",
-                })
+                yield _sse(
+                    {
+                        "type": "image",
+                        "content": b64,
+                        "mime_type": part.inline_data.mime_type or "image/png",
+                    }
+                )
 
         elapsed = time.perf_counter() - start_time
-        yield _sse({
-            "type": "done",
-            "model": model_used,
-            "elapsed_s": round(elapsed, 1),
-            "text_parts": text_count,
-            "image_parts": image_count,
-        })
+        yield _sse(
+            {
+                "type": "done",
+                "model": model_used,
+                "elapsed_s": round(elapsed, 1),
+                "text_parts": text_count,
+                "image_parts": image_count,
+            }
+        )
 
     return StreamingResponse(
         event_stream(),

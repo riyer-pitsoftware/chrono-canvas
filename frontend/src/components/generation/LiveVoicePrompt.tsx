@@ -1,5 +1,5 @@
-import { useState, useRef, useCallback } from "react";
-import { Button } from "@/components/ui/button";
+import { useState, useRef, useCallback } from 'react';
+import { Button } from '@/components/ui/button';
 
 interface LiveVoicePromptProps {
   onUse: (text: string) => void;
@@ -21,7 +21,7 @@ export function LiveVoicePrompt({ onUse, disabled }: LiveVoicePromptProps) {
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream, { mimeType: "audio/webm" });
+      const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
       mediaRecorderRef.current = mediaRecorder;
       chunksRef.current = [];
 
@@ -31,7 +31,7 @@ export function LiveVoicePrompt({ onUse, disabled }: LiveVoicePromptProps) {
 
       mediaRecorder.onstop = async () => {
         stream.getTracks().forEach((t) => t.stop());
-        const blob = new Blob(chunksRef.current, { type: "audio/webm" });
+        const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
         await sendAudio(blob);
       };
 
@@ -41,7 +41,7 @@ export function LiveVoicePrompt({ onUse, disabled }: LiveVoicePromptProps) {
       // Auto-stop after 15 seconds
       timerRef.current = setTimeout(() => stopRecording(), 15000);
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Microphone access denied");
+      setError(e instanceof Error ? e.message : 'Microphone access denied');
     }
   }, []);
 
@@ -50,7 +50,7 @@ export function LiveVoicePrompt({ onUse, disabled }: LiveVoicePromptProps) {
       clearTimeout(timerRef.current);
       timerRef.current = null;
     }
-    if (mediaRecorderRef.current?.state === "recording") {
+    if (mediaRecorderRef.current?.state === 'recording') {
       mediaRecorderRef.current.stop();
     }
     setRecording(false);
@@ -61,13 +61,13 @@ export function LiveVoicePrompt({ onUse, disabled }: LiveVoicePromptProps) {
     try {
       const buffer = await blob.arrayBuffer();
       const b64 = btoa(
-        new Uint8Array(buffer).reduce((data, byte) => data + String.fromCharCode(byte), ""),
+        new Uint8Array(buffer).reduce((data, byte) => data + String.fromCharCode(byte), ''),
       );
 
-      const res = await fetch("/api/live-voice/prompt", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ audio_base64: b64, mime_type: "audio/webm" }),
+      const res = await fetch('/api/live-voice/prompt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ audio_base64: b64, mime_type: 'audio/webm' }),
       });
 
       if (!res.ok) {
@@ -88,7 +88,7 @@ export function LiveVoicePrompt({ onUse, disabled }: LiveVoicePromptProps) {
     <div className="space-y-2">
       <div className="flex items-center gap-2">
         <Button
-          variant={recording ? "destructive" : "outline"}
+          variant={recording ? 'destructive' : 'outline'}
           size="sm"
           onClick={recording ? stopRecording : startRecording}
           disabled={disabled || processing}
@@ -99,7 +99,7 @@ export function LiveVoicePrompt({ onUse, disabled }: LiveVoicePromptProps) {
               Stop Recording
             </>
           ) : processing ? (
-            "Processing..."
+            'Processing...'
           ) : (
             <>
               <MicIcon className="w-3.5 h-3.5 mr-1.5" />
@@ -107,14 +107,10 @@ export function LiveVoicePrompt({ onUse, disabled }: LiveVoicePromptProps) {
             </>
           )}
         </Button>
-        {recording && (
-          <span className="text-xs text-[var(--muted-foreground)]">Max 15s</span>
-        )}
+        {recording && <span className="text-xs text-[var(--muted-foreground)]">Max 15s</span>}
       </div>
 
-      {error && (
-        <div className="text-xs text-red-400">{error}</div>
-      )}
+      {error && <div className="text-xs text-red-400">{error}</div>}
 
       {result && (
         <div className="rounded-md border border-[var(--border)] bg-[var(--muted)] p-3 space-y-2">
@@ -145,7 +141,15 @@ export function LiveVoicePrompt({ onUse, disabled }: LiveVoicePromptProps) {
 
 function MicIcon({ className }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
       <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
       <line x1="12" x2="12" y1="19" y2="22" />

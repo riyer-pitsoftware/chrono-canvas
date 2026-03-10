@@ -23,9 +23,12 @@ type PipelineNodeData = {
 const HANDLE_STYLE = { opacity: 0, pointerEvents: 'none' as const };
 
 const NODE_CLASSES: Record<NodeStatus, string> = {
-  pending: 'border border-gray-200 rounded-lg px-3 py-1.5 text-xs font-medium text-gray-400 bg-white',
-  running: 'border-2 border-blue-400 rounded-lg px-3 py-1.5 text-xs font-medium text-white bg-blue-500 animate-pulse',
-  completed: 'border-2 border-green-600 rounded-lg px-3 py-1.5 text-xs font-medium text-white bg-green-600',
+  pending:
+    'border border-gray-200 rounded-lg px-3 py-1.5 text-xs font-medium text-gray-400 bg-white',
+  running:
+    'border-2 border-blue-400 rounded-lg px-3 py-1.5 text-xs font-medium text-white bg-blue-500 animate-pulse',
+  completed:
+    'border-2 border-green-600 rounded-lg px-3 py-1.5 text-xs font-medium text-white bg-green-600',
   error: 'border-2 border-red-500 rounded-lg px-3 py-1.5 text-xs font-medium text-white bg-red-500',
 };
 
@@ -70,7 +73,8 @@ function resolveStatus(
 ): NodeStatus {
   if (overallStatus === 'failed' && currentAgent === nodeId) return 'error';
   if (completedAgents.has(nodeId)) return 'completed';
-  if (currentAgent === nodeId && overallStatus !== 'completed' && overallStatus !== 'failed') return 'running';
+  if (currentAgent === nodeId && overallStatus !== 'completed' && overallStatus !== 'failed')
+    return 'running';
   return 'pending';
 }
 
@@ -132,12 +136,48 @@ const LABEL_AMBER = { fontSize: 9, fill: '#d97706' };
 
 const PORTRAIT_EDGES: Edge[] = [
   // Direct happy-path edges
-  { id: 'e-ex-re', source: 'extraction', target: 'research', style: EDGE_STYLE_DIRECT, markerEnd: GRAY_MARKER },
-  { id: 'e-re-fsr', source: 'research', target: 'face_search', style: EDGE_STYLE_DIRECT, markerEnd: GRAY_MARKER },
-  { id: 'e-fsr-pg', source: 'face_search', target: 'prompt_generation', style: EDGE_STYLE_DIRECT, markerEnd: GRAY_MARKER },
-  { id: 'e-pg-ig', source: 'prompt_generation', target: 'image_generation', style: EDGE_STYLE_DIRECT, markerEnd: GRAY_MARKER },
-  { id: 'e-fs-ex', source: 'facial_compositing', target: 'export', style: EDGE_STYLE_DIRECT, markerEnd: GRAY_MARKER },
-  { id: 'e-ex-end', source: 'export', target: 'END', style: EDGE_STYLE_DIRECT, markerEnd: GRAY_MARKER },
+  {
+    id: 'e-ex-re',
+    source: 'extraction',
+    target: 'research',
+    style: EDGE_STYLE_DIRECT,
+    markerEnd: GRAY_MARKER,
+  },
+  {
+    id: 'e-re-fsr',
+    source: 'research',
+    target: 'face_search',
+    style: EDGE_STYLE_DIRECT,
+    markerEnd: GRAY_MARKER,
+  },
+  {
+    id: 'e-fsr-pg',
+    source: 'face_search',
+    target: 'prompt_generation',
+    style: EDGE_STYLE_DIRECT,
+    markerEnd: GRAY_MARKER,
+  },
+  {
+    id: 'e-pg-ig',
+    source: 'prompt_generation',
+    target: 'image_generation',
+    style: EDGE_STYLE_DIRECT,
+    markerEnd: GRAY_MARKER,
+  },
+  {
+    id: 'e-fs-ex',
+    source: 'facial_compositing',
+    target: 'export',
+    style: EDGE_STYLE_DIRECT,
+    markerEnd: GRAY_MARKER,
+  },
+  {
+    id: 'e-ex-end',
+    source: 'export',
+    target: 'END',
+    style: EDGE_STYLE_DIRECT,
+    markerEnd: GRAY_MARKER,
+  },
   // Conditional: image_generation
   {
     id: 'e-ig-va',
@@ -247,15 +287,60 @@ const STORY_EDGES: Edge[] = [
     type: 'smoothstep',
   },
   // image_to_story → character_extraction (or ref analysis)
-  { id: 's-i2s-char', source: 'image_to_story', target: 'character_extraction', style: EDGE_STYLE_DIRECT, markerEnd: GRAY_MARKER },
-  { id: 's-i2s-ref', source: 'image_to_story', target: 'reference_image_analysis', label: 'ref imgs', labelStyle: LABEL_GRAY, labelBgStyle: LABEL_BG, style: EDGE_STYLE_COND, markerEnd: GRAY_MARKER },
+  {
+    id: 's-i2s-char',
+    source: 'image_to_story',
+    target: 'character_extraction',
+    style: EDGE_STYLE_DIRECT,
+    markerEnd: GRAY_MARKER,
+  },
+  {
+    id: 's-i2s-ref',
+    source: 'image_to_story',
+    target: 'reference_image_analysis',
+    label: 'ref imgs',
+    labelStyle: LABEL_GRAY,
+    labelBgStyle: LABEL_BG,
+    style: EDGE_STYLE_COND,
+    markerEnd: GRAY_MARKER,
+  },
   // reference_image_analysis → character_extraction
-  { id: 's-ref-char', source: 'reference_image_analysis', target: 'character_extraction', style: EDGE_STYLE_DIRECT, markerEnd: GRAY_MARKER },
+  {
+    id: 's-ref-char',
+    source: 'reference_image_analysis',
+    target: 'character_extraction',
+    style: EDGE_STYLE_DIRECT,
+    markerEnd: GRAY_MARKER,
+  },
   // Main pipeline path
-  { id: 's-char-scene', source: 'character_extraction', target: 'scene_decomposition', style: EDGE_STYLE_DIRECT, markerEnd: GRAY_MARKER },
-  { id: 's-scene-prompt', source: 'scene_decomposition', target: 'scene_prompt_generation', style: EDGE_STYLE_DIRECT, markerEnd: GRAY_MARKER },
-  { id: 's-prompt-img', source: 'scene_prompt_generation', target: 'scene_image_generation', style: EDGE_STYLE_DIRECT, markerEnd: GRAY_MARKER },
-  { id: 's-img-coh', source: 'scene_image_generation', target: 'storyboard_coherence', style: EDGE_STYLE_DIRECT, markerEnd: GRAY_MARKER },
+  {
+    id: 's-char-scene',
+    source: 'character_extraction',
+    target: 'scene_decomposition',
+    style: EDGE_STYLE_DIRECT,
+    markerEnd: GRAY_MARKER,
+  },
+  {
+    id: 's-scene-prompt',
+    source: 'scene_decomposition',
+    target: 'scene_prompt_generation',
+    style: EDGE_STYLE_DIRECT,
+    markerEnd: GRAY_MARKER,
+  },
+  {
+    id: 's-prompt-img',
+    source: 'scene_prompt_generation',
+    target: 'scene_image_generation',
+    style: EDGE_STYLE_DIRECT,
+    markerEnd: GRAY_MARKER,
+  },
+  {
+    id: 's-img-coh',
+    source: 'scene_image_generation',
+    target: 'storyboard_coherence',
+    style: EDGE_STYLE_DIRECT,
+    markerEnd: GRAY_MARKER,
+  },
   // Coherence → conditional: narration (TTS) / regen / export
   {
     id: 's-coh-narr',
@@ -294,10 +379,34 @@ const STORY_EDGES: Edge[] = [
     type: 'smoothstep',
   },
   // Narration → Audio → Video → Export
-  { id: 's-narr-audio', source: 'narration_script', target: 'narration_audio', style: EDGE_STYLE_DIRECT, markerEnd: GRAY_MARKER },
-  { id: 's-audio-video', source: 'narration_audio', target: 'video_assembly', style: EDGE_STYLE_DIRECT, markerEnd: GRAY_MARKER },
-  { id: 's-video-exp', source: 'video_assembly', target: 'storyboard_export', style: EDGE_STYLE_DIRECT, markerEnd: GRAY_MARKER },
-  { id: 's-exp-end', source: 'storyboard_export', target: 'END', style: EDGE_STYLE_DIRECT, markerEnd: GRAY_MARKER },
+  {
+    id: 's-narr-audio',
+    source: 'narration_script',
+    target: 'narration_audio',
+    style: EDGE_STYLE_DIRECT,
+    markerEnd: GRAY_MARKER,
+  },
+  {
+    id: 's-audio-video',
+    source: 'narration_audio',
+    target: 'video_assembly',
+    style: EDGE_STYLE_DIRECT,
+    markerEnd: GRAY_MARKER,
+  },
+  {
+    id: 's-video-exp',
+    source: 'video_assembly',
+    target: 'storyboard_export',
+    style: EDGE_STYLE_DIRECT,
+    markerEnd: GRAY_MARKER,
+  },
+  {
+    id: 's-exp-end',
+    source: 'storyboard_export',
+    target: 'END',
+    style: EDGE_STYLE_DIRECT,
+    markerEnd: GRAY_MARKER,
+  },
 ];
 
 export function DAGVisualizer({ currentAgent, status, agentTrace, runType }: DAGVisualizerProps) {
@@ -316,7 +425,10 @@ export function DAGVisualizer({ currentAgent, status, agentTrace, runType }: DAG
       id: def.id,
       type: 'pipeline' as const,
       position: { x: def.x, y: def.y },
-      data: { label: def.label, nodeStatus: resolveStatus(def.id, currentAgent, status, completedAgents) },
+      data: {
+        label: def.label,
+        nodeStatus: resolveStatus(def.id, currentAgent, status, completedAgents),
+      },
       draggable: false,
       selectable: false,
     }));
@@ -326,7 +438,11 @@ export function DAGVisualizer({ currentAgent, status, agentTrace, runType }: DAG
       id: 'END',
       type: 'pipeline',
       position: { x: endNodeDef.x, y: endNodeDef.y },
-      data: { label: 'END', nodeStatus: endReached ? ('completed' as NodeStatus) : ('pending' as NodeStatus), isEnd: true },
+      data: {
+        label: 'END',
+        nodeStatus: endReached ? ('completed' as NodeStatus) : ('pending' as NodeStatus),
+        isEnd: true,
+      },
       draggable: false,
       selectable: false,
     };
@@ -335,7 +451,10 @@ export function DAGVisualizer({ currentAgent, status, agentTrace, runType }: DAG
   }, [currentAgent, status, completedAgents, nodeDefs, endNodeDef]);
 
   return (
-    <div className="rounded-lg border border-[var(--border)] bg-white overflow-hidden" style={{ height: isStory ? 320 : 260 }}>
+    <div
+      className="rounded-lg border border-[var(--border)] bg-white overflow-hidden"
+      style={{ height: isStory ? 320 : 260 }}
+    >
       <ReactFlow
         nodes={nodes}
         edges={edges}

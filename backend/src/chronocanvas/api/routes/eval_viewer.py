@@ -31,9 +31,7 @@ async def get_eval_runs(
     include_rejected: bool = Query(False),
 ):
     """List eval runs, optionally filtered by condition or case."""
-    return list_runs(
-        condition=condition, case_id=case_id, include_rejected=include_rejected
-    )
+    return list_runs(condition=condition, case_id=case_id, include_rejected=include_rejected)
 
 
 @router.get("/runs/{run_id}", response_model=EvalRunDetail)

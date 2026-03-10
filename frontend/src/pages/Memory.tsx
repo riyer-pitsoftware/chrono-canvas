@@ -1,7 +1,7 @@
-import { AlertCircle, Trash2 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { useCacheEntries, useCacheStats, useClearCache } from "@/api/hooks/useMemory";
+import { AlertCircle, Trash2 } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { useCacheEntries, useCacheStats, useClearCache } from '@/api/hooks/useMemory';
 
 export function Memory() {
   const { data: statsData } = useCacheStats();
@@ -9,7 +9,7 @@ export function Memory() {
   const clearCacheMutation = useClearCache();
 
   const handleClearCache = async () => {
-    if (window.confirm("Are you sure you want to clear all cached research entries?")) {
+    if (window.confirm('Are you sure you want to clear all cached research entries?')) {
       await clearCacheMutation.mutateAsync();
       refetch();
     }
@@ -73,7 +73,7 @@ export function Memory() {
               className="gap-2"
             >
               <Trash2 className="w-4 h-4" />
-              {clearCacheMutation.isPending ? "Clearing..." : "Clear All"}
+              {clearCacheMutation.isPending ? 'Clearing...' : 'Clear All'}
             </Button>
           </div>
         </CardHeader>
@@ -83,7 +83,9 @@ export function Memory() {
           ) : entries.length === 0 ? (
             <div className="flex items-center gap-2 p-4 text-sm text-gray-600 border border-gray-200 rounded">
               <AlertCircle className="h-4 w-4 flex-shrink-0" />
-              <span>No cached research entries yet. Cache will populate as you generate portraits.</span>
+              <span>
+                No cached research entries yet. Cache will populate as you generate portraits.
+              </span>
             </div>
           ) : (
             <div className="overflow-x-auto">

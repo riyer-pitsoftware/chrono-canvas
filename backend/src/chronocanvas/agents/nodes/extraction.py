@@ -67,30 +67,34 @@ async def extraction_node(state: AgentState) -> AgentState:
         data["figure_name"] = input_text.strip() or "Unknown Figure"
 
     trace = state.get("agent_trace", [])
-    trace.append({
-        "agent": "extraction",
-        "timestamp": time.time(),
-        "extracted": data,
-        "llm_cost": response.cost,
-    })
+    trace.append(
+        {
+            "agent": "extraction",
+            "timestamp": time.time(),
+            "extracted": data,
+            "llm_cost": response.cost,
+        }
+    )
 
     llm_calls = list(state.get("llm_calls", []))
-    llm_calls.append({
-        "agent": "extraction",
-        "timestamp": time.time(),
-        "system_prompt": response.system_prompt,
-        "user_prompt": response.user_prompt,
-        "raw_response": response.content,
-        "parsed_output": data,
-        "provider": response.provider,
-        "model": response.model,
-        "input_tokens": response.input_tokens,
-        "output_tokens": response.output_tokens,
-        "cost": response.cost,
-        "duration_ms": response.duration_ms,
-        "requested_provider": response.requested_provider,
-        "fallback": response.fallback,
-    })
+    llm_calls.append(
+        {
+            "agent": "extraction",
+            "timestamp": time.time(),
+            "system_prompt": response.system_prompt,
+            "user_prompt": response.user_prompt,
+            "raw_response": response.content,
+            "parsed_output": data,
+            "provider": response.provider,
+            "model": response.model,
+            "input_tokens": response.input_tokens,
+            "output_tokens": response.output_tokens,
+            "cost": response.cost,
+            "duration_ms": response.duration_ms,
+            "requested_provider": response.requested_provider,
+            "fallback": response.fallback,
+        }
+    )
 
     return {
         "current_agent": "extraction",

@@ -1,34 +1,28 @@
-import { useEffect } from "react";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { BookOpen, Camera } from "lucide-react";
-import { useNavigation } from "@/stores/navigation";
-import { useHackathonMode } from "@/api/hooks/useConfig";
+import { useEffect } from 'react';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { BookOpen, Camera } from 'lucide-react';
+import { useNavigation } from '@/stores/navigation';
+import { useHackathonMode } from '@/api/hooks/useConfig';
 
 const allModes = [
   {
-    id: "creative_story",
-    title: "Story Director",
+    id: 'creative_story',
+    title: 'Story Director',
     description:
-      "Create multi-scene visual storyboards from your narrative. AI extracts characters, finds references, and generates a complete storyboard.",
-    badge: "Creative",
-    cta: "Start Creating",
+      'Create multi-scene visual storyboards from your narrative. AI extracts characters, finds references, and generates a complete storyboard.',
+    badge: 'Creative',
+    cta: 'Start Creating',
     icon: BookOpen,
   },
   {
-    id: "portrait",
-    title: "Historical Lens",
+    id: 'portrait',
+    title: 'Historical Lens',
     description:
-      "Generate historically-accurate portraits of real figures. AI researches the period, crafts prompts, and produces validated artwork.",
-    badge: "Portrait",
-    cta: "Start Generating",
+      'Generate historically-accurate portraits of real figures. AI researches the period, crafts prompts, and produces validated artwork.',
+    badge: 'Portrait',
+    cta: 'Start Generating',
     icon: Camera,
   },
 ] as const;
@@ -37,9 +31,7 @@ export function ModeSelector() {
   const { navigate } = useNavigation();
   const hackathonMode = useHackathonMode();
 
-  const modes = hackathonMode
-    ? allModes.filter((m) => m.id !== "portrait")
-    : allModes;
+  const modes = hackathonMode ? allModes.filter((m) => m.id !== 'portrait') : allModes;
 
   useEffect(() => {
     if (modes.length === 1) {
@@ -52,12 +44,8 @@ export function ModeSelector() {
   return (
     <div className="flex flex-col items-center justify-center min-h-[80vh] gap-8">
       <div className="text-center space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight">
-          ChronoNoir Studio
-        </h1>
-        <p className="text-[var(--muted-foreground)]">
-          Choose your creative mode
-        </p>
+        <h1 className="text-3xl font-bold tracking-tight">ChronoNoir Studio</h1>
+        <p className="text-[var(--muted-foreground)]">Choose your creative mode</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl w-full">

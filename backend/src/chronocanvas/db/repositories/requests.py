@@ -35,11 +35,7 @@ class RequestRepository(BaseRepository[GenerationRequest]):
         return list(result.scalars().all())
 
     async def list_recent(self, limit: int = 20) -> list[GenerationRequest]:
-        stmt = (
-            select(GenerationRequest)
-            .order_by(GenerationRequest.created_at.desc())
-            .limit(limit)
-        )
+        stmt = select(GenerationRequest).order_by(GenerationRequest.created_at.desc()).limit(limit)
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
 

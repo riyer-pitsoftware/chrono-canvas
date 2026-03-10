@@ -60,11 +60,13 @@ async def export_node(state: AgentState) -> AgentState:
     metadata_path.write_text(json.dumps(metadata, indent=2))
 
     trace = state.get("agent_trace", [])
-    trace.append({
-        "agent": "export",
-        "timestamp": time.time(),
-        "export_path": str(export_dir),
-    })
+    trace.append(
+        {
+            "agent": "export",
+            "timestamp": time.time(),
+            "export_path": str(export_dir),
+        }
+    )
 
     return {
         "current_agent": "export",

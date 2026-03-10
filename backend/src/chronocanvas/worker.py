@@ -27,7 +27,8 @@ async def run_generation_pipeline_task(
     config_payload: dict | None = None,
 ) -> None:
     await run_generation_pipeline(
-        request_id, input_text,
+        request_id,
+        input_text,
         source_face_path=source_face_path,
         config_payload=config_payload,
     )

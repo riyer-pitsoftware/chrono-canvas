@@ -36,16 +36,31 @@ def _load_aggregate_module():
 _agg_mod = _load_aggregate_module()
 
 # Constants / functions from aggregation script (with fallbacks)
-SCORE_DIMENSIONS: list[str] = getattr(_agg_mod, "SCORE_DIMENSIONS", [
-    "prompt_adherence", "visual_coherence", "face_usability",
-    "period_plausibility", "anachronism_avoidance",
-    "narrative_image_consistency", "uncertainty_signaling_quality",
-    "audit_trace_completeness",
-])
+SCORE_DIMENSIONS: list[str] = getattr(
+    _agg_mod,
+    "SCORE_DIMENSIONS",
+    [
+        "prompt_adherence",
+        "visual_coherence",
+        "face_usability",
+        "period_plausibility",
+        "anachronism_avoidance",
+        "narrative_image_consistency",
+        "uncertainty_signaling_quality",
+        "audit_trace_completeness",
+    ],
+)
 
-CONDITION_ORDER: list[str] = getattr(_agg_mod, "CONDITION_ORDER", [
-    "baselineA", "baselineB", "baselineC", "baselineD",
-])
+CONDITION_ORDER: list[str] = getattr(
+    _agg_mod,
+    "CONDITION_ORDER",
+    [
+        "baselineA",
+        "baselineB",
+        "baselineC",
+        "baselineD",
+    ],
+)
 
 
 def _normalize_condition(condition: str) -> str:
@@ -94,16 +109,12 @@ def _load_all_ratings(ratings_dir: Path) -> list[dict]:
                     val = row.get(dim, "")
                     row[dim] = int(val) if val.strip() else None
                 tags_raw = row.get("failure_tags", "")
-                row["failure_tags_list"] = [
-                    t.strip() for t in tags_raw.split(";") if t.strip()
-                ]
+                row["failure_tags_list"] = [t.strip() for t in tags_raw.split(";") if t.strip()]
                 rows.append(row)
     return rows
 
 
-def _merge_ratings_with_manifests(
-    ratings: list[dict], manifests: dict[str, dict]
-) -> list[dict]:
+def _merge_ratings_with_manifests(ratings: list[dict], manifests: dict[str, dict]) -> list[dict]:
     """Enrich each rating row with manifest metadata."""
     if _agg_mod:
         return _agg_mod.merge_ratings_with_manifests(ratings, manifests)

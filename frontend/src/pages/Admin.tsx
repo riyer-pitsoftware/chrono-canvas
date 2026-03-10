@@ -1,8 +1,8 @@
-import { useState, useCallback } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { useAgents, useLLMStatus, useCostSummary } from "@/api/hooks/useAgents";
+import { useState, useCallback } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { useAgents, useLLMStatus, useCostSummary } from '@/api/hooks/useAgents';
 import {
   useValidationRules,
   useUpdateValidationRule,
@@ -10,9 +10,9 @@ import {
   useValidationQueue,
   useAcceptValidation,
   useRejectValidation,
-} from "@/api/hooks/useValidationAdmin";
-import type { ValidationRule, ValidationQueueItem } from "@/api/types";
-import { useNavigation } from "@/stores/navigation";
+} from '@/api/hooks/useValidationAdmin';
+import type { ValidationRule, ValidationQueueItem } from '@/api/types';
+import { useNavigation } from '@/stores/navigation';
 
 // ── Speed Gauge ──────────────────────────────────────────────────────────────
 
@@ -20,7 +20,7 @@ function SpeedGauge({ value, onChange }: { value: number; onChange: (v: number) 
   const clamp = (v: number) => Math.max(0, Math.min(100, v));
   const angle = (clamp(value) / 100) * 180 - 90; // -90° (left) to +90° (right)
 
-  const zone = value < 50 ? "#ef4444" : value < 70 ? "#f59e0b" : "#22c55e";
+  const zone = value < 50 ? '#ef4444' : value < 70 ? '#f59e0b' : '#22c55e';
 
   // SVG arc path helper
   function polarToXY(deg: number, r: number) {
@@ -41,11 +41,29 @@ function SpeedGauge({ value, onChange }: { value: number; onChange: (v: number) 
         {/* Background arc */}
         <path d={arcPath(180, 360, 44)} fill="none" stroke="var(--border)" strokeWidth="10" />
         {/* Red zone 0-50 */}
-        <path d={arcPath(180, 270, 44)} fill="none" stroke="#ef4444" strokeWidth="10" opacity="0.25" />
+        <path
+          d={arcPath(180, 270, 44)}
+          fill="none"
+          stroke="#ef4444"
+          strokeWidth="10"
+          opacity="0.25"
+        />
         {/* Amber zone 50-70 */}
-        <path d={arcPath(270, 306, 44)} fill="none" stroke="#f59e0b" strokeWidth="10" opacity="0.25" />
+        <path
+          d={arcPath(270, 306, 44)}
+          fill="none"
+          stroke="#f59e0b"
+          strokeWidth="10"
+          opacity="0.25"
+        />
         {/* Green zone 70-100 */}
-        <path d={arcPath(306, 360, 44)} fill="none" stroke="#22c55e" strokeWidth="10" opacity="0.25" />
+        <path
+          d={arcPath(306, 360, 44)}
+          fill="none"
+          stroke="#22c55e"
+          strokeWidth="10"
+          opacity="0.25"
+        />
         {/* Value arc */}
         <path
           d={arcPath(180, 180 + clamp(value) * 1.8, 44)}
@@ -65,7 +83,14 @@ function SpeedGauge({ value, onChange }: { value: number; onChange: (v: number) 
           strokeLinecap="round"
         />
         <circle cx="60" cy="60" r="4" fill="var(--foreground)" />
-        <text x="60" y="68" textAnchor="middle" fontSize="11" fill="var(--foreground)" fontWeight="bold">
+        <text
+          x="60"
+          y="68"
+          textAnchor="middle"
+          fontSize="11"
+          fill="var(--foreground)"
+          fontWeight="bold"
+        >
           {Math.round(value)}
         </text>
       </svg>
@@ -85,7 +110,13 @@ function SpeedGauge({ value, onChange }: { value: number; onChange: (v: number) 
 
 // ── Rule Row ─────────────────────────────────────────────────────────────────
 
-function RuleRow({ rule, onUpdate }: { rule: ValidationRule; onUpdate: (id: string, weight: number, enabled: boolean) => void }) {
+function RuleRow({
+  rule,
+  onUpdate,
+}: {
+  rule: ValidationRule;
+  onUpdate: (id: string, weight: number, enabled: boolean) => void;
+}) {
   const [weight, setWeight] = useState(rule.weight);
   const [enabled, setEnabled] = useState(rule.enabled);
   const [dirty, setDirty] = useState(false);
@@ -129,11 +160,11 @@ function RuleRow({ rule, onUpdate }: { rule: ValidationRule; onUpdate: (id: stri
         onClick={handleToggle}
         className={`text-xs px-2 py-1 rounded border transition-colors ${
           enabled
-            ? "border-[var(--primary)] text-[var(--primary)]"
-            : "border-[var(--border)] text-[var(--muted-foreground)]"
+            ? 'border-[var(--primary)] text-[var(--primary)]'
+            : 'border-[var(--border)] text-[var(--muted-foreground)]'
         }`}
       >
-        {enabled ? "On" : "Off"}
+        {enabled ? 'On' : 'Off'}
       </button>
       {dirty && (
         <Button size="sm" onClick={handleSave}>
@@ -158,7 +189,11 @@ function QueueCard({
   onReview: (id: string) => void;
 }) {
   const scoreColor =
-    item.overall_score >= 70 ? "text-green-500" : item.overall_score >= 50 ? "text-amber-500" : "text-red-500";
+    item.overall_score >= 70
+      ? 'text-green-500'
+      : item.overall_score >= 50
+        ? 'text-amber-500'
+        : 'text-red-500';
 
   return (
     <Card>
@@ -179,10 +214,14 @@ function QueueCard({
             <div className="flex flex-wrap gap-2 mb-3">
               {item.categories.map((cat) => (
                 <div key={cat.category} className="text-xs bg-[var(--muted)] rounded px-2 py-0.5">
-                  <span className="capitalize">{cat.category.replace(/_/g, " ")}</span>
+                  <span className="capitalize">{cat.category.replace(/_/g, ' ')}</span>
                   <span
                     className={`ml-1 font-semibold ${
-                      cat.score >= 70 ? "text-green-500" : cat.score >= 50 ? "text-amber-500" : "text-red-500"
+                      cat.score >= 70
+                        ? 'text-green-500'
+                        : cat.score >= 50
+                          ? 'text-amber-500'
+                          : 'text-red-500'
                     }`}
                   >
                     {Math.round(cat.score)}
@@ -195,7 +234,9 @@ function QueueCard({
                 Overall: {item.overall_score}
               </span>
               {item.human_review_status ? (
-                <Badge variant={item.human_review_status === "accepted" ? "success" : "destructive"}>
+                <Badge
+                  variant={item.human_review_status === 'accepted' ? 'success' : 'destructive'}
+                >
                   {item.human_review_status}
                 </Badge>
               ) : (
@@ -215,11 +256,7 @@ function QueueCard({
                   >
                     Accept
                   </Button>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => onReview(item.request_id)}
-                  >
+                  <Button size="sm" variant="secondary" onClick={() => onReview(item.request_id)}>
                     Review
                   </Button>
                 </div>
@@ -234,12 +271,12 @@ function QueueCard({
 
 // ── Tabs ──────────────────────────────────────────────────────────────────────
 
-type Tab = "overview" | "rules" | "queue";
+type Tab = 'overview' | 'rules' | 'queue';
 
 // ── Admin Page ────────────────────────────────────────────────────────────────
 
 export function Admin() {
-  const [activeTab, setActiveTab] = useState<Tab>("overview");
+  const [activeTab, setActiveTab] = useState<Tab>('overview');
   const [pendingThreshold, setPendingThreshold] = useState<number | null>(null);
   const { navigate } = useNavigation();
 
@@ -285,9 +322,9 @@ export function Admin() {
   );
 
   const tabs: { id: Tab; label: string }[] = [
-    { id: "overview", label: "Overview" },
-    { id: "rules", label: "Validation Rules" },
-    { id: "queue", label: `Review Queue${queueQuery.data ? ` (${queueQuery.data.total})` : ""}` },
+    { id: 'overview', label: 'Overview' },
+    { id: 'rules', label: 'Validation Rules' },
+    { id: 'queue', label: `Review Queue${queueQuery.data ? ` (${queueQuery.data.total})` : ''}` },
   ];
 
   return (
@@ -302,8 +339,8 @@ export function Admin() {
             onClick={() => setActiveTab(t.id)}
             className={`px-4 py-2 text-sm font-medium transition-colors ${
               activeTab === t.id
-                ? "border-b-2 border-[var(--primary)] text-[var(--primary)]"
-                : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
+                ? 'border-b-2 border-[var(--primary)] text-[var(--primary)]'
+                : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'
             }`}
           >
             {t.label}
@@ -312,7 +349,7 @@ export function Admin() {
       </div>
 
       {/* Overview Tab */}
-      {activeTab === "overview" && (
+      {activeTab === 'overview' && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <Card>
             <CardHeader>
@@ -343,8 +380,8 @@ export function Admin() {
                   Object.entries(llmStatus.data.providers).map(([name, available]) => (
                     <div key={name} className="flex items-center justify-between">
                       <p className="font-medium">{name}</p>
-                      <Badge variant={available ? "success" : "destructive"}>
-                        {available ? "Available" : "Unavailable"}
+                      <Badge variant={available ? 'success' : 'destructive'}>
+                        {available ? 'Available' : 'Unavailable'}
                       </Badge>
                     </div>
                   ))}
@@ -379,7 +416,7 @@ export function Admin() {
       )}
 
       {/* Validation Rules Tab */}
-      {activeTab === "rules" && (
+      {activeTab === 'rules' && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Pass threshold gauge */}
           <Card>
@@ -389,8 +426,12 @@ export function Admin() {
             <CardContent className="flex flex-col items-center gap-4">
               <SpeedGauge value={threshold} onChange={handleThresholdChange} />
               {pendingThreshold !== null && (
-                <Button size="sm" onClick={handleThresholdSave} disabled={updateThreshold.isPending}>
-                  {updateThreshold.isPending ? "Saving…" : "Save threshold"}
+                <Button
+                  size="sm"
+                  onClick={handleThresholdSave}
+                  disabled={updateThreshold.isPending}
+                >
+                  {updateThreshold.isPending ? 'Saving…' : 'Save threshold'}
                 </Button>
               )}
               <p className="text-xs text-center text-[var(--muted-foreground)]">
@@ -421,7 +462,7 @@ export function Admin() {
       )}
 
       {/* Review Queue Tab */}
-      {activeTab === "queue" && (
+      {activeTab === 'queue' && (
         <div>
           {queueQuery.isLoading && (
             <p className="text-sm text-[var(--muted-foreground)]">Loading queue…</p>

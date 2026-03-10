@@ -59,9 +59,7 @@ class ConnectionManager:
                 )
                 self.disconnect(ws, request_id)
             except Exception as exc:
-                logger.warning(
-                    "send_json failed for request_id=%s: %s", request_id, exc
-                )
+                logger.warning("send_json failed for request_id=%s: %s", request_id, exc)
 
 
 manager = ConnectionManager()
@@ -104,14 +102,10 @@ async def generation_websocket(websocket: WebSocket, request_id: str):
                 try:
                     data = json.loads(message["data"])
                 except (json.JSONDecodeError, KeyError) as exc:
-                    logger.warning(
-                        "Malformed Redis message on channel=%s: %s", channel, exc
-                    )
+                    logger.warning("Malformed Redis message on channel=%s: %s", channel, exc)
                     continue
                 try:
-                    await asyncio.wait_for(
-                        websocket.send_json(data), timeout=_SEND_TIMEOUT_S
-                    )
+                    await asyncio.wait_for(websocket.send_json(data), timeout=_SEND_TIMEOUT_S)
                 except asyncio.TimeoutError:
                     logger.warning(
                         "WS send timed out for request_id=%s; closing connection",
@@ -119,9 +113,7 @@ async def generation_websocket(websocket: WebSocket, request_id: str):
                     )
                     return
                 except Exception as exc:
-                    logger.warning(
-                        "WS send failed for request_id=%s: %s", request_id, exc
-                    )
+                    logger.warning("WS send failed for request_id=%s: %s", request_id, exc)
                     return
                 if data.get("status") in ("completed", "failed"):
                     return
@@ -139,7 +131,8 @@ async def generation_websocket(websocket: WebSocket, request_id: str):
                     return  # client gone; cleanup happens in finally
             logger.info(
                 "Idle timeout (%ss) reached for request_id=%s; closing WebSocket",
-                _IDLE_TIMEOUT_S, request_id,
+                _IDLE_TIMEOUT_S,
+                request_id,
             )
 
         async def recv_loop() -> None:
@@ -150,9 +143,7 @@ async def generation_websocket(websocket: WebSocket, request_id: str):
                 pass
 
         redis_task = asyncio.create_task(listen_redis(), name=f"ws-redis-{request_id}")
-        heartbeat_task = asyncio.create_task(
-            send_heartbeats(), name=f"ws-hb-{request_id}"
-        )
+        heartbeat_task = asyncio.create_task(send_heartbeats(), name=f"ws-hb-{request_id}")
         recv_task = asyncio.create_task(recv_loop(), name=f"ws-recv-{request_id}")
 
         # Block until any of: generation done, idle timeout, client disconnect
@@ -179,8 +170,6 @@ async def generation_websocket(websocket: WebSocket, request_id: str):
                 await pubsub.unsubscribe(channel)
                 await pubsub.aclose()
             except Exception as exc:
-                logger.debug(
-                    "pubsub cleanup error for channel=%s: %s", channel, exc
-                )
+                logger.debug("pubsub cleanup error for channel=%s: %s", channel, exc)
 
         manager.disconnect(websocket, request_id)

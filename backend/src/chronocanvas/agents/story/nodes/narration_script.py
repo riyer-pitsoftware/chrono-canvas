@@ -73,6 +73,7 @@ async def _vision_narration(panels: list[dict], request_id: str) -> tuple[dict[i
     """Use Gemini multimodal to generate narration from actual images."""
     from google import genai
     from google.genai import types
+
     from chronocanvas.llm.providers.gemini import GEMINI_PRICING, gemini_generate_with_timeout
 
     parts: list[types.Part] = []
@@ -84,10 +85,11 @@ async def _vision_narration(panels: list[dict], request_id: str) -> tuple[dict[i
         mood = panel.get("mood", "")
         image_path = panel.get("image_path", "")
 
-        parts.append(types.Part.from_text(
-            text=f"\n--- Scene {scene_idx} ---\n"
-            f"Description: {description}\nMood: {mood}\n"
-        ))
+        parts.append(
+            types.Part.from_text(
+                text=f"\n--- Scene {scene_idx} ---\nDescription: {description}\nMood: {mood}\n"
+            )
+        )
 
         if image_path and Path(image_path).exists():
             image_bytes = Path(image_path).read_bytes()
@@ -122,10 +124,7 @@ async def _vision_narration(panels: list[dict], request_id: str) -> tuple[dict[i
     json_end = raw_text.rfind("}") + 1
     parsed = json.loads(raw_text[json_start:json_end]) if json_start >= 0 else {}
 
-    narrations = {
-        n["scene_index"]: n["narration_text"]
-        for n in parsed.get("narrations", [])
-    }
+    narrations = {n["scene_index"]: n["narration_text"] for n in parsed.get("narrations", [])}
 
     llm_record = {
         "agent": "narration_script",
@@ -146,7 +145,9 @@ async def _vision_narration(panels: list[dict], request_id: str) -> tuple[dict[i
 
 
 async def _text_only_narration(
-    completed_panels: list[dict], request_id: str,
+    completed_panels: list[dict],
+    request_id: str,
+    state: StoryState | None = None,
 ) -> tuple[dict[int, str], dict]:
     """Use text-only LLM router for narration (original behavior)."""
     scenes_for_prompt = [
@@ -183,10 +184,7 @@ async def _text_only_narration(
         raise ValueError("No JSON found in narration script response")
 
     parsed = json.loads(content[json_start:json_end])
-    narrations = {
-        n["scene_index"]: n["narration_text"]
-        for n in parsed.get("narrations", [])
-    }
+    narrations = {n["scene_index"]: n["narration_text"] for n in parsed.get("narrations", [])}
 
     llm_record = {
         "agent": "narration_script",
@@ -213,7 +211,8 @@ async def narration_script_node(state: StoryState) -> StoryState:
     panels = list(state.get("panels", []))
     logger.info(
         "Narration script: generating for %d panels [request_id=%s]",
-        len(panels), request_id,
+        len(panels),
+        request_id,
     )
 
     trace = list(state.get("agent_trace", []))
@@ -222,12 +221,14 @@ async def narration_script_node(state: StoryState) -> StoryState:
     completed_panels = [p for p in panels if p.get("status") == "completed"]
     if not completed_panels:
         logger.info("Skipping narration script: no completed panels")
-        trace.append({
-            "agent": "narration_script",
-            "timestamp": time.time(),
-            "skipped": True,
-            "reason": "No completed panels",
-        })
+        trace.append(
+            {
+                "agent": "narration_script",
+                "timestamp": time.time(),
+                "skipped": True,
+                "reason": "No completed panels",
+            }
+        )
         return {
             "current_agent": "narration_script",
             "agent_trace": trace,
@@ -237,15 +238,16 @@ async def narration_script_node(state: StoryState) -> StoryState:
     try:
         # Use vision-enhanced narration if enabled and images exist
         has_images = any(
-            p.get("image_path") and Path(p["image_path"]).exists()
-            for p in completed_panels
+            p.get("image_path") and Path(p["image_path"]).exists() for p in completed_panels
         )
 
         if settings.vision_narration_enabled and has_images:
             logger.info("Using vision-enhanced narration [request_id=%s]", request_id)
             narrations, llm_record = await _vision_narration(completed_panels, request_id)
         else:
-            narrations, llm_record = await _text_only_narration(completed_panels, request_id)
+            narrations, llm_record = await _text_only_narration(
+                completed_panels, request_id, state=state
+            )
 
         llm_calls.append(llm_record)
 
@@ -257,17 +259,20 @@ async def narration_script_node(state: StoryState) -> StoryState:
 
         logger.info(
             "Generated narration for %d/%d panels (vision=%s) [request_id=%s]",
-            len(narrations), len(panels),
+            len(narrations),
+            len(panels),
             llm_record.get("vision_enhanced", False),
             request_id,
         )
 
-        trace.append({
-            "agent": "narration_script",
-            "timestamp": time.time(),
-            "panels_narrated": len(narrations),
-            "vision_enhanced": llm_record.get("vision_enhanced", False),
-        })
+        trace.append(
+            {
+                "agent": "narration_script",
+                "timestamp": time.time(),
+                "panels_narrated": len(narrations),
+                "vision_enhanced": llm_record.get("vision_enhanced", False),
+            }
+        )
 
         return {
             "current_agent": "narration_script",
@@ -279,13 +284,16 @@ async def narration_script_node(state: StoryState) -> StoryState:
     except Exception as e:
         logger.warning(
             "Narration script generation failed [request_id=%s]: %s",
-            request_id, e,
+            request_id,
+            e,
         )
-        trace.append({
-            "agent": "narration_script",
-            "timestamp": time.time(),
-            "error": str(e),
-        })
+        trace.append(
+            {
+                "agent": "narration_script",
+                "timestamp": time.time(),
+                "error": str(e),
+            }
+        )
         # Non-fatal: continue without narration text
         return {
             "current_agent": "narration_script",

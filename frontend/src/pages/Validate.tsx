@@ -1,41 +1,48 @@
-import { useCallback, useEffect, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { api } from "@/api/client";
-import { useGenerations } from "@/api/hooks/useGeneration";
-import { useNavigation } from "@/stores/navigation";
-import type { ValidationSummary } from "@/api/types";
+import { useCallback, useEffect, useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { api } from '@/api/client';
+import { useGenerations } from '@/api/hooks/useGeneration';
+import { useNavigation } from '@/stores/navigation';
+import type { ValidationSummary } from '@/api/types';
 
 interface ValidateProps {
   initialRequestId?: string;
 }
 
 export function Validate({ initialRequestId }: ValidateProps) {
-  const [requestId, setRequestId] = useState(initialRequestId ?? "");
+  const [requestId, setRequestId] = useState(initialRequestId ?? '');
   const [results, setResults] = useState<ValidationSummary | null>(null);
   const [loading, setLoading] = useState(false);
   const [recentPage, setRecentPage] = useState(0);
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState('all');
   const RECENT_LIMIT = 10;
   const recentOffset = recentPage * RECENT_LIMIT;
-  const statusParam = statusFilter === "all" ? undefined : statusFilter;
-  const { data: recentGenerations, isLoading: loadingGenerations, error: recentError } = useGenerations(recentOffset, RECENT_LIMIT, statusParam);
+  const statusParam = statusFilter === 'all' ? undefined : statusFilter;
+  const {
+    data: recentGenerations,
+    isLoading: loadingGenerations,
+    error: recentError,
+  } = useGenerations(recentOffset, RECENT_LIMIT, statusParam);
   const { navigate } = useNavigation();
-  const handleValidate = useCallback(async (overrideId?: string) => {
-    const idToValidate = (overrideId ?? requestId).trim();
-    if (!idToValidate) return;
-    setLoading(true);
-    try {
-      const data = await api.get<ValidationSummary>(`/validation/${idToValidate}`);
-      setResults(data);
-    } catch {
-      setResults(null);
-    } finally {
-      setLoading(false);
-    }
-  }, [requestId]);
+  const handleValidate = useCallback(
+    async (overrideId?: string) => {
+      const idToValidate = (overrideId ?? requestId).trim();
+      if (!idToValidate) return;
+      setLoading(true);
+      try {
+        const data = await api.get<ValidationSummary>(`/validation/${idToValidate}`);
+        setResults(data);
+      } catch {
+        setResults(null);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [requestId],
+  );
 
   useEffect(() => {
     if (!initialRequestId) return;
@@ -81,9 +88,12 @@ export function Validate({ initialRequestId }: ValidateProps) {
 
   const getStatusVariant = (status: string) => {
     switch (status) {
-      case "completed": return "success" as const;
-      case "failed": return "destructive" as const;
-      default: return "secondary" as const;
+      case 'completed':
+        return 'success' as const;
+      case 'failed':
+        return 'destructive' as const;
+      default:
+        return 'secondary' as const;
     }
   };
 
@@ -104,7 +114,7 @@ export function Validate({ initialRequestId }: ValidateProps) {
               className="flex-1"
             />
             <Button onClick={() => handleValidate()} disabled={loading}>
-              {loading ? "Checking..." : "Check"}
+              {loading ? 'Checking...' : 'Check'}
             </Button>
           </div>
         </CardContent>
@@ -115,7 +125,7 @@ export function Validate({ initialRequestId }: ValidateProps) {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle>Results</CardTitle>
-              <Badge variant={results.passed ? "success" : "destructive"}>
+              <Badge variant={results.passed ? 'success' : 'destructive'}>
                 Score: {results.overall_score.toFixed(1)}
               </Badge>
             </div>
@@ -123,15 +133,22 @@ export function Validate({ initialRequestId }: ValidateProps) {
           <CardContent>
             <div className="space-y-3">
               {results.results.map((r) => (
-                <div key={r.id} className="flex items-center justify-between p-3 border border-[var(--border)] rounded-md">
+                <div
+                  key={r.id}
+                  className="flex items-center justify-between p-3 border border-[var(--border)] rounded-md"
+                >
                   <div>
-                    <p className="font-medium">{r.category}: {r.rule_name}</p>
-                    {r.details && <p className="text-sm text-[var(--muted-foreground)]">{r.details}</p>}
+                    <p className="font-medium">
+                      {r.category}: {r.rule_name}
+                    </p>
+                    {r.details && (
+                      <p className="text-sm text-[var(--muted-foreground)]">{r.details}</p>
+                    )}
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-sm">{r.score.toFixed(1)}</span>
-                    <Badge variant={r.passed ? "success" : "destructive"}>
-                      {r.passed ? "Pass" : "Fail"}
+                    <Badge variant={r.passed ? 'success' : 'destructive'}>
+                      {r.passed ? 'Pass' : 'Fail'}
                     </Badge>
                   </div>
                 </div>
@@ -146,7 +163,9 @@ export function Validate({ initialRequestId }: ValidateProps) {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <CardTitle>Recent Generations</CardTitle>
             <div className="flex items-center gap-2 text-xs text-[var(--muted-foreground)]">
-              <label htmlFor="statusFilter" className="font-medium text-[var(--foreground)]">Status</label>
+              <label htmlFor="statusFilter" className="font-medium text-[var(--foreground)]">
+                Status
+              </label>
               <select
                 id="statusFilter"
                 value={statusFilter}
@@ -178,21 +197,24 @@ export function Validate({ initialRequestId }: ValidateProps) {
             <>
               <div className="space-y-3">
                 {recentItems.map((item) => (
-                  <div key={item.id} className="border rounded-md p-3 flex flex-wrap items-center gap-3">
+                  <div
+                    key={item.id}
+                    className="border rounded-md p-3 flex flex-wrap items-center gap-3"
+                  >
                     <div className="flex-1 min-w-[200px]">
                       <p className="text-sm font-medium text-[var(--foreground)]">
-                        {item.figure_id ? item.figure_id : "Custom request"}
+                        {item.figure_id ? item.figure_id : 'Custom request'}
                       </p>
                       <p className="text-xs text-[var(--muted-foreground)] break-all">
-                        {item.input_text.length > 120 ? `${item.input_text.slice(0, 120)}…` : item.input_text}
+                        {item.input_text.length > 120
+                          ? `${item.input_text.slice(0, 120)}…`
+                          : item.input_text}
                       </p>
                       <p className="text-xs text-[var(--muted-foreground)] mt-1">
                         {new Date(item.created_at).toLocaleString()}
                       </p>
                     </div>
-                    <Badge variant={getStatusVariant(item.status)}>
-                      {item.status}
-                    </Badge>
+                    <Badge variant={getStatusVariant(item.status)}>{item.status}</Badge>
                     <div className="flex items-center gap-2">
                       <Button
                         variant="outline"
@@ -217,7 +239,8 @@ export function Validate({ initialRequestId }: ValidateProps) {
               </div>
               <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-xs text-[var(--muted-foreground)]">
                 <span>
-                  Showing {recentTotal === 0 ? 0 : `${showingFrom}–${showingTo}`} of {recentTotal} generations
+                  Showing {recentTotal === 0 ? 0 : `${showingFrom}–${showingTo}`} of {recentTotal}{' '}
+                  generations
                 </span>
                 <div className="flex items-center gap-2">
                   <Button

@@ -4,11 +4,10 @@ Runs the arq worker alongside a minimal HTTP health server on $PORT
 so Cloud Run's startup probe succeeds.
 """
 
-import asyncio
 import os
 import subprocess
 import threading
-from http.server import HTTPServer, BaseHTTPRequestHandler
+from http.server import BaseHTTPRequestHandler, HTTPServer
 
 
 class _HealthHandler(BaseHTTPRequestHandler):

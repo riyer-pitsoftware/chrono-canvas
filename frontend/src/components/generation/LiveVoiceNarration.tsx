@@ -1,5 +1,5 @@
-import { useState, useRef } from "react";
-import { Button } from "@/components/ui/button";
+import { useState, useRef } from 'react';
+import { Button } from '@/components/ui/button';
 
 interface LiveVoiceNarrationProps {
   text: string;
@@ -27,9 +27,9 @@ export function LiveVoiceNarration({ text, disabled }: LiveVoiceNarrationProps) 
     setLoading(true);
 
     try {
-      const res = await fetch("/api/live-voice/narrate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const res = await fetch('/api/live-voice/narrate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text }),
       });
 
@@ -51,7 +51,7 @@ export function LiveVoiceNarration({ text, disabled }: LiveVoiceNarrationProps) 
 
       audio.onerror = () => {
         setPlaying(false);
-        setError("Audio playback failed");
+        setError('Audio playback failed');
         URL.revokeObjectURL(url);
         audioRef.current = null;
       };
@@ -73,7 +73,7 @@ export function LiveVoiceNarration({ text, disabled }: LiveVoiceNarrationProps) 
         className="h-6 px-2 text-xs"
         onClick={handleNarrate}
         disabled={disabled || !text}
-        title={playing ? "Stop narration" : "Narrate with Live API"}
+        title={playing ? 'Stop narration' : 'Narrate with Live API'}
       >
         {loading ? (
           <span className="animate-pulse">...</span>
@@ -90,7 +90,15 @@ export function LiveVoiceNarration({ text, disabled }: LiveVoiceNarrationProps) 
 
 function SpeakerIcon({ className }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
       <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
       <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />

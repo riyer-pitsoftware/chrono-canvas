@@ -1,7 +1,7 @@
-import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   useEvalRuns,
   useEvalRun,
@@ -9,53 +9,55 @@ import {
   useEvalDashboard,
   useRejectEvalRun,
   useUnrejectEvalRun,
-} from "@/api/hooks/useEval";
-import type { EvalRunDetail, EvalRunSummary, DimensionAggregate } from "@/api/types";
+} from '@/api/hooks/useEval';
+import type { EvalRunDetail, EvalRunSummary, DimensionAggregate } from '@/api/types';
 
 // ── Tab navigation ──────────────────────────────────────────────────────────
 
-type Tab = "gallery" | "comparison" | "dashboard" | "agreement";
+type Tab = 'gallery' | 'comparison' | 'dashboard' | 'agreement';
 
 const TABS: { id: Tab; label: string }[] = [
-  { id: "gallery", label: "Gallery" },
-  { id: "comparison", label: "Comparison" },
-  { id: "dashboard", label: "Dashboard" },
-  { id: "agreement", label: "Agreement" },
+  { id: 'gallery', label: 'Gallery' },
+  { id: 'comparison', label: 'Comparison' },
+  { id: 'dashboard', label: 'Dashboard' },
+  { id: 'agreement', label: 'Agreement' },
 ];
 
 // ── Score dimensions ────────────────────────────────────────────────────────
 
 const SCORE_DIMENSIONS = [
-  "prompt_adherence",
-  "visual_coherence",
-  "face_usability",
-  "period_plausibility",
-  "anachronism_avoidance",
-  "narrative_image_consistency",
-  "uncertainty_signaling_quality",
-  "audit_trace_completeness",
+  'prompt_adherence',
+  'visual_coherence',
+  'face_usability',
+  'period_plausibility',
+  'anachronism_avoidance',
+  'narrative_image_consistency',
+  'uncertainty_signaling_quality',
+  'audit_trace_completeness',
 ];
 
 function dimLabel(dim: string): string {
   return dim
-    .split("_")
+    .split('_')
     .map((w) => w[0].toUpperCase() + w.slice(1))
-    .join(" ");
+    .join(' ');
 }
 
 // ── Condition colors ────────────────────────────────────────────────────────
 
 const CONDITION_COLORS: Record<string, string> = {
-  baselineA: "bg-blue-500/20 text-blue-400 border-blue-500/30",
-  baselineB: "bg-purple-500/20 text-purple-400 border-purple-500/30",
-  baselineC: "bg-amber-500/20 text-amber-400 border-amber-500/30",
-  baselineD: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
+  baselineA: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+  baselineB: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
+  baselineC: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
+  baselineD: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
 };
 
 function conditionBadge(condition: string) {
-  const cls = CONDITION_COLORS[condition] ?? "bg-gray-500/20 text-gray-400 border-gray-500/30";
+  const cls = CONDITION_COLORS[condition] ?? 'bg-gray-500/20 text-gray-400 border-gray-500/30';
   return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${cls}`}>
+    <span
+      className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${cls}`}
+    >
       {condition}
     </span>
   );
@@ -65,8 +67,7 @@ function conditionBadge(condition: string) {
 
 function ScoreBar({ value, max = 3 }: { value: number; max?: number }) {
   const pct = (value / max) * 100;
-  const color =
-    value >= 2.5 ? "bg-emerald-500" : value >= 1.5 ? "bg-amber-500" : "bg-red-500";
+  const color = value >= 2.5 ? 'bg-emerald-500' : value >= 1.5 ? 'bg-amber-500' : 'bg-red-500';
   return (
     <div className="flex items-center gap-2">
       <div className="w-20 h-2 rounded-full bg-[var(--border)] overflow-hidden">
@@ -80,8 +81,8 @@ function ScoreBar({ value, max = 3 }: { value: number; max?: number }) {
 // ── Gallery Tab ─────────────────────────────────────────────────────────────
 
 function GalleryTab() {
-  const [conditionFilter, setConditionFilter] = useState<string>("");
-  const [caseFilter, setCaseFilter] = useState<string>("");
+  const [conditionFilter, setConditionFilter] = useState<string>('');
+  const [caseFilter, setCaseFilter] = useState<string>('');
   const [showRejected, setShowRejected] = useState(false);
   const [selectedRun, setSelectedRun] = useState<string | undefined>();
 
@@ -150,8 +151,8 @@ function GalleryTab() {
             variant="ghost"
             size="sm"
             onClick={() => {
-              setConditionFilter("");
-              setCaseFilter("");
+              setConditionFilter('');
+              setCaseFilter('');
             }}
           >
             Clear Filters
@@ -180,15 +181,11 @@ function RunCard({ run, onClick }: { run: EvalRunSummary; onClick: () => void })
     <button
       onClick={onClick}
       className={`text-left rounded-lg border border-[var(--border)] bg-[var(--card)] overflow-hidden hover:border-[var(--primary)] transition-colors ${
-        run.rejected ? "opacity-50" : ""
+        run.rejected ? 'opacity-50' : ''
       }`}
     >
       {run.image_url ? (
-        <img
-          src={run.image_url}
-          alt={run.title}
-          className="w-full aspect-square object-cover"
-        />
+        <img src={run.image_url} alt={run.title} className="w-full aspect-square object-cover" />
       ) : (
         <div className="w-full aspect-square bg-[var(--accent)] flex items-center justify-center text-[var(--muted-foreground)] text-xs">
           No image
@@ -199,7 +196,10 @@ function RunCard({ run, onClick }: { run: EvalRunSummary; onClick: () => void })
         <div className="flex items-center gap-1.5 flex-wrap">
           {conditionBadge(run.condition)}
           {run.rejected && (
-            <Badge variant="outline" className="text-red-400 border-red-500/30 bg-red-500/10 text-[10px]">
+            <Badge
+              variant="outline"
+              className="text-red-400 border-red-500/30 bg-red-500/10 text-[10px]"
+            >
               Rejected
             </Badge>
           )}
@@ -213,7 +213,9 @@ function RunCard({ run, onClick }: { run: EvalRunSummary; onClick: () => void })
             </Badge>
           )}
           {run.has_rating && (
-            <Badge variant="outline" className="text-[10px]">Rated</Badge>
+            <Badge variant="outline" className="text-[10px]">
+              Rated
+            </Badge>
           )}
         </div>
         <p className="text-[10px] text-[var(--muted-foreground)] truncate">{run.case_id}</p>
@@ -226,7 +228,7 @@ function RunDetailView({ run }: { run: EvalRunDetail }) {
   const manifest = (run.manifest ?? {}) as Record<string, unknown>;
   const rating = run.rating as Record<string, unknown> | null;
   const outputText = run.output_text as string | null;
-  const [rejectReason, setRejectReason] = useState("");
+  const [rejectReason, setRejectReason] = useState('');
   const [showRejectForm, setShowRejectForm] = useState(false);
   const rejectMutation = useRejectEvalRun();
   const unrejectMutation = useUnrejectEvalRun();
@@ -271,7 +273,7 @@ function RunDetailView({ run }: { run: EvalRunDetail }) {
             onClick={() => unrejectMutation.mutate(run.run_id)}
             disabled={unrejectMutation.isPending}
           >
-            {unrejectMutation.isPending ? "Unrejecting..." : "Unreject"}
+            {unrejectMutation.isPending ? 'Unrejecting...' : 'Unreject'}
           </Button>
         ) : showRejectForm ? (
           <div className="space-y-2 p-3 rounded-md border border-red-500/30 bg-red-500/5">
@@ -294,7 +296,7 @@ function RunDetailView({ run }: { run: EvalRunDetail }) {
                 }}
                 disabled={rejectMutation.isPending}
               >
-                {rejectMutation.isPending ? "Rejecting..." : "Confirm Reject"}
+                {rejectMutation.isPending ? 'Rejecting...' : 'Confirm Reject'}
               </Button>
               <Button variant="ghost" size="sm" onClick={() => setShowRejectForm(false)}>
                 Cancel
@@ -320,25 +322,25 @@ function RunDetailView({ run }: { run: EvalRunDetail }) {
           <CardContent className="text-xs space-y-1">
             <div className="grid grid-cols-2 gap-x-4 gap-y-1">
               <span className="text-[var(--muted-foreground)]">Image Provider</span>
-              <span>{String(manifest.image_provider ?? "—")}</span>
+              <span>{String(manifest.image_provider ?? '—')}</span>
               <span className="text-[var(--muted-foreground)]">Image Model</span>
-              <span className="truncate">{String(manifest.image_model ?? "—")}</span>
+              <span className="truncate">{String(manifest.image_model ?? '—')}</span>
               <span className="text-[var(--muted-foreground)]">Latency</span>
               <span>
                 {manifest.total_latency_ms
                   ? `${(Number(manifest.total_latency_ms) / 1000).toFixed(1)}s`
-                  : "—"}
+                  : '—'}
               </span>
               <span className="text-[var(--muted-foreground)]">Cost</span>
               <span>
                 {manifest.total_cost_usd != null
                   ? `$${Number(manifest.total_cost_usd).toFixed(4)}`
-                  : "—"}
+                  : '—'}
               </span>
               <span className="text-[var(--muted-foreground)]">Retries</span>
               <span>{String(manifest.total_retries ?? 0)}</span>
               <span className="text-[var(--muted-foreground)]">Git Commit</span>
-              <span className="font-mono">{String(manifest.git_commit ?? "—")}</span>
+              <span className="font-mono">{String(manifest.git_commit ?? '—')}</span>
             </div>
           </CardContent>
         </Card>
@@ -369,10 +371,14 @@ function RunDetailView({ run }: { run: EvalRunDetail }) {
               {Boolean(rating.failure_tags) && (
                 <div className="flex gap-1 flex-wrap mt-2">
                   {String(rating.failure_tags)
-                    .split(";")
+                    .split(';')
                     .filter(Boolean)
                     .map((tag) => (
-                      <Badge key={tag} variant="outline" className="text-[10px] text-red-400 border-red-500/30">
+                      <Badge
+                        key={tag}
+                        variant="outline"
+                        className="text-[10px] text-red-400 border-red-500/30"
+                      >
                         {tag.trim()}
                       </Badge>
                     ))}
@@ -404,7 +410,7 @@ function RunDetailView({ run }: { run: EvalRunDetail }) {
 
 function ComparisonTab() {
   const { data: cases, isLoading } = useEvalCases();
-  const [selectedCaseId, setSelectedCaseId] = useState<string>("");
+  const [selectedCaseId, setSelectedCaseId] = useState<string>('');
 
   const selectedCase = cases?.find((c) => c.case_id === selectedCaseId);
 
@@ -443,9 +449,7 @@ function ComparisonTab() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {conditions.map((cond) => {
             const run = runsByCondition[cond];
-            return (
-              <ComparisonCard key={cond} run={run} />
-            );
+            return <ComparisonCard key={cond} run={run} />;
           })}
         </div>
       )}
@@ -506,9 +510,7 @@ function ComparisonCard({ run }: { run: EvalRunSummary }) {
         {!rating && run.has_rating && (
           <p className="text-xs text-[var(--muted-foreground)]">Loading scores...</p>
         )}
-        {!run.has_rating && (
-          <p className="text-xs text-[var(--muted-foreground)]">Not yet rated</p>
-        )}
+        {!run.has_rating && <p className="text-xs text-[var(--muted-foreground)]">Not yet rated</p>}
       </CardContent>
     </Card>
   );
@@ -557,7 +559,7 @@ function DashboardTab() {
         </Card>
         <Card>
           <CardContent className="pt-4">
-            <p className="text-2xl font-bold">{data.dimension_scores.length > 0 ? "8" : "0"}</p>
+            <p className="text-2xl font-bold">{data.dimension_scores.length > 0 ? '8' : '0'}</p>
             <p className="text-xs text-[var(--muted-foreground)]">Dimensions</p>
           </CardContent>
         </Card>
@@ -588,15 +590,17 @@ function DashboardTab() {
                     <td className="text-right py-2 px-2">{String(c.n_runs)}</td>
                     <td className="text-right py-2 px-2">{String(c.n_ratings)}</td>
                     <td className="text-right py-2 px-2">
-                      {c.success_rate != null ? `${(Number(c.success_rate) * 100).toFixed(0)}%` : "—"}
+                      {c.success_rate != null
+                        ? `${(Number(c.success_rate) * 100).toFixed(0)}%`
+                        : '—'}
                     </td>
                     <td className="text-right py-2 px-2">
-                      {c.mean_cost_usd != null ? `$${Number(c.mean_cost_usd).toFixed(4)}` : "—"}
+                      {c.mean_cost_usd != null ? `$${Number(c.mean_cost_usd).toFixed(4)}` : '—'}
                     </td>
                     <td className="text-right py-2 px-2">
                       {c.mean_latency_ms != null
                         ? `${(Number(c.mean_latency_ms) / 1000).toFixed(1)}s`
-                        : "—"}
+                        : '—'}
                     </td>
                   </tr>
                 ))}
@@ -626,10 +630,10 @@ function DashboardTab() {
                         <div
                           className={`h-full rounded ${
                             s.mean >= 2.5
-                              ? "bg-emerald-500"
+                              ? 'bg-emerald-500'
                               : s.mean >= 1.5
-                              ? "bg-amber-500"
-                              : "bg-red-500"
+                                ? 'bg-amber-500'
+                                : 'bg-red-500'
                           }`}
                           style={{ width: `${(s.mean / 3) * 100}%` }}
                         />
@@ -700,7 +704,7 @@ function AgreementTab() {
 // ── Main Page ───────────────────────────────────────────────────────────────
 
 export function EvalViewer() {
-  const [activeTab, setActiveTab] = useState<Tab>("gallery");
+  const [activeTab, setActiveTab] = useState<Tab>('gallery');
 
   return (
     <div className="space-y-6">
@@ -719,8 +723,8 @@ export function EvalViewer() {
             onClick={() => setActiveTab(tab.id)}
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
               activeTab === tab.id
-                ? "border-[var(--primary)] text-[var(--foreground)]"
-                : "border-transparent text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
+                ? 'border-[var(--primary)] text-[var(--foreground)]'
+                : 'border-transparent text-[var(--muted-foreground)] hover:text-[var(--foreground)]'
             }`}
           >
             {tab.label}
@@ -729,10 +733,10 @@ export function EvalViewer() {
       </div>
 
       {/* Tab content */}
-      {activeTab === "gallery" && <GalleryTab />}
-      {activeTab === "comparison" && <ComparisonTab />}
-      {activeTab === "dashboard" && <DashboardTab />}
-      {activeTab === "agreement" && <AgreementTab />}
+      {activeTab === 'gallery' && <GalleryTab />}
+      {activeTab === 'comparison' && <ComparisonTab />}
+      {activeTab === 'dashboard' && <DashboardTab />}
+      {activeTab === 'agreement' && <AgreementTab />}
     </div>
   );
 }

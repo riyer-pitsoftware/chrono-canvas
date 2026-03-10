@@ -69,10 +69,13 @@ _MIME_MAP = {
 
 
 def _estimate_cost(
-    input_tokens: int, output_tokens: int, model: str,
+    input_tokens: int,
+    output_tokens: int,
+    model: str,
 ) -> float:
     pricing = GEMINI_PRICING.get(
-        model, GEMINI_PRICING.get("gemini-2.5-flash", {}),
+        model,
+        GEMINI_PRICING.get("gemini-2.5-flash", {}),
     )
     in_cost = (input_tokens / 1_000_000) * pricing.get("input", 0)
     out_cost = (output_tokens / 1_000_000) * pricing.get("output", 0)
@@ -105,12 +108,14 @@ async def multimodal_validation_node(state: AgentState) -> AgentState:
             "Multimodal validation: no image [request_id=%s]",
             request_id,
         )
-        trace.append({
-            "agent": "multimodal_validation",
-            "timestamp": time.time(),
-            "skipped": True,
-            "reason": "no_image",
-        })
+        trace.append(
+            {
+                "agent": "multimodal_validation",
+                "timestamp": time.time(),
+                "skipped": True,
+                "reason": "no_image",
+            }
+        )
         return _skip_result(trace, llm_calls)
 
     if not settings.google_api_key:
@@ -122,18 +127,21 @@ async def multimodal_validation_node(state: AgentState) -> AgentState:
             "Multimodal validation: no GOOGLE_API_KEY [request_id=%s]",
             request_id,
         )
-        trace.append({
-            "agent": "multimodal_validation",
-            "timestamp": time.time(),
-            "skipped": True,
-            "reason": "no_api_key",
-        })
+        trace.append(
+            {
+                "agent": "multimodal_validation",
+                "timestamp": time.time(),
+                "skipped": True,
+                "reason": "no_api_key",
+            }
+        )
         return _skip_result(trace, llm_calls)
 
     figure_name = ext.get("figure_name", "Unknown")
     logger.info(
         "Multimodal validation: %s [request_id=%s]",
-        figure_name, request_id,
+        figure_name,
+        request_id,
     )
 
     # Read image bytes
@@ -160,7 +168,8 @@ async def multimodal_validation_node(state: AgentState) -> AgentState:
             model=model_id,
             contents=[
                 types.Part.from_bytes(
-                    data=image_bytes, mime_type=mime_type,
+                    data=image_bytes,
+                    mime_type=mime_type,
                 ),
                 types.Part.from_text(text=prompt_text),
             ],
@@ -175,9 +184,7 @@ async def multimodal_validation_node(state: AgentState) -> AgentState:
         raw = response.text or "{}"
         usage = getattr(response, "usage_metadata", None)
         in_tok = getattr(usage, "prompt_token_count", 0) if usage else 0
-        out_tok = (
-            getattr(usage, "candidates_token_count", 0) if usage else 0
-        )
+        out_tok = getattr(usage, "candidates_token_count", 0) if usage else 0
         cost = _estimate_cost(in_tok, out_tok, model_id)
 
         try:
@@ -189,33 +196,37 @@ async def multimodal_validation_node(state: AgentState) -> AgentState:
                 "recommendation": "review",
             }
 
-        trace.append({
-            "agent": "multimodal_validation",
-            "timestamp": time.time(),
-            "overall_score": data.get("overall_score", 0),
-            "recommendation": data.get("recommendation", "review"),
-            "issues": data.get("issues", []),
-            "strengths": data.get("strengths", []),
-            "scores": data.get("scores", {}),
-            "cost": cost,
-        })
+        trace.append(
+            {
+                "agent": "multimodal_validation",
+                "timestamp": time.time(),
+                "overall_score": data.get("overall_score", 0),
+                "recommendation": data.get("recommendation", "review"),
+                "issues": data.get("issues", []),
+                "strengths": data.get("strengths", []),
+                "scores": data.get("scores", {}),
+                "cost": cost,
+            }
+        )
 
-        llm_calls.append({
-            "agent": "multimodal_validation",
-            "timestamp": time.time(),
-            "system_prompt": None,
-            "user_prompt": prompt_text[:500],
-            "raw_response": raw,
-            "parsed_output": data,
-            "provider": "gemini",
-            "model": model_id,
-            "input_tokens": in_tok,
-            "output_tokens": out_tok,
-            "cost": cost,
-            "duration_ms": elapsed_ms,
-            "requested_provider": "gemini",
-            "fallback": False,
-        })
+        llm_calls.append(
+            {
+                "agent": "multimodal_validation",
+                "timestamp": time.time(),
+                "system_prompt": None,
+                "user_prompt": prompt_text[:500],
+                "raw_response": raw,
+                "parsed_output": data,
+                "provider": "gemini",
+                "model": model_id,
+                "input_tokens": in_tok,
+                "output_tokens": out_tok,
+                "cost": cost,
+                "duration_ms": elapsed_ms,
+                "requested_provider": "gemini",
+                "fallback": False,
+            }
+        )
 
         # Store vision validation results alongside existing validation
         val = dict(state.get("validation", {}))
@@ -233,14 +244,16 @@ async def multimodal_validation_node(state: AgentState) -> AgentState:
             raise
         elapsed_ms = (time.perf_counter() - start) * 1000
         logger.warning(
-            "Multimodal validation failed (non-fatal) "
-            "[request_id=%s]: %s",
-            request_id, e,
+            "Multimodal validation failed (non-fatal) [request_id=%s]: %s",
+            request_id,
+            e,
         )
-        trace.append({
-            "agent": "multimodal_validation",
-            "timestamp": time.time(),
-            "skipped": False,
-            "error": str(e),
-        })
+        trace.append(
+            {
+                "agent": "multimodal_validation",
+                "timestamp": time.time(),
+                "skipped": False,
+                "error": str(e),
+            }
+        )
         return _skip_result(trace, llm_calls)

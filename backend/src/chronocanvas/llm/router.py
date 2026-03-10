@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 
 class GeminiUnavailableError(RuntimeError):
     """Raised in strict Gemini mode when Gemini is unavailable and fallback is disabled."""
+
     pass
 
 
@@ -63,14 +64,20 @@ class LLMRouter:
         # RuntimeConfig provider override (from ConfigHUD — authoritative source)
         if runtime_config and runtime_config.llm_provider:
             if runtime_config.llm_provider in self.providers:
-                logger.debug("LLM provider from ConfigHUD: %s (agent=%s)", runtime_config.llm_provider, agent_name)
+                logger.debug(
+                    "LLM provider from ConfigHUD: %s (agent=%s)",
+                    runtime_config.llm_provider,
+                    agent_name,
+                )
                 return self.providers[runtime_config.llm_provider]
 
         # No ConfigHUD provider — derive default from deployment mode
         preferred = _MODE_DEFAULT_PROVIDER.get(settings.deployment_mode, "gemini")
         logger.debug(
             "LLM provider from deployment_mode=%s: %s (agent=%s)",
-            settings.deployment_mode, preferred, agent_name,
+            settings.deployment_mode,
+            preferred,
+            agent_name,
         )
         return self.providers[preferred]
 
@@ -90,7 +97,8 @@ class LLMRouter:
             provider = self.providers[provider_override]
         else:
             provider = self.get_provider(
-                task_type, agent_name=agent_name,
+                task_type,
+                agent_name=agent_name,
                 runtime_config=runtime_config,
             )
 
@@ -162,7 +170,8 @@ class LLMRouter:
             provider = self.providers[provider_override]
         else:
             provider = self.get_provider(
-                task_type, agent_name=agent_name,
+                task_type,
+                agent_name=agent_name,
                 runtime_config=runtime_config,
             )
 
@@ -192,11 +201,14 @@ class LLMRouter:
 
         async def on_token(token: str) -> None:
             if channel:
-                await publish_progress(channel, {
-                    "type": "llm_token",
-                    "agent": agent_name,
-                    "token": token,
-                })
+                await publish_progress(
+                    channel,
+                    {
+                        "type": "llm_token",
+                        "agent": agent_name,
+                        "token": token,
+                    },
+                )
 
         start = time.perf_counter()
         async with self.rate_limiter:
@@ -217,10 +229,13 @@ class LLMRouter:
         response.fallback = fell_back
 
         if channel:
-            await publish_progress(channel, {
-                "type": "llm_stream_end",
-                "agent": agent_name,
-            })
+            await publish_progress(
+                channel,
+                {
+                    "type": "llm_stream_end",
+                    "agent": agent_name,
+                },
+            )
 
         self.cost_tracker.record(
             provider=response.provider,
@@ -245,9 +260,13 @@ class LLMRouter:
         json_mode: bool = False,
         runtime_config: RuntimeConfig | None = None,
     ) -> LLMResponse:
-        """Generate with Google Search grounding (Gemini only). Falls back to plain generate for other providers."""
+        """Generate with Google Search grounding (Gemini only).
+
+        Falls back to plain generate for other providers.
+        """
         provider = self.get_provider(
-            task_type, agent_name=agent_name,
+            task_type,
+            agent_name=agent_name,
             runtime_config=runtime_config,
         )
 

@@ -161,7 +161,8 @@ async def _build_character_anchors(
         if json_start == -1 or json_end <= json_start:
             logger.warning(
                 "Character anchor LLM returned no JSON array [request_id=%s]: %.200s",
-                request_id, content,
+                request_id,
+                content,
             )
             return {}, None
 
@@ -189,7 +190,8 @@ async def _build_character_anchors(
     except Exception as e:
         logger.warning(
             "Character anchor generation failed [request_id=%s]: %s",
-            request_id, e,
+            request_id,
+            e,
         )
         return {}, None
 
@@ -306,17 +308,25 @@ async def _generate_prompt_for_scene(
         except Exception as e:
             last_error = e
             if attempt < _MAX_PROMPT_RETRIES - 1:
-                backoff = _RETRY_BACKOFF_BASE * (2 ** attempt)
+                backoff = _RETRY_BACKOFF_BASE * (2**attempt)
                 logger.warning(
                     "Prompt generation failed for scene %d (attempt %d/%d), retrying in %.1fs [request_id=%s]: %s",
-                    scene_index, attempt + 1, _MAX_PROMPT_RETRIES, backoff, request_id, e,
+                    scene_index,
+                    attempt + 1,
+                    _MAX_PROMPT_RETRIES,
+                    backoff,
+                    request_id,
+                    e,
                 )
                 await asyncio.sleep(backoff)
 
     # All retries exhausted
     logger.error(
         "Prompt generation failed for scene %d after %d attempts [request_id=%s]: %s",
-        scene_index, _MAX_PROMPT_RETRIES, request_id, last_error,
+        scene_index,
+        _MAX_PROMPT_RETRIES,
+        request_id,
+        last_error,
     )
     panel = {
         "scene_index": scene_index,
@@ -359,7 +369,8 @@ async def scene_prompt_generation_node(state: StoryState) -> StoryState:
     reference_analysis = state.get("reference_analysis", [])
     logger.info(
         "Scene prompt generation: creating prompts for %d scenes in parallel [request_id=%s]",
-        len(scenes), request_id,
+        len(scenes),
+        request_id,
     )
 
     trace = list(state.get("agent_trace", []))
@@ -370,7 +381,10 @@ async def scene_prompt_generation_node(state: StoryState) -> StoryState:
 
     # Build canonical visual anchors for all characters (one LLM call)
     anchors, anchor_llm_record = await _build_character_anchors(
-        characters, router, request_id, runtime_config=rc,
+        characters,
+        router,
+        request_id,
+        runtime_config=rc,
     )
     if anchor_llm_record:
         llm_calls.append(anchor_llm_record)
@@ -381,12 +395,14 @@ async def scene_prompt_generation_node(state: StoryState) -> StoryState:
         if name in anchors:
             char["visual_anchor"] = anchors[name]
 
-    trace.append({
-        "agent": "character_anchor_generation",
-        "timestamp": time.time(),
-        "anchors_generated": len(anchors),
-        "character_names": list(anchors.keys()),
-    })
+    trace.append(
+        {
+            "agent": "character_anchor_generation",
+            "timestamp": time.time(),
+            "anchors_generated": len(anchors),
+            "character_names": list(anchors.keys()),
+        }
+    )
 
     # Determine which scenes to generate (all, or only regen targets)
     regen_scenes = state.get("regen_scenes", [])
@@ -394,7 +410,9 @@ async def scene_prompt_generation_node(state: StoryState) -> StoryState:
         target_scenes = [s for s in scenes if s.get("scene_index") in regen_scenes]
         logger.info(
             "Regenerating prompts for %d scenes: %s [request_id=%s]",
-            len(target_scenes), regen_scenes, request_id,
+            len(target_scenes),
+            regen_scenes,
+            request_id,
         )
     else:
         target_scenes = scenes
@@ -403,10 +421,14 @@ async def scene_prompt_generation_node(state: StoryState) -> StoryState:
     ref_context = _build_reference_context(reference_analysis)
 
     # Generate all scene prompts concurrently
-    results = await asyncio.gather(*(
-        _generate_prompt_for_scene(scene, characters, router, request_id, ref_context, runtime_config=rc)
-        for scene in target_scenes
-    ))
+    results = await asyncio.gather(
+        *(
+            _generate_prompt_for_scene(
+                scene, characters, router, request_id, ref_context, runtime_config=rc
+            )
+            for scene in target_scenes
+        )
+    )
 
     # Collect results — merge with existing panels if regenerating
     existing_panels = list(state.get("panels", []))
@@ -419,19 +441,18 @@ async def scene_prompt_generation_node(state: StoryState) -> StoryState:
     if regen_scenes and existing_panels:
         # Replace only the regenerated scenes in the existing panel list
         regen_map = {p["scene_index"]: p for p in new_panels}
-        panels = [
-            regen_map.get(p.get("scene_index"), p)
-            for p in existing_panels
-        ]
+        panels = [regen_map.get(p.get("scene_index"), p) for p in existing_panels]
     else:
         panels = new_panels
 
-    trace.append({
-        "agent": "scene_prompt_generation",
-        "timestamp": time.time(),
-        "panels_created": len(panels),
-        "panels_ok": sum(1 for p in panels if p.get("status") == "pending"),
-    })
+    trace.append(
+        {
+            "agent": "scene_prompt_generation",
+            "timestamp": time.time(),
+            "panels_created": len(panels),
+            "panels_ok": sum(1 for p in panels if p.get("status") == "pending"),
+        }
+    )
 
     return {
         "current_agent": "scene_prompt_generation",

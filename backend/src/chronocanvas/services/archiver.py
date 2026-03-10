@@ -10,7 +10,7 @@ import tarfile
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from sqlalchemy import select, func
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from chronocanvas.config import settings
@@ -37,10 +37,12 @@ async def archive_old_requests(
         select(GenerationRequest)
         .where(
             GenerationRequest.created_at < cutoff,
-            GenerationRequest.status.in_([
-                RequestStatus.COMPLETED,
-                RequestStatus.FAILED,
-            ]),
+            GenerationRequest.status.in_(
+                [
+                    RequestStatus.COMPLETED,
+                    RequestStatus.FAILED,
+                ]
+            ),
         )
         .order_by(GenerationRequest.created_at.asc())
     )
@@ -63,25 +65,31 @@ async def archive_old_requests(
             # No output directory on disk — just mark archived in DB
             if not dry_run:
                 req.status = RequestStatus.ARCHIVED
-            details.append({"id": str(req.id), "action": "marked_archived", "reason": "no output dir"})
+            details.append(
+                {"id": str(req.id), "action": "marked_archived", "reason": "no output dir"}
+            )
             archived += 1
             continue
 
         archive_path = archive_dir / f"{req.id}.tar.gz"
 
         if archive_path.exists():
-            details.append({"id": str(req.id), "action": "skipped", "reason": "archive already exists"})
+            details.append(
+                {"id": str(req.id), "action": "skipped", "reason": "archive already exists"}
+            )
             skipped += 1
             continue
 
         if dry_run:
             dir_size = sum(f.stat().st_size for f in req_dir.rglob("*") if f.is_file())
-            details.append({
-                "id": str(req.id),
-                "action": "would_archive",
-                "size_mb": round(dir_size / 1_048_576, 2),
-                "created_at": req.created_at.isoformat(),
-            })
+            details.append(
+                {
+                    "id": str(req.id),
+                    "action": "would_archive",
+                    "size_mb": round(dir_size / 1_048_576, 2),
+                    "created_at": req.created_at.isoformat(),
+                }
+            )
             archived += 1
             continue
 
@@ -98,12 +106,14 @@ async def archive_old_requests(
             # Update DB status
             req.status = RequestStatus.ARCHIVED
 
-            details.append({
-                "id": str(req.id),
-                "action": "archived",
-                "size_mb": round(dir_size / 1_048_576, 2),
-                "archive": str(archive_path),
-            })
+            details.append(
+                {
+                    "id": str(req.id),
+                    "action": "archived",
+                    "size_mb": round(dir_size / 1_048_576, 2),
+                    "archive": str(archive_path),
+                }
+            )
             archived += 1
             logger.info("Archived request %s (%.2f MB)", req.id, dir_size / 1_048_576)
 

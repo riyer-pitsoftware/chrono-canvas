@@ -90,7 +90,9 @@ class GeminiProvider(LLMProvider):
             logger.warning(
                 "Gemini returned empty response (model=%s, finish_reason=%s, input_tokens=%d)",
                 self.model,
-                getattr(response.candidates[0], "finish_reason", "unknown") if response.candidates else "no_candidates",
+                getattr(response.candidates[0], "finish_reason", "unknown")
+                if response.candidates
+                else "no_candidates",
                 input_tokens,
             )
 
@@ -206,14 +208,16 @@ class GeminiProvider(LLMProvider):
             for chunk in getattr(gm, "grounding_chunks", []) or []:
                 web = getattr(chunk, "web", None)
                 if web:
-                    grounding_citations.append({
-                        "title": getattr(web, "title", "") or "",
-                        "url": getattr(web, "uri", "") or "",
-                        "publisher": None,
-                        "quote_snippet": None,
-                        "claim_supported": None,
-                        "confidence": 1.0,
-                    })
+                    grounding_citations.append(
+                        {
+                            "title": getattr(web, "title", "") or "",
+                            "url": getattr(web, "uri", "") or "",
+                            "publisher": None,
+                            "quote_snippet": None,
+                            "claim_supported": None,
+                            "confidence": 1.0,
+                        }
+                    )
 
         return LLMResponse(
             content=content,

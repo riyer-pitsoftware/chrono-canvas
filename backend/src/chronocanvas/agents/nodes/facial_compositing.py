@@ -28,11 +28,13 @@ async def facial_compositing_node(state: AgentState) -> AgentState:
     trace = list(state.get("agent_trace", []))
 
     if not source_face_path:
-        trace.append({
-            "agent": "facial_compositing",
-            "timestamp": time.time(),
-            "skipped": True,
-        })
+        trace.append(
+            {
+                "agent": "facial_compositing",
+                "timestamp": time.time(),
+                "skipped": True,
+            }
+        )
         return {
             "current_agent": "facial_compositing",
             "agent_trace": trace,
@@ -51,12 +53,14 @@ async def facial_compositing_node(state: AgentState) -> AgentState:
             "Facial compositing: no generated image found, skipping [request_id=%s]",
             request_id,
         )
-        trace.append({
-            "agent": "facial_compositing",
-            "timestamp": time.time(),
-            "skipped": True,
-            "reason": "no_image",
-        })
+        trace.append(
+            {
+                "agent": "facial_compositing",
+                "timestamp": time.time(),
+                "skipped": True,
+                "reason": "no_image",
+            }
+        )
         return {
             "current_agent": "facial_compositing",
             "agent_trace": trace,
@@ -80,14 +84,16 @@ async def facial_compositing_node(state: AgentState) -> AgentState:
             target_image=image_path,
         )
 
-        trace.append({
-            "agent": "facial_compositing",
-            "timestamp": time.time(),
-            "skipped": False,
-            "source_face": source_face_path,
-            "swapped_path": result.file_path,
-            "original_path": str(original_copy),
-        })
+        trace.append(
+            {
+                "agent": "facial_compositing",
+                "timestamp": time.time(),
+                "skipped": False,
+                "source_face": source_face_path,
+                "swapped_path": result.file_path,
+                "original_path": str(original_copy),
+            }
+        )
 
         return {
             "current_agent": "facial_compositing",
@@ -101,15 +107,18 @@ async def facial_compositing_node(state: AgentState) -> AgentState:
     except Exception as e:
         logger.exception(
             "Facial compositing failed, continuing with original image [request_id=%s]: %s",
-            request_id, e,
+            request_id,
+            e,
         )
-        trace.append({
-            "agent": "facial_compositing",
-            "timestamp": time.time(),
-            "skipped": False,
-            "error": True,
-            "error_message": str(e),
-        })
+        trace.append(
+            {
+                "agent": "facial_compositing",
+                "timestamp": time.time(),
+                "skipped": False,
+                "error": True,
+                "error_message": str(e),
+            }
+        )
         return {
             "current_agent": "facial_compositing",
             "agent_trace": trace,

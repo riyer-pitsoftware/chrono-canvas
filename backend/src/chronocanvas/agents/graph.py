@@ -84,6 +84,7 @@ def recompile_graph():
     agent_graph = get_compiled_graph()
 
     from chronocanvas.agents.story.graph import get_compiled_story_graph
+
     story_graph = get_compiled_story_graph()
 
 

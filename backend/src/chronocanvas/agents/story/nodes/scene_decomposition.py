@@ -73,7 +73,7 @@ def _characters_summary(characters: list[dict]) -> str:
         if c.get("gender"):
             desc_parts.append(c["gender"])
         if c.get("clothing"):
-            desc_parts.append(f'wearing {c["clothing"]}')
+            desc_parts.append(f"wearing {c['clothing']}")
         desc = ", ".join(desc_parts) if desc_parts else "no details"
         lines.append(f"- {name}: {desc}")
     return "\n".join(lines)
@@ -132,29 +132,33 @@ async def scene_decomposition_node(state: StoryState) -> StoryState:
 
             logger.info("Decomposed into %d scenes [request_id=%s]", len(scenes), request_id)
 
-            trace.append({
-                "agent": "scene_decomposition",
-                "timestamp": time.time(),
-                "scenes_count": len(scenes),
-                "retry_attempts": attempt,
-            })
+            trace.append(
+                {
+                    "agent": "scene_decomposition",
+                    "timestamp": time.time(),
+                    "scenes_count": len(scenes),
+                    "retry_attempts": attempt,
+                }
+            )
 
-            llm_calls.append({
-                "agent": "scene_decomposition",
-                "timestamp": time.time(),
-                "user_prompt": prompt,
-                "raw_response": content,
-                "parsed_output": parsed,
-                "provider": response.provider,
-                "model": response.model,
-                "input_tokens": response.input_tokens,
-                "output_tokens": response.output_tokens,
-                "cost": response.cost,
-                "duration_ms": response.duration_ms,
-                "requested_provider": response.requested_provider,
-                "fallback": response.fallback,
-                "retry_attempts": attempt,
-            })
+            llm_calls.append(
+                {
+                    "agent": "scene_decomposition",
+                    "timestamp": time.time(),
+                    "user_prompt": prompt,
+                    "raw_response": content,
+                    "parsed_output": parsed,
+                    "provider": response.provider,
+                    "model": response.model,
+                    "input_tokens": response.input_tokens,
+                    "output_tokens": response.output_tokens,
+                    "cost": response.cost,
+                    "duration_ms": response.duration_ms,
+                    "requested_provider": response.requested_provider,
+                    "fallback": response.fallback,
+                    "retry_attempts": attempt,
+                }
+            )
 
             return {
                 "current_agent": "scene_decomposition",
@@ -167,21 +171,31 @@ async def scene_decomposition_node(state: StoryState) -> StoryState:
         except Exception as e:
             last_error = e
             if attempt < _MAX_DECOMPOSITION_RETRIES - 1:
-                backoff = _RETRY_BACKOFF_BASE * (2 ** attempt)
+                backoff = _RETRY_BACKOFF_BASE * (2**attempt)
                 logger.warning(
                     "Scene decomposition failed (attempt %d/%d), retrying in %.1fs [request_id=%s]: %s",
-                    attempt + 1, _MAX_DECOMPOSITION_RETRIES, backoff, request_id, e,
+                    attempt + 1,
+                    _MAX_DECOMPOSITION_RETRIES,
+                    backoff,
+                    request_id,
+                    e,
                 )
                 await asyncio.sleep(backoff)
 
     # All retries exhausted
-    logger.exception("Scene decomposition failed after %d attempts [request_id=%s]", _MAX_DECOMPOSITION_RETRIES, request_id)
-    trace.append({
-        "agent": "scene_decomposition",
-        "timestamp": time.time(),
-        "error": str(last_error),
-        "retry_attempts": _MAX_DECOMPOSITION_RETRIES,
-    })
+    logger.exception(
+        "Scene decomposition failed after %d attempts [request_id=%s]",
+        _MAX_DECOMPOSITION_RETRIES,
+        request_id,
+    )
+    trace.append(
+        {
+            "agent": "scene_decomposition",
+            "timestamp": time.time(),
+            "error": str(last_error),
+            "retry_attempts": _MAX_DECOMPOSITION_RETRIES,
+        }
+    )
     return {
         "current_agent": "scene_decomposition",
         "scenes": [],

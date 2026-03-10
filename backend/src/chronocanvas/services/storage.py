@@ -26,8 +26,7 @@ class StorageBackend(ABC):
         ...
 
     @abstractmethod
-    def is_cloud(self) -> bool:
-        ...
+    def is_cloud(self) -> bool: ...
 
     async def download(self, remote_key: str) -> bytes | None:
         """Download file contents. Returns None if not found."""

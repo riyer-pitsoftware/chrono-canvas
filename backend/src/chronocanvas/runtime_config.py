@@ -61,6 +61,7 @@ class RuntimeConfig:
     def to_dict(self) -> dict:
         """Serialize to a plain dict (safe for JSON/msgpack checkpointing)."""
         from dataclasses import asdict
+
         return asdict(self)
 
     @classmethod

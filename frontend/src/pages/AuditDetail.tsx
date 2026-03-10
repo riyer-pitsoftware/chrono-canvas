@@ -1,45 +1,62 @@
-import { useEffect, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { useAuditDetail, useAuditFeedback, useCreateFeedback, useDeleteGeneration, useRetryGeneration } from "@/api/hooks/useGeneration";
-import { useNavigation } from "@/stores/navigation";
-import { PipelineStepper } from "@/components/generation/PipelineStepper";
-import { StateInspector } from "@/components/generation/StateInspector";
-import { CostTimeline } from "@/components/generation/CostTimeline";
-import { DAGVisualizer } from "@/components/generation/DAGVisualizer";
-import { StoryboardView } from "@/components/generation/StoryboardView";
-import { TrustCard } from "@/components/generation/TrustCard";
-import { ImageGallery } from "@/components/generation/ImageGallery";
-import { BookOpen, ChevronDown, ChevronRight, Copy, Download, ExternalLink, RotateCcw, ShieldCheck, Trash2, Volume2 } from "lucide-react";
-import type { AuditFeedback } from "@/api/types";
-import { MessageSquare, Send } from "lucide-react";
+import { useEffect, useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+  useAuditDetail,
+  useAuditFeedback,
+  useCreateFeedback,
+  useDeleteGeneration,
+  useRetryGeneration,
+} from '@/api/hooks/useGeneration';
+import { useNavigation } from '@/stores/navigation';
+import { PipelineStepper } from '@/components/generation/PipelineStepper';
+import { StateInspector } from '@/components/generation/StateInspector';
+import { CostTimeline } from '@/components/generation/CostTimeline';
+import { DAGVisualizer } from '@/components/generation/DAGVisualizer';
+import { StoryboardView } from '@/components/generation/StoryboardView';
+import { TrustCard } from '@/components/generation/TrustCard';
+import { ImageGallery } from '@/components/generation/ImageGallery';
+import {
+  BookOpen,
+  ChevronDown,
+  ChevronRight,
+  Copy,
+  Download,
+  ExternalLink,
+  RotateCcw,
+  ShieldCheck,
+  Trash2,
+  Volume2,
+} from 'lucide-react';
+import type { AuditFeedback } from '@/api/types';
+import { MessageSquare, Send } from 'lucide-react';
 
 const PORTRAIT_PIPELINE_STEPS = [
-  { value: "orchestrator", label: "Orchestrator" },
-  { value: "extraction", label: "Extraction" },
-  { value: "research", label: "Research" },
-  { value: "face_search", label: "Face Search" },
-  { value: "prompt_generation", label: "Prompt Generation" },
-  { value: "image_generation", label: "Image Generation" },
-  { value: "validation", label: "Validation" },
-  { value: "facial_compositing", label: "Facial Compositing" },
-  { value: "export", label: "Export" },
+  { value: 'orchestrator', label: 'Orchestrator' },
+  { value: 'extraction', label: 'Extraction' },
+  { value: 'research', label: 'Research' },
+  { value: 'face_search', label: 'Face Search' },
+  { value: 'prompt_generation', label: 'Prompt Generation' },
+  { value: 'image_generation', label: 'Image Generation' },
+  { value: 'validation', label: 'Validation' },
+  { value: 'facial_compositing', label: 'Facial Compositing' },
+  { value: 'export', label: 'Export' },
 ];
 
 const STORY_PIPELINE_STEPS = [
-  { value: "story_orchestrator", label: "Orchestrator" },
-  { value: "image_to_story", label: "Image to Story" },
-  { value: "reference_image_analysis", label: "Ref Image Analysis" },
-  { value: "character_extraction", label: "Character Extraction" },
-  { value: "scene_decomposition", label: "Scene Decomposition" },
-  { value: "scene_prompt_generation", label: "Prompt Generation" },
-  { value: "scene_image_generation", label: "Image Generation" },
-  { value: "storyboard_coherence", label: "Coherence Check" },
-  { value: "narration_script", label: "Narration Script" },
-  { value: "narration_audio", label: "Narration Audio" },
-  { value: "video_assembly", label: "Video Assembly" },
-  { value: "storyboard_export", label: "Export" },
+  { value: 'story_orchestrator', label: 'Orchestrator' },
+  { value: 'image_to_story', label: 'Image to Story' },
+  { value: 'reference_image_analysis', label: 'Ref Image Analysis' },
+  { value: 'character_extraction', label: 'Character Extraction' },
+  { value: 'scene_decomposition', label: 'Scene Decomposition' },
+  { value: 'scene_prompt_generation', label: 'Prompt Generation' },
+  { value: 'scene_image_generation', label: 'Image Generation' },
+  { value: 'storyboard_coherence', label: 'Coherence Check' },
+  { value: 'narration_script', label: 'Narration Script' },
+  { value: 'narration_audio', label: 'Narration Audio' },
+  { value: 'video_assembly', label: 'Video Assembly' },
+  { value: 'storyboard_export', label: 'Export' },
 ];
 
 export function AuditDetail({ requestId }: { requestId: string }) {
@@ -52,10 +69,9 @@ export function AuditDetail({ requestId }: { requestId: string }) {
   const retryGeneration = useRetryGeneration();
   const { navigate } = useNavigation();
 
-  const effectiveRetryStep = retryStep ?? data?.current_agent ?? "image_generation";
+  const effectiveRetryStep = retryStep ?? data?.current_agent ?? 'image_generation';
 
-  const toggle = (key: string) =>
-    setExpanded((prev) => ({ ...prev, [key]: !prev[key] }));
+  const toggle = (key: string) => setExpanded((prev) => ({ ...prev, [key]: !prev[key] }));
 
   useEffect(() => {
     if (!copied) return;
@@ -67,23 +83,26 @@ export function AuditDetail({ requestId }: { requestId: string }) {
   if (error) return <div className="text-[var(--destructive)]">Error: {error.message}</div>;
   if (!data) return <div>No audit data found.</div>;
 
-  const statusColor = data.status === "completed" ? "success" as const
-    : data.status === "failed" ? "destructive" as const
-    : "secondary" as const;
+  const statusColor =
+    data.status === 'completed'
+      ? ('success' as const)
+      : data.status === 'failed'
+        ? ('destructive' as const)
+        : ('secondary' as const);
 
   const handleCopyId = async () => {
     try {
       if (navigator?.clipboard?.writeText) {
         await navigator.clipboard.writeText(data.id);
       } else {
-        const textarea = document.createElement("textarea");
+        const textarea = document.createElement('textarea');
         textarea.value = data.id;
-        textarea.style.position = "fixed";
-        textarea.style.opacity = "0";
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
         document.body.appendChild(textarea);
         textarea.focus();
         textarea.select();
-        document.execCommand("copy");
+        document.execCommand('copy');
         document.body.removeChild(textarea);
       }
       setCopied(true);
@@ -112,9 +131,9 @@ export function AuditDetail({ requestId }: { requestId: string }) {
               variant="destructive"
               size="sm"
               onClick={() => {
-                if (window.confirm("Delete this generation? This cannot be undone.")) {
+                if (window.confirm('Delete this generation? This cannot be undone.')) {
                   deleteGeneration.mutate(requestId, {
-                    onSuccess: () => navigate("/audit"),
+                    onSuccess: () => navigate('/audit'),
                   });
                 }
               }}
@@ -126,19 +145,21 @@ export function AuditDetail({ requestId }: { requestId: string }) {
         </div>
         <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--muted-foreground)] mb-2">
           <span className="uppercase tracking-wide">Request ID</span>
-          <code className="rounded bg-[var(--muted)] px-2 py-1 text-[var(--foreground)] text-xs">{data.id}</code>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 px-2"
-            onClick={handleCopyId}
-          >
+          <code className="rounded bg-[var(--muted)] px-2 py-1 text-[var(--foreground)] text-xs">
+            {data.id}
+          </code>
+          <Button variant="ghost" size="sm" className="h-7 px-2" onClick={handleCopyId}>
             <Copy className="h-3.5 w-3.5 mr-1" />
-            {copied ? "Copied" : "Copy"}
+            {copied ? 'Copied' : 'Copy'}
           </Button>
         </div>
         <div className="text-sm text-[var(--muted-foreground)] space-y-1">
-          {data.figure_name && <p>Figure: <span className="font-medium text-[var(--foreground)]">{data.figure_name}</span></p>}
+          {data.figure_name && (
+            <p>
+              Figure:{' '}
+              <span className="font-medium text-[var(--foreground)]">{data.figure_name}</span>
+            </p>
+          )}
           <p>Input: {data.input_text}</p>
           <p>Created: {new Date(data.created_at).toLocaleString()}</p>
           <div className="flex gap-4">
@@ -157,7 +178,10 @@ export function AuditDetail({ requestId }: { requestId: string }) {
           <PipelineStepper
             currentAgent={null}
             status={data.status}
-            agentTrace={data.agent_trace ?? data.llm_calls.map((c) => ({ agent: c.agent, timestamp: c.timestamp }))}
+            agentTrace={
+              data.agent_trace ??
+              data.llm_calls.map((c) => ({ agent: c.agent, timestamp: c.timestamp }))
+            }
             llmCalls={data.llm_calls}
             runType={data.run_type}
           />
@@ -200,13 +224,22 @@ export function AuditDetail({ requestId }: { requestId: string }) {
                     onClick={() => toggle(key)}
                     className="w-full flex items-center gap-3 p-3 text-left hover:bg-[var(--accent)] transition-colors"
                   >
-                    {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                    {isExpanded ? (
+                      <ChevronDown className="w-4 h-4" />
+                    ) : (
+                      <ChevronRight className="w-4 h-4" />
+                    )}
                     <span className="font-medium text-sm">{call.agent}</span>
                     {call.provider && (
-                      <Badge variant="outline" className="text-xs">{call.provider}/{call.model}</Badge>
+                      <Badge variant="outline" className="text-xs">
+                        {call.provider}/{call.model}
+                      </Badge>
                     )}
                     <button
-                      onClick={(e) => { e.stopPropagation(); navigate(`/guide/${call.agent}`); }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/guide/${call.agent}`);
+                      }}
                       className="flex items-center gap-1 text-xs text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors ml-1"
                       title="Learn about this step"
                     >
@@ -214,7 +247,11 @@ export function AuditDetail({ requestId }: { requestId: string }) {
                       Learn
                     </button>
                     <span className="text-xs text-[var(--muted-foreground)] ml-auto flex gap-3">
-                      <span>{call.duration_ms < 1000 ? `${Math.round(call.duration_ms)}ms` : `${(call.duration_ms / 1000).toFixed(1)}s`}</span>
+                      <span>
+                        {call.duration_ms < 1000
+                          ? `${Math.round(call.duration_ms)}ms`
+                          : `${(call.duration_ms / 1000).toFixed(1)}s`}
+                      </span>
                       <span>{call.input_tokens + call.output_tokens} tokens</span>
                       {call.cost > 0 && <span>${call.cost.toFixed(6)}</span>}
                     </span>
@@ -223,34 +260,52 @@ export function AuditDetail({ requestId }: { requestId: string }) {
                     <div className="px-3 pb-3 space-y-3 border-t">
                       {call.system_prompt && (
                         <div className="mt-3">
-                          <p className="text-xs font-medium text-[var(--muted-foreground)] mb-1">System Prompt</p>
-                          <pre className="text-xs bg-[var(--muted)] p-3 rounded-md overflow-auto whitespace-pre-wrap max-h-64">{call.system_prompt}</pre>
+                          <p className="text-xs font-medium text-[var(--muted-foreground)] mb-1">
+                            System Prompt
+                          </p>
+                          <pre className="text-xs bg-[var(--muted)] p-3 rounded-md overflow-auto whitespace-pre-wrap max-h-64">
+                            {call.system_prompt}
+                          </pre>
                         </div>
                       )}
                       {call.user_prompt && (
                         <div>
-                          <p className="text-xs font-medium text-[var(--muted-foreground)] mb-1">User Prompt</p>
-                          <pre className="text-xs bg-[var(--muted)] p-3 rounded-md overflow-auto whitespace-pre-wrap max-h-64">{call.user_prompt}</pre>
+                          <p className="text-xs font-medium text-[var(--muted-foreground)] mb-1">
+                            User Prompt
+                          </p>
+                          <pre className="text-xs bg-[var(--muted)] p-3 rounded-md overflow-auto whitespace-pre-wrap max-h-64">
+                            {call.user_prompt}
+                          </pre>
                         </div>
                       )}
                       {call.raw_response && (
                         <div>
-                          <p className="text-xs font-medium text-[var(--muted-foreground)] mb-1">Raw Response</p>
-                          <pre className="text-xs bg-[var(--muted)] p-3 rounded-md overflow-auto whitespace-pre-wrap max-h-64">{call.raw_response}</pre>
+                          <p className="text-xs font-medium text-[var(--muted-foreground)] mb-1">
+                            Raw Response
+                          </p>
+                          <pre className="text-xs bg-[var(--muted)] p-3 rounded-md overflow-auto whitespace-pre-wrap max-h-64">
+                            {call.raw_response}
+                          </pre>
                         </div>
                       )}
                       {call.parsed_output != null && (
                         <div>
-                          <p className="text-xs font-medium text-[var(--muted-foreground)] mb-1">Parsed Output</p>
+                          <p className="text-xs font-medium text-[var(--muted-foreground)] mb-1">
+                            Parsed Output
+                          </p>
                           <pre className="text-xs bg-[var(--muted)] p-3 rounded-md overflow-auto whitespace-pre-wrap max-h-64">
-                            {typeof call.parsed_output === "string" ? call.parsed_output : JSON.stringify(call.parsed_output, null, 2)}
+                            {typeof call.parsed_output === 'string'
+                              ? call.parsed_output
+                              : JSON.stringify(call.parsed_output, null, 2)}
                           </pre>
                         </div>
                       )}
                       <StepFeedback
                         requestId={requestId}
                         stepName={call.agent}
-                        feedback={feedbackData?.items?.filter((f) => f.step_name === call.agent) ?? []}
+                        feedback={
+                          feedbackData?.items?.filter((f) => f.step_name === call.agent) ?? []
+                        }
                       />
                     </div>
                   )}
@@ -262,7 +317,11 @@ export function AuditDetail({ requestId }: { requestId: string }) {
       )}
 
       {/* Agent Steps (non-LLM nodes: face_search, facial_compositing) */}
-      <AgentStepsCard agentTrace={data.agent_trace ?? []} requestId={requestId} feedback={feedbackData?.items ?? []} />
+      <AgentStepsCard
+        agentTrace={data.agent_trace ?? []}
+        requestId={requestId}
+        feedback={feedbackData?.items ?? []}
+      />
 
       {/* Research & Citations */}
       {data.research_data && (
@@ -274,25 +333,33 @@ export function AuditDetail({ requestId }: { requestId: string }) {
             {/* Research context */}
             {data.research_data.historical_context && (
               <div>
-                <p className="text-xs font-medium text-[var(--muted-foreground)] mb-1">Historical Context</p>
+                <p className="text-xs font-medium text-[var(--muted-foreground)] mb-1">
+                  Historical Context
+                </p>
                 <p className="text-sm">{data.research_data.historical_context}</p>
               </div>
             )}
             {data.research_data.clothing_details && (
               <div>
-                <p className="text-xs font-medium text-[var(--muted-foreground)] mb-1">Clothing Details</p>
+                <p className="text-xs font-medium text-[var(--muted-foreground)] mb-1">
+                  Clothing Details
+                </p>
                 <p className="text-sm">{data.research_data.clothing_details}</p>
               </div>
             )}
             {data.research_data.physical_description && (
               <div>
-                <p className="text-xs font-medium text-[var(--muted-foreground)] mb-1">Physical Description</p>
+                <p className="text-xs font-medium text-[var(--muted-foreground)] mb-1">
+                  Physical Description
+                </p>
                 <p className="text-sm">{data.research_data.physical_description}</p>
               </div>
             )}
             {data.research_data.art_style_reference && (
               <div>
-                <p className="text-xs font-medium text-[var(--muted-foreground)] mb-1">Art Style Reference</p>
+                <p className="text-xs font-medium text-[var(--muted-foreground)] mb-1">
+                  Art Style Reference
+                </p>
                 <p className="text-sm">{data.research_data.art_style_reference}</p>
               </div>
             )}
@@ -311,7 +378,13 @@ export function AuditDetail({ requestId }: { requestId: string }) {
                         <div className="flex items-center gap-2">
                           {cite.confidence != null && (
                             <Badge
-                              variant={cite.confidence >= 0.7 ? "success" : cite.confidence >= 0.4 ? "secondary" : "destructive"}
+                              variant={
+                                cite.confidence >= 0.7
+                                  ? 'success'
+                                  : cite.confidence >= 0.4
+                                    ? 'secondary'
+                                    : 'destructive'
+                              }
                               className="text-xs"
                             >
                               {(cite.confidence * 100).toFixed(0)}%
@@ -333,10 +406,15 @@ export function AuditDetail({ requestId }: { requestId: string }) {
                         <p className="text-xs text-[var(--muted-foreground)]">{cite.publisher}</p>
                       )}
                       {cite.quote_snippet && (
-                        <p className="text-xs italic text-[var(--muted-foreground)]">&ldquo;{cite.quote_snippet}&rdquo;</p>
+                        <p className="text-xs italic text-[var(--muted-foreground)]">
+                          &ldquo;{cite.quote_snippet}&rdquo;
+                        </p>
                       )}
                       {cite.claim_supported && (
-                        <p className="text-xs"><span className="text-[var(--muted-foreground)]">Supports:</span> {cite.claim_supported}</p>
+                        <p className="text-xs">
+                          <span className="text-[var(--muted-foreground)]">Supports:</span>{' '}
+                          {cite.claim_supported}
+                        </p>
                       )}
                     </div>
                   ))}
@@ -352,7 +430,8 @@ export function AuditDetail({ requestId }: { requestId: string }) {
         <CardHeader>
           <CardTitle className="text-lg">Agent State Inspector</CardTitle>
           <p className="text-sm text-[var(--muted-foreground)]">
-            Full AgentState snapshot after each node ran. Diff view shows what each agent added or changed.
+            Full AgentState snapshot after each node ran. Diff view shows what each agent added or
+            changed.
           </p>
         </CardHeader>
         <CardContent>
@@ -368,8 +447,8 @@ export function AuditDetail({ requestId }: { requestId: string }) {
               <CardTitle className="text-lg">Validation</CardTitle>
               <div className="flex items-center gap-2">
                 <span className="text-lg font-bold">{data.validation_score.toFixed(1)}</span>
-                <Badge variant={data.validation_passed ? "success" : "destructive"}>
-                  {data.validation_passed ? "Passed" : "Failed"}
+                <Badge variant={data.validation_passed ? 'success' : 'destructive'}>
+                  {data.validation_passed ? 'Passed' : 'Failed'}
                 </Badge>
               </div>
             </div>
@@ -384,12 +463,14 @@ export function AuditDetail({ requestId }: { requestId: string }) {
                   <span className="text-sm font-medium">{cat.category}</span>
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-bold">{cat.score.toFixed(1)}</span>
-                    <Badge variant={cat.passed ? "success" : "destructive"} className="text-xs">
-                      {cat.passed ? "Pass" : "Fail"}
+                    <Badge variant={cat.passed ? 'success' : 'destructive'} className="text-xs">
+                      {cat.passed ? 'Pass' : 'Fail'}
                     </Badge>
                   </div>
                 </div>
-                {cat.details && <p className="text-xs text-[var(--muted-foreground)]">{cat.details}</p>}
+                {cat.details && (
+                  <p className="text-xs text-[var(--muted-foreground)]">{cat.details}</p>
+                )}
                 {cat.reasoning && <p className="text-xs mt-1">{cat.reasoning}</p>}
               </div>
             ))}
@@ -402,14 +483,12 @@ export function AuditDetail({ requestId }: { requestId: string }) {
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">
-              Storyboard ({data.storyboard_data.completed_scenes} / {data.storyboard_data.total_scenes} scenes)
+              Storyboard ({data.storyboard_data.completed_scenes} /{' '}
+              {data.storyboard_data.total_scenes} scenes)
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <StoryboardView
-              storyboard={data.storyboard_data}
-              requestId={requestId}
-            />
+            <StoryboardView storyboard={data.storyboard_data} requestId={requestId} />
           </CardContent>
         </Card>
       )}
@@ -455,9 +534,7 @@ export function AuditDetail({ requestId }: { requestId: string }) {
       {data.images.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">
-              Generated Images ({data.images.length})
-            </CardTitle>
+            <CardTitle className="text-lg">Generated Images ({data.images.length})</CardTitle>
           </CardHeader>
           <CardContent>
             <ImageGallery
@@ -482,7 +559,7 @@ export function AuditDetail({ requestId }: { requestId: string }) {
       )}
 
       {/* Retry */}
-      {data.status !== "completed" && data.status !== "pending" && (
+      {data.status !== 'completed' && data.status !== 'pending' && (
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">Retry from Step</CardTitle>
@@ -494,8 +571,13 @@ export function AuditDetail({ requestId }: { requestId: string }) {
                 onChange={(e) => setRetryStep(e.target.value)}
                 className="flex-1 rounded-md border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm"
               >
-                {(data.run_type === "creative_story" ? STORY_PIPELINE_STEPS : PORTRAIT_PIPELINE_STEPS).map((s) => (
-                  <option key={s.value} value={s.value}>{s.label}</option>
+                {(data.run_type === 'creative_story'
+                  ? STORY_PIPELINE_STEPS
+                  : PORTRAIT_PIPELINE_STEPS
+                ).map((s) => (
+                  <option key={s.value} value={s.value}>
+                    {s.label}
+                  </option>
                 ))}
               </select>
               <Button
@@ -510,7 +592,7 @@ export function AuditDetail({ requestId }: { requestId: string }) {
                 }
               >
                 <RotateCcw className="h-4 w-4 mr-1" />
-                {retryGeneration.isPending ? "Retrying…" : "Retry"}
+                {retryGeneration.isPending ? 'Retrying…' : 'Retry'}
               </Button>
             </div>
             {retryGeneration.isError && (
@@ -526,9 +608,17 @@ export function AuditDetail({ requestId }: { requestId: string }) {
 }
 
 // Agents that produce trace entries but no LLM calls
-const NON_LLM_AGENTS = ["face_search", "facial_compositing"];
+const NON_LLM_AGENTS = ['face_search', 'facial_compositing'];
 
-function AgentStepsCard({ agentTrace, requestId, feedback }: { agentTrace: Array<Record<string, unknown>>; requestId: string; feedback: AuditFeedback[] }) {
+function AgentStepsCard({
+  agentTrace,
+  requestId,
+  feedback,
+}: {
+  agentTrace: Array<Record<string, unknown>>;
+  requestId: string;
+  feedback: AuditFeedback[];
+}) {
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const toggle = (key: string) => setExpanded((prev) => ({ ...prev, [key]: !prev[key] }));
 
@@ -553,17 +643,27 @@ function AgentStepsCard({ agentTrace, requestId, feedback }: { agentTrace: Array
                 onClick={() => toggle(key)}
                 className="w-full flex items-center gap-3 p-3 text-left hover:bg-[var(--accent)] transition-colors"
               >
-                {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                {isExpanded ? (
+                  <ChevronDown className="w-4 h-4" />
+                ) : (
+                  <ChevronRight className="w-4 h-4" />
+                )}
                 <span className="font-medium text-sm">{agent}</span>
                 {skipped ? (
-                  <Badge variant="secondary" className="text-xs">skipped</Badge>
+                  <Badge variant="secondary" className="text-xs">
+                    skipped
+                  </Badge>
                 ) : (
-                  <Badge variant="outline" className="text-xs text-green-700 border-green-300">completed</Badge>
+                  <Badge variant="outline" className="text-xs text-green-700 border-green-300">
+                    completed
+                  </Badge>
                 )}
                 {!!entry.reason && (
-                  <span className="text-xs text-[var(--muted-foreground)]">{String(entry.reason)}</span>
+                  <span className="text-xs text-[var(--muted-foreground)]">
+                    {String(entry.reason)}
+                  </span>
                 )}
-                {agent === "face_search" && !skipped && !!entry.source_url && (
+                {agent === 'face_search' && !skipped && !!entry.source_url && (
                   <a
                     href={String(entry.source_url)}
                     target="_blank"
@@ -571,7 +671,13 @@ function AgentStepsCard({ agentTrace, requestId, feedback }: { agentTrace: Array
                     className="text-xs text-blue-600 underline truncate max-w-xs ml-auto"
                     onClick={(e) => e.stopPropagation()}
                   >
-                    {(() => { try { return new URL(String(entry.source_url)).hostname; } catch { return "source"; } })()}
+                    {(() => {
+                      try {
+                        return new URL(String(entry.source_url)).hostname;
+                      } catch {
+                        return 'source';
+                      }
+                    })()}
                   </a>
                 )}
               </button>
@@ -579,18 +685,24 @@ function AgentStepsCard({ agentTrace, requestId, feedback }: { agentTrace: Array
               {isExpanded && (
                 <div className="px-3 pb-3 border-t space-y-3 mt-3">
                   {/* face_search details */}
-                  {agent === "face_search" && (
+                  {agent === 'face_search' && (
                     <>
                       {entry.face_search_query || entry.query ? (
                         <div>
-                          <p className="text-xs font-medium text-[var(--muted-foreground)] mb-1">Search Query</p>
-                          <p className="text-xs bg-[var(--muted)] p-2 rounded">{String(entry.face_search_query ?? entry.query ?? "")}</p>
+                          <p className="text-xs font-medium text-[var(--muted-foreground)] mb-1">
+                            Search Query
+                          </p>
+                          <p className="text-xs bg-[var(--muted)] p-2 rounded">
+                            {String(entry.face_search_query ?? entry.query ?? '')}
+                          </p>
                         </div>
                       ) : null}
                       {!skipped && entry.source_url && (
                         <>
                           <div>
-                            <p className="text-xs font-medium text-[var(--muted-foreground)] mb-1">Source URL</p>
+                            <p className="text-xs font-medium text-[var(--muted-foreground)] mb-1">
+                              Source URL
+                            </p>
                             <a
                               href={String(entry.source_url)}
                               target="_blank"
@@ -601,37 +713,52 @@ function AgentStepsCard({ agentTrace, requestId, feedback }: { agentTrace: Array
                             </a>
                           </div>
                           <div>
-                            <p className="text-xs font-medium text-[var(--muted-foreground)] mb-1">Downloaded Face</p>
+                            <p className="text-xs font-medium text-[var(--muted-foreground)] mb-1">
+                              Downloaded Face
+                            </p>
                             <img
-                              src={`/output/${requestId}/${String(entry.local_path ?? "").split("/").pop()}`}
+                              src={`/output/${requestId}/${String(entry.local_path ?? '')
+                                .split('/')
+                                .pop()}`}
                               alt="sourced face"
                               className="h-32 w-32 object-cover rounded border"
-                              onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).style.display = 'none';
+                              }}
                             />
                           </div>
                         </>
                       )}
                       {entry.candidates_tried != null && (
                         <p className="text-xs text-[var(--muted-foreground)]">
-                          Tried {String(entry.candidates_tried)} candidate{Number(entry.candidates_tried) !== 1 ? "s" : ""}
+                          Tried {String(entry.candidates_tried)} candidate
+                          {Number(entry.candidates_tried) !== 1 ? 's' : ''}
                         </p>
                       )}
                     </>
                   )}
 
                   {/* facial_compositing details */}
-                  {agent === "facial_compositing" && !skipped && (
+                  {agent === 'facial_compositing' && !skipped && (
                     <>
                       {entry.source_face && (
                         <div>
-                          <p className="text-xs font-medium text-[var(--muted-foreground)] mb-1">Source Face</p>
-                          <p className="text-xs text-[var(--muted-foreground)] break-all">{String(entry.source_face)}</p>
+                          <p className="text-xs font-medium text-[var(--muted-foreground)] mb-1">
+                            Source Face
+                          </p>
+                          <p className="text-xs text-[var(--muted-foreground)] break-all">
+                            {String(entry.source_face)}
+                          </p>
                         </div>
                       )}
                       {entry.swapped_path && (
                         <div>
-                          <p className="text-xs font-medium text-[var(--muted-foreground)] mb-1">Output</p>
-                          <p className="text-xs text-[var(--muted-foreground)] break-all">{String(entry.swapped_path)}</p>
+                          <p className="text-xs font-medium text-[var(--muted-foreground)] mb-1">
+                            Output
+                          </p>
+                          <p className="text-xs text-[var(--muted-foreground)] break-all">
+                            {String(entry.swapped_path)}
+                          </p>
                         </div>
                       )}
                     </>
@@ -639,7 +766,9 @@ function AgentStepsCard({ agentTrace, requestId, feedback }: { agentTrace: Array
 
                   {/* Raw trace JSON fallback */}
                   <details className="text-xs">
-                    <summary className="cursor-pointer text-[var(--muted-foreground)] hover:text-[var(--foreground)]">Raw trace entry</summary>
+                    <summary className="cursor-pointer text-[var(--muted-foreground)] hover:text-[var(--foreground)]">
+                      Raw trace entry
+                    </summary>
                     <pre className="mt-2 bg-[var(--muted)] p-2 rounded overflow-auto max-h-48 whitespace-pre-wrap">
                       {JSON.stringify(entry, null, 2)}
                     </pre>
@@ -671,8 +800,8 @@ function StepFeedback({
   feedback: AuditFeedback[];
 }) {
   const [open, setOpen] = useState(false);
-  const [author, setAuthor] = useState("");
-  const [comment, setComment] = useState("");
+  const [author, setAuthor] = useState('');
+  const [comment, setComment] = useState('');
   const createFeedback = useCreateFeedback();
 
   const handleSubmit = () => {
@@ -681,7 +810,7 @@ function StepFeedback({
       { requestId, step_name: stepName, comment: comment.trim(), author: author.trim() },
       {
         onSuccess: () => {
-          setComment("");
+          setComment('');
           setOpen(false);
         },
       },
@@ -732,7 +861,7 @@ function StepFeedback({
               placeholder="Add a comment on this step..."
               value={comment}
               onChange={(e) => setComment(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
+              onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
               className="flex-1 text-xs rounded border border-[var(--border)] bg-[var(--background)] px-2 py-1.5"
             />
             <Button
@@ -753,7 +882,7 @@ function StepFeedback({
 
 // ── DAG + Cost tabbed card ────────────────────────────────────────────────────
 
-type DAGCostTab = "dag" | "cost";
+type DAGCostTab = 'dag' | 'cost';
 
 function DAGCostCard({
   currentAgent,
@@ -765,10 +894,10 @@ function DAGCostCard({
   currentAgent: string | null;
   status: string;
   agentTrace: Array<Record<string, unknown>>;
-  llmCalls: import("@/api/types").LLMCallDetail[];
+  llmCalls: import('@/api/types').LLMCallDetail[];
   runType?: string;
 }) {
-  const [activeTab, setActiveTab] = useState<DAGCostTab>("dag");
+  const [activeTab, setActiveTab] = useState<DAGCostTab>('dag');
   const hasCost = llmCalls.length > 0;
 
   return (
@@ -776,28 +905,28 @@ function DAGCostCard({
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg">
-            {activeTab === "dag" ? "Pipeline DAG" : "Cost & Latency Breakdown"}
+            {activeTab === 'dag' ? 'Pipeline DAG' : 'Cost & Latency Breakdown'}
           </CardTitle>
           <div className="flex rounded-md border border-[var(--border)] overflow-hidden text-sm">
             <button
-              onClick={() => setActiveTab("dag")}
+              onClick={() => setActiveTab('dag')}
               className={`px-3 py-1 transition-colors ${
-                activeTab === "dag"
-                  ? "bg-[var(--foreground)] text-[var(--background)]"
-                  : "hover:bg-[var(--accent)] text-[var(--muted-foreground)]"
+                activeTab === 'dag'
+                  ? 'bg-[var(--foreground)] text-[var(--background)]'
+                  : 'hover:bg-[var(--accent)] text-[var(--muted-foreground)]'
               }`}
             >
               DAG
             </button>
             <button
-              onClick={() => setActiveTab("cost")}
+              onClick={() => setActiveTab('cost')}
               disabled={!hasCost}
               className={`px-3 py-1 transition-colors border-l border-[var(--border)] ${
-                activeTab === "cost"
-                  ? "bg-[var(--foreground)] text-[var(--background)]"
+                activeTab === 'cost'
+                  ? 'bg-[var(--foreground)] text-[var(--background)]'
                   : hasCost
-                  ? "hover:bg-[var(--accent)] text-[var(--muted-foreground)]"
-                  : "opacity-40 cursor-not-allowed text-[var(--muted-foreground)]"
+                    ? 'hover:bg-[var(--accent)] text-[var(--muted-foreground)]'
+                    : 'opacity-40 cursor-not-allowed text-[var(--muted-foreground)]'
               }`}
             >
               Cost &amp; Latency
@@ -805,13 +934,13 @@ function DAGCostCard({
           </div>
         </div>
         <p className="text-sm text-[var(--muted-foreground)]">
-          {activeTab === "dag"
-            ? "Nodes completed this run are highlighted green; conditional edges show the path taken"
-            : "Bar width = wall-clock duration · Hover a segment to highlight the row"}
+          {activeTab === 'dag'
+            ? 'Nodes completed this run are highlighted green; conditional edges show the path taken'
+            : 'Bar width = wall-clock duration · Hover a segment to highlight the row'}
         </p>
       </CardHeader>
       <CardContent>
-        {activeTab === "dag" ? (
+        {activeTab === 'dag' ? (
           <DAGVisualizer
             currentAgent={currentAgent}
             status={status}
@@ -825,4 +954,3 @@ function DAGCostCard({
     </Card>
   );
 }
-

@@ -1,9 +1,7 @@
 """Live Voice — Gemini Live API for voice narration + voice prompt."""
 
-import asyncio
 import base64
 import io
-import json
 import logging
 import struct
 import time
@@ -34,7 +32,9 @@ class VoicePromptRequest(BaseModel):
     mime_type: str = "audio/webm"
 
 
-def _pcm_to_wav(pcm_data: bytes, sample_rate: int = SAMPLE_RATE, channels: int = 1, bits: int = 16) -> bytes:
+def _pcm_to_wav(
+    pcm_data: bytes, sample_rate: int = SAMPLE_RATE, channels: int = 1, bits: int = 16
+) -> bytes:
     """Wrap raw PCM16 bytes in a WAV header."""
     data_size = len(pcm_data)
     buf = io.BytesIO()
@@ -155,9 +155,9 @@ async def voice_prompt(req: VoicePromptRequest):
             for line in full_text.split("\n"):
                 line = line.strip()
                 if line.startswith("TRANSCRIPT:"):
-                    transcript = line[len("TRANSCRIPT:"):].strip()
+                    transcript = line[len("TRANSCRIPT:") :].strip()
                 elif line.startswith("RESPONSE:"):
-                    response_text = line[len("RESPONSE:"):].strip()
+                    response_text = line[len("RESPONSE:") :].strip()
 
             # Fallback: if parsing fails, use the whole text
             if not transcript and not response_text:

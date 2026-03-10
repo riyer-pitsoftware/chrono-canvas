@@ -1,15 +1,15 @@
-import { useEffect, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { useFigures } from "@/api/hooks/useFigures";
-import { useNavigation } from "@/stores/navigation";
-import { cn } from "@/lib/utils";
-import { QuillIcon } from "@/components/icons/QuillIcon";
+import { useEffect, useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { useFigures } from '@/api/hooks/useFigures';
+import { useNavigation } from '@/stores/navigation';
+import { cn } from '@/lib/utils';
+import { QuillIcon } from '@/components/icons/QuillIcon';
 
 export function FigureLibrary() {
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState('');
   const [page, setPage] = useState(0);
   const [selectedFigure, setSelectedFigure] = useState<{ id: string; name: string } | null>(null);
   const limit = 12;
@@ -97,45 +97,47 @@ export function FigureLibrary() {
             <Card
               key={figure.id}
               className={cn(
-                "flex flex-col border transition-colors cursor-pointer",
-                isSelected ? "border-[var(--primary)] ring-1 ring-[var(--primary)]" : "",
+                'flex flex-col border transition-colors cursor-pointer',
+                isSelected ? 'border-[var(--primary)] ring-1 ring-[var(--primary)]' : '',
               )}
               onClick={() => handleSelect(figure.id, figure.name)}
             >
-            <CardHeader>
-              <CardTitle className="text-lg">{figure.name}</CardTitle>
-            </CardHeader>
-            <CardContent className="flex-1 flex flex-col">
-              <div className="space-y-2 text-sm flex-1">
-                {figure.birth_year && (
-                  <p>
-                    <span className="text-[var(--muted-foreground)]">Period:</span>{" "}
-                    {figure.birth_year}–{figure.death_year ?? "?"}
-                  </p>
-                )}
-                {figure.nationality && (
-                  <p>
-                    <span className="text-[var(--muted-foreground)]">Nationality:</span>{" "}
-                    {figure.nationality}
-                  </p>
-                )}
-                {figure.occupation && <Badge variant="secondary">{figure.occupation}</Badge>}
-                {figure.description && (
-                  <p className="text-[var(--muted-foreground)] line-clamp-2">{figure.description}</p>
-                )}
-              </div>
-              <Button
-                variant={isSelected ? "default" : "outline"}
-                size="sm"
-                className="mt-3 w-full"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleSelect(figure.id, figure.name);
-                }}
-              >
-                {isSelected ? "Selected" : "Select figure"}
-              </Button>
-            </CardContent>
+              <CardHeader>
+                <CardTitle className="text-lg">{figure.name}</CardTitle>
+              </CardHeader>
+              <CardContent className="flex-1 flex flex-col">
+                <div className="space-y-2 text-sm flex-1">
+                  {figure.birth_year && (
+                    <p>
+                      <span className="text-[var(--muted-foreground)]">Period:</span>{' '}
+                      {figure.birth_year}–{figure.death_year ?? '?'}
+                    </p>
+                  )}
+                  {figure.nationality && (
+                    <p>
+                      <span className="text-[var(--muted-foreground)]">Nationality:</span>{' '}
+                      {figure.nationality}
+                    </p>
+                  )}
+                  {figure.occupation && <Badge variant="secondary">{figure.occupation}</Badge>}
+                  {figure.description && (
+                    <p className="text-[var(--muted-foreground)] line-clamp-2">
+                      {figure.description}
+                    </p>
+                  )}
+                </div>
+                <Button
+                  variant={isSelected ? 'default' : 'outline'}
+                  size="sm"
+                  className="mt-3 w-full"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleSelect(figure.id, figure.name);
+                  }}
+                >
+                  {isSelected ? 'Selected' : 'Select figure'}
+                </Button>
+              </CardContent>
             </Card>
           );
         })}

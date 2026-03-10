@@ -25,9 +25,9 @@ class ResearchCacheRepository(BaseRepository[ResearchCache]):
         if entry is None:
             return None
         distance = await self.session.execute(
-            select(
-                ResearchCache.embedding.cosine_distance(embedding).label("distance")
-            ).where(ResearchCache.id == entry.id)
+            select(ResearchCache.embedding.cosine_distance(embedding).label("distance")).where(
+                ResearchCache.id == entry.id
+            )
         )
         dist_val = distance.scalar()
         similarity = 1 - dist_val

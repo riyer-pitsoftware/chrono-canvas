@@ -46,19 +46,22 @@ async def reference_image_analysis_node(state: StoryState) -> StoryState:
 
     logger.info(
         "Reference image analysis: %d images [request_id=%s]",
-        len(reference_images), request_id,
+        len(reference_images),
+        request_id,
     )
 
     trace = list(state.get("agent_trace", []))
     llm_calls = list(state.get("llm_calls", []))
 
     if not reference_images:
-        trace.append({
-            "agent": "reference_image_analysis",
-            "timestamp": time.time(),
-            "skipped": True,
-            "reason": "No reference images",
-        })
+        trace.append(
+            {
+                "agent": "reference_image_analysis",
+                "timestamp": time.time(),
+                "skipped": True,
+                "reason": "No reference images",
+            }
+        )
         return {
             "current_agent": "reference_image_analysis",
             "agent_trace": trace,
@@ -77,21 +80,26 @@ async def reference_image_analysis_node(state: StoryState) -> StoryState:
         ref_type = ref.get("ref_type", "style_reference")
 
         if file_path and Path(file_path).exists():
-            parts.append(types.Part.from_text(
-                text=f"\n--- Reference {i} (type: {ref_type}) ---\n"
-                f"Description: {desc}\n" if desc else f"\n--- Reference {i} (type: {ref_type}) ---\n"
-            ))
+            parts.append(
+                types.Part.from_text(
+                    text=f"\n--- Reference {i} (type: {ref_type}) ---\nDescription: {desc}\n"
+                    if desc
+                    else f"\n--- Reference {i} (type: {ref_type}) ---\n"
+                )
+            )
             image_bytes = Path(file_path).read_bytes()
             parts.append(types.Part.from_bytes(data=image_bytes, mime_type=mime_type))
             loaded_count += 1
 
     if loaded_count == 0:
-        trace.append({
-            "agent": "reference_image_analysis",
-            "timestamp": time.time(),
-            "skipped": True,
-            "reason": "No readable reference image files",
-        })
+        trace.append(
+            {
+                "agent": "reference_image_analysis",
+                "timestamp": time.time(),
+                "skipped": True,
+                "reason": "No readable reference image files",
+            }
+        )
         return {
             "current_agent": "reference_image_analysis",
             "agent_trace": trace,
@@ -125,30 +133,36 @@ async def reference_image_analysis_node(state: StoryState) -> StoryState:
         json_end = raw_text.rfind("]") + 1
         analyses = json.loads(raw_text[json_start:json_end]) if json_start >= 0 else []
 
-        llm_calls.append({
-            "agent": "reference_image_analysis",
-            "timestamp": time.time(),
-            "provider": "gemini",
-            "model": model,
-            "input_tokens": input_tokens,
-            "output_tokens": output_tokens,
-            "cost": cost,
-            "duration_ms": elapsed_ms,
-            "raw_response": raw_text[:500],
-            "requested_provider": "gemini",
-            "fallback": False,
-        })
+        llm_calls.append(
+            {
+                "agent": "reference_image_analysis",
+                "timestamp": time.time(),
+                "provider": "gemini",
+                "model": model,
+                "input_tokens": input_tokens,
+                "output_tokens": output_tokens,
+                "cost": cost,
+                "duration_ms": elapsed_ms,
+                "raw_response": raw_text[:500],
+                "requested_provider": "gemini",
+                "fallback": False,
+            }
+        )
 
-        trace.append({
-            "agent": "reference_image_analysis",
-            "timestamp": time.time(),
-            "images_analyzed": loaded_count,
-            "analyses_returned": len(analyses),
-        })
+        trace.append(
+            {
+                "agent": "reference_image_analysis",
+                "timestamp": time.time(),
+                "images_analyzed": loaded_count,
+                "analyses_returned": len(analyses),
+            }
+        )
 
         logger.info(
             "Reference analysis: %d images → %d analyses [request_id=%s]",
-            loaded_count, len(analyses), request_id,
+            loaded_count,
+            len(analyses),
+            request_id,
         )
 
         return {
@@ -162,13 +176,16 @@ async def reference_image_analysis_node(state: StoryState) -> StoryState:
         elapsed_ms = (time.perf_counter() - start) * 1000
         logger.warning(
             "Reference image analysis failed [request_id=%s]: %s",
-            request_id, e,
+            request_id,
+            e,
         )
-        trace.append({
-            "agent": "reference_image_analysis",
-            "timestamp": time.time(),
-            "error": str(e),
-        })
+        trace.append(
+            {
+                "agent": "reference_image_analysis",
+                "timestamp": time.time(),
+                "error": str(e),
+            }
+        )
         return {
             "current_agent": "reference_image_analysis",
             "agent_trace": trace,

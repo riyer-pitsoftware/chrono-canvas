@@ -21,7 +21,5 @@ class ValidationRepository(BaseRepository[ValidationResult]):
         return list(result.scalars().all())
 
     async def delete_by_request(self, request_id: uuid.UUID) -> None:
-        stmt = delete(ValidationResult).where(
-            ValidationResult.request_id == request_id
-        )
+        stmt = delete(ValidationResult).where(ValidationResult.request_id == request_id)
         await self.session.execute(stmt)

@@ -14,12 +14,14 @@ class ImageAttemptRecorder:
         """Record a new image attempt when the image_generation node completes."""
         img = node_state.get("image", {})
         prompt_state = node_state.get("prompt", {})
-        self._attempts.append({
-            "image_path": img.get("image_path", ""),
-            "provider": img.get("image_provider", "mock"),
-            "prompt": prompt_state.get("image_prompt", ""),
-            "validation_score": None,
-        })
+        self._attempts.append(
+            {
+                "image_path": img.get("image_path", ""),
+                "provider": img.get("image_provider", "mock"),
+                "prompt": prompt_state.get("image_prompt", ""),
+                "validation_score": None,
+            }
+        )
 
     def on_validation(self, node_state: dict[str, Any]) -> None:
         """Associate the validation score with the most recent attempt."""
@@ -50,49 +52,57 @@ class ImageAttemptRecorder:
                     if is_last
                     else attempt["image_path"]
                 )
-                session.add(GeneratedImage(
-                    request_id=rid,
-                    figure_id=None,
-                    file_path=file_path,
-                    prompt_used=attempt["prompt"],
-                    provider=attempt["provider"],
-                    width=512,
-                    height=512,
-                    validation_score=attempt["validation_score"],
-                ))
+                session.add(
+                    GeneratedImage(
+                        request_id=rid,
+                        figure_id=None,
+                        file_path=file_path,
+                        prompt_used=attempt["prompt"],
+                        provider=attempt["provider"],
+                        width=512,
+                        height=512,
+                        validation_score=attempt["validation_score"],
+                    )
+                )
             if comp.get("swapped_image_path"):
-                session.add(GeneratedImage(
-                    request_id=rid,
-                    figure_id=None,
-                    file_path=comp["swapped_image_path"],
-                    prompt_used=prompt_state.get("image_prompt", ""),
-                    provider="facefusion",
-                    width=512,
-                    height=512,
-                    validation_score=val.get("validation_score"),
-                ))
+                session.add(
+                    GeneratedImage(
+                        request_id=rid,
+                        figure_id=None,
+                        file_path=comp["swapped_image_path"],
+                        prompt_used=prompt_state.get("image_prompt", ""),
+                        provider="facefusion",
+                        width=512,
+                        height=512,
+                        validation_score=val.get("validation_score"),
+                    )
+                )
 
         elif img.get("image_path"):
             # Fallback: streaming loop missed events (e.g. resumed checkpoint)
             original_path = comp.get("original_image_path") or img["image_path"]
-            session.add(GeneratedImage(
-                request_id=rid,
-                figure_id=None,
-                file_path=original_path,
-                prompt_used=prompt_state.get("image_prompt", ""),
-                provider=img.get("image_provider", "mock"),
-                width=512,
-                height=512,
-                validation_score=val.get("validation_score"),
-            ))
-            if comp.get("swapped_image_path"):
-                session.add(GeneratedImage(
+            session.add(
+                GeneratedImage(
                     request_id=rid,
                     figure_id=None,
-                    file_path=comp["swapped_image_path"],
+                    file_path=original_path,
                     prompt_used=prompt_state.get("image_prompt", ""),
-                    provider="facefusion",
+                    provider=img.get("image_provider", "mock"),
                     width=512,
                     height=512,
                     validation_score=val.get("validation_score"),
-                ))
+                )
+            )
+            if comp.get("swapped_image_path"):
+                session.add(
+                    GeneratedImage(
+                        request_id=rid,
+                        figure_id=None,
+                        file_path=comp["swapped_image_path"],
+                        prompt_used=prompt_state.get("image_prompt", ""),
+                        provider="facefusion",
+                        width=512,
+                        height=512,
+                        validation_score=val.get("validation_score"),
+                    )
+                )

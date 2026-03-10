@@ -15,8 +15,13 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/voice", tags=["voice"])
 
 ALLOWED_AUDIO_TYPES = {
-    "audio/webm", "audio/wav", "audio/wave", "audio/x-wav",
-    "audio/ogg", "audio/mpeg", "audio/mp4",
+    "audio/webm",
+    "audio/wav",
+    "audio/wave",
+    "audio/x-wav",
+    "audio/ogg",
+    "audio/mpeg",
+    "audio/mp4",
 }
 MAX_AUDIO_SIZE = 25 * 1024 * 1024  # 25MB
 
@@ -30,7 +35,9 @@ async def transcribe_audio(file: UploadFile):
     if content_type not in ALLOWED_AUDIO_TYPES:
         raise HTTPException(
             status_code=400,
-            detail=f"Unsupported audio type: {content_type}. Allowed: {sorted(ALLOWED_AUDIO_TYPES)}",
+            detail=(
+                f"Unsupported audio type: {content_type}. Allowed: {sorted(ALLOWED_AUDIO_TYPES)}"
+            ),
         )
 
     data = await file.read()
@@ -71,7 +78,9 @@ async def transcribe_audio(file: UploadFile):
 
         logger.info(
             "Voice transcription: %d chars, %.0fms, $%.4f",
-            len(transcript), elapsed_ms, cost,
+            len(transcript),
+            elapsed_ms,
+            cost,
         )
 
         return {

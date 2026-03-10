@@ -17,9 +17,7 @@ async def get_embedder(model_name: str = "all-MiniLM-L6-v2"):
 
                 logger.info(f"Loading embedding model: {model_name}")
                 loop = asyncio.get_event_loop()
-                _model = await loop.run_in_executor(
-                    None, lambda: SentenceTransformer(model_name)
-                )
+                _model = await loop.run_in_executor(None, lambda: SentenceTransformer(model_name))
                 logger.info(f"Embedding model loaded: {model_name}")
     return _model
 
@@ -28,7 +26,5 @@ async def embed_text(text: str, model_name: str = "all-MiniLM-L6-v2") -> list[fl
     """Embed text using sentence-transformers (async)."""
     model = await get_embedder(model_name)
     loop = asyncio.get_event_loop()
-    embedding = await loop.run_in_executor(
-        None, lambda: model.encode(text, convert_to_numpy=False)
-    )
+    embedding = await loop.run_in_executor(None, lambda: model.encode(text, convert_to_numpy=False))
     return embedding.tolist()

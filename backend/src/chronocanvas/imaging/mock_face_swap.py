@@ -47,8 +47,12 @@ class MockFaceSwapClient(ImageGenerator):
                 result_img.paste(face.convert("RGB"), offset)
                 # Draw a border around the face thumbnail
                 draw.rectangle(
-                    [offset[0] - 2, offset[1] - 2,
-                     offset[0] + thumb_size + 2, offset[1] + thumb_size + 2],
+                    [
+                        offset[0] - 2,
+                        offset[1] - 2,
+                        offset[0] + thumb_size + 2,
+                        offset[1] + thumb_size + 2,
+                    ],
                     outline=(255, 200, 0),
                     width=2,
                 )
@@ -62,7 +66,12 @@ class MockFaceSwapClient(ImageGenerator):
             font = None
 
         draw.rectangle([0, height - 22, width, height], fill=(0, 0, 0, 180))
-        draw.text((4, height - 20), "[MOCK FACE SWAP] source face shown top-right", fill="yellow", font=font)  # noqa: E501
+        draw.text(
+            (4, height - 20),
+            "[MOCK FACE SWAP] source face shown top-right",
+            fill="yellow",
+            font=font,
+        )  # noqa: E501
 
         filename = f"swapped_{uuid.uuid4().hex}.png"
         filepath = output_dir / filename

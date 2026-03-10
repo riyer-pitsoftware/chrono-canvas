@@ -10,17 +10,23 @@ class ProgressPublisher:
         await publish_progress(channel, payload)
 
     async def publish_agent(self, channel: str, agent: str, status: Any) -> None:
-        await self.publish(channel, {
-            "status": status,
-            "agent": agent,
-            "message": f"Running {agent}...",
-        })
+        await self.publish(
+            channel,
+            {
+                "status": status,
+                "agent": agent,
+                "message": f"Running {agent}...",
+            },
+        )
 
     async def publish_terminal(self, channel: str, *, failed: bool) -> None:
-        await self.publish(channel, {
-            "status": "failed" if failed else "completed",
-            "message": "Generation complete",
-        })
+        await self.publish(
+            channel,
+            {
+                "status": "failed" if failed else "completed",
+                "message": "Generation complete",
+            },
+        )
 
     async def publish_artifact(
         self,
@@ -33,12 +39,15 @@ class ProgressPublisher:
         url: str,
         mime_type: str,
     ) -> None:
-        await self.publish(channel, {
-            "type": "artifact_ready",
-            "artifact_type": artifact_type,
-            "scene_index": scene_index,
-            "total": total,
-            "completed": completed,
-            "url": url,
-            "mime_type": mime_type,
-        })
+        await self.publish(
+            channel,
+            {
+                "type": "artifact_ready",
+                "artifact_type": artifact_type,
+                "scene_index": scene_index,
+                "total": total,
+                "completed": completed,
+                "url": url,
+                "mime_type": mime_type,
+            },
+        )

@@ -24,33 +24,35 @@ async def character_extraction_node(state: StoryState) -> StoryState:
         elapsed_ms = (time.perf_counter() - start) * 1000
 
         characters = result.get("characters", [])
-        logger.info(
-            "Extracted %d characters [request_id=%s]", len(characters), request_id
+        logger.info("Extracted %d characters [request_id=%s]", len(characters), request_id)
+
+        trace.append(
+            {
+                "agent": "character_extraction",
+                "timestamp": time.time(),
+                "characters_found": len(characters),
+                "character_names": [c.get("name", "?") for c in characters],
+            }
         )
 
-        trace.append({
-            "agent": "character_extraction",
-            "timestamp": time.time(),
-            "characters_found": len(characters),
-            "character_names": [c.get("name", "?") for c in characters],
-        })
-
         resp = bridge.last_response
-        llm_calls.append({
-            "agent": "character_extraction",
-            "timestamp": time.time(),
-            "user_prompt": bridge.last_prompt,
-            "raw_response": resp.content if resp else None,
-            "parsed_output": result,
-            "provider": resp.provider if resp else "gemini",
-            "model": resp.model if resp else "unknown",
-            "input_tokens": resp.input_tokens if resp else 0,
-            "output_tokens": resp.output_tokens if resp else 0,
-            "cost": resp.cost if resp else 0.0,
-            "duration_ms": elapsed_ms,
-            "requested_provider": resp.requested_provider if resp else "gemini",
-            "fallback": resp.fallback if resp else False,
-        })
+        llm_calls.append(
+            {
+                "agent": "character_extraction",
+                "timestamp": time.time(),
+                "user_prompt": bridge.last_prompt,
+                "raw_response": resp.content if resp else None,
+                "parsed_output": result,
+                "provider": resp.provider if resp else "gemini",
+                "model": resp.model if resp else "unknown",
+                "input_tokens": resp.input_tokens if resp else 0,
+                "output_tokens": resp.output_tokens if resp else 0,
+                "cost": resp.cost if resp else 0.0,
+                "duration_ms": elapsed_ms,
+                "requested_provider": resp.requested_provider if resp else "gemini",
+                "fallback": resp.fallback if resp else False,
+            }
+        )
 
         return {
             "current_agent": "character_extraction",
@@ -61,11 +63,13 @@ async def character_extraction_node(state: StoryState) -> StoryState:
 
     except Exception as e:
         logger.exception("Character extraction failed [request_id=%s]", request_id)
-        trace.append({
-            "agent": "character_extraction",
-            "timestamp": time.time(),
-            "error": str(e),
-        })
+        trace.append(
+            {
+                "agent": "character_extraction",
+                "timestamp": time.time(),
+                "error": str(e),
+            }
+        )
         return {
             "current_agent": "character_extraction",
             "characters": [],

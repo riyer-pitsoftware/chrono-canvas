@@ -79,7 +79,12 @@ async def create_generation(
                 raise HTTPException(status_code=404, detail="Reference image not found")
             ref_image_path = safe_matches[0]
             ext = Path(ref_image_path).suffix.lower()
-            mime_map = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".webp": "image/webp"}
+            mime_map = {
+                ".jpg": "image/jpeg",
+                ".jpeg": "image/jpeg",
+                ".png": "image/png",
+                ".webp": "image/webp",
+            }
             ref_image_mime = mime_map.get(ext, "image/png")
 
         # Resolve optional reference images for style/location refs
@@ -93,18 +98,26 @@ async def create_generation(
                     try:
                         confine_path(Path(m), refs_base)
                         ext = Path(m).suffix.lower()
-                        mime_map = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".webp": "image/webp"}
-                        ref_images_data.append({
-                            "file_path": m,
-                            "mime_type": mime_map.get(ext, "image/png"),
-                            "ref_type": "style_reference",
-                        })
+                        mime_map = {
+                            ".jpg": "image/jpeg",
+                            ".jpeg": "image/jpeg",
+                            ".png": "image/png",
+                            ".webp": "image/webp",
+                        }
+                        ref_images_data.append(
+                            {
+                                "file_path": m,
+                                "mime_type": mime_map.get(ext, "image/png"),
+                                "ref_type": "style_reference",
+                            }
+                        )
                     except PermissionError:
                         pass
 
         await request.app.state.arq_pool.enqueue_job(
             "run_story_pipeline_task",
-            str(gen_request.id), data.input_text,
+            str(gen_request.id),
+            data.input_text,
             ref_image_path=ref_image_path,
             ref_image_mime=ref_image_mime,
             ref_images=ref_images_data,
@@ -128,7 +141,8 @@ async def create_generation(
 
         await request.app.state.arq_pool.enqueue_job(
             "run_generation_pipeline_task",
-            str(gen_request.id), data.input_text,
+            str(gen_request.id),
+            data.input_text,
             source_face_path=source_face_path,
             config_payload=data.config,
         )
@@ -192,9 +206,7 @@ async def get_generation(request_id: uuid.UUID, session: AsyncSession = Depends(
 
 
 @router.get("/{request_id}/audit", response_model=AuditDetailResponse)
-async def get_generation_audit(
-    request_id: uuid.UUID, session: AsyncSession = Depends(get_session)
-):
+async def get_generation_audit(request_id: uuid.UUID, session: AsyncSession = Depends(get_session)):
     from chronocanvas.config import settings
 
     if not settings.enable_audit_ui:
@@ -211,9 +223,7 @@ async def get_generation_audit(
 
 
 @router.delete("/{request_id}", status_code=204)
-async def delete_generation(
-    request_id: uuid.UUID, session: AsyncSession = Depends(get_session)
-):
+async def delete_generation(request_id: uuid.UUID, session: AsyncSession = Depends(get_session)):
     repo = RequestRepository(session)
     request = await repo.get(request_id)
     if not request:
@@ -263,7 +273,9 @@ async def edit_scene(
 
     await request.app.state.arq_pool.enqueue_job(
         "edit_scene_task",
-        str(request_id), scene_index, instruction,
+        str(request_id),
+        scene_index,
+        instruction,
     )
     return {"status": "editing", "scene_index": scene_index}
 
@@ -335,6 +347,4 @@ async def list_feedback(
 ):
     repo = FeedbackRepository(session)
     items = await repo.list_by_request(request_id)
-    return FeedbackListResponse(
-        items=[FeedbackResponse.model_validate(f) for f in items]
-    )
+    return FeedbackListResponse(items=[FeedbackResponse.model_validate(f) for f in items])

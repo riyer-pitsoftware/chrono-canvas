@@ -118,26 +118,30 @@ async def historical_research_node(state: StoryState) -> StoryState:
             request_id,
         )
 
-        trace.append({
-            "agent": "historical_research",
-            "timestamp": time.time(),
-            "sources_count": len(grounding_sources),
-        })
+        trace.append(
+            {
+                "agent": "historical_research",
+                "timestamp": time.time(),
+                "sources_count": len(grounding_sources),
+            }
+        )
 
-        llm_calls.append({
-            "agent": "historical_research",
-            "timestamp": time.time(),
-            "user_prompt": prompt,
-            "raw_response": historical_context[:500],  # truncate for storage
-            "provider": response.provider,
-            "model": response.model,
-            "input_tokens": response.input_tokens,
-            "output_tokens": response.output_tokens,
-            "cost": response.cost,
-            "duration_ms": response.duration_ms,
-            "requested_provider": response.requested_provider,
-            "fallback": response.fallback,
-        })
+        llm_calls.append(
+            {
+                "agent": "historical_research",
+                "timestamp": time.time(),
+                "user_prompt": prompt,
+                "raw_response": historical_context[:500],  # truncate for storage
+                "provider": response.provider,
+                "model": response.model,
+                "input_tokens": response.input_tokens,
+                "output_tokens": response.output_tokens,
+                "cost": response.cost,
+                "duration_ms": response.duration_ms,
+                "requested_provider": response.requested_provider,
+                "fallback": response.fallback,
+            }
+        )
 
         return {
             "current_agent": "historical_research",
@@ -155,12 +159,14 @@ async def historical_research_node(state: StoryState) -> StoryState:
             request_id,
             e,
         )
-        trace.append({
-            "agent": "historical_research",
-            "timestamp": time.time(),
-            "error": str(e),
-            "non_fatal": True,
-        })
+        trace.append(
+            {
+                "agent": "historical_research",
+                "timestamp": time.time(),
+                "error": str(e),
+                "non_fatal": True,
+            }
+        )
         return {
             "current_agent": "historical_research",
             "historical_context": "",

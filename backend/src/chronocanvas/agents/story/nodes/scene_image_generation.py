@@ -16,10 +16,14 @@ def _get_generator(runtime_config=None):
     factory = get_registry().image_generator_factory
     if factory is not None:
         gen = factory(runtime_config=runtime_config)
-        logger.info("Image generator selected: %s (runtime_config.image_provider=%s)",
-                     gen.name, getattr(runtime_config, 'image_provider', None))
+        logger.info(
+            "Image generator selected: %s (runtime_config.image_provider=%s)",
+            gen.name,
+            getattr(runtime_config, "image_provider", None),
+        )
         return gen
     from chronocanvas.imaging.mock_generator import MockImageGenerator
+
     logger.warning("No image_generator_factory registered, using MockImageGenerator")
     return MockImageGenerator()
 
@@ -46,13 +50,16 @@ async def _generate_scene(
     output_dir = Path(settings.output_dir) / request_id / f"scene_{scene_index}"
 
     async def on_progress(step: int, total: int) -> None:
-        await publish_progress(channel, {
-            "type": "image_progress",
-            "agent": "scene_image_generation",
-            "step": step,
-            "total": total,
-            "scene_index": scene_index,
-        })
+        await publish_progress(
+            channel,
+            {
+                "type": "image_progress",
+                "agent": "scene_image_generation",
+                "step": step,
+                "total": total,
+                "scene_index": scene_index,
+            },
+        )
 
     try:
         result = await generator.generate(
@@ -70,12 +77,15 @@ async def _generate_scene(
         panel["height"] = result.height
         panel["status"] = "completed"
 
-        await publish_progress(channel, {
-            "type": "scene_image_complete",
-            "scene_index": scene_index,
-            "total_scenes": total_scenes,
-            "image_path": result.file_path,
-        })
+        await publish_progress(
+            channel,
+            {
+                "type": "scene_image_complete",
+                "scene_index": scene_index,
+                "total_scenes": total_scenes,
+                "image_path": result.file_path,
+            },
+        )
 
         # Emit uniform artifact_ready event
         if completed_counter is not None:
@@ -96,7 +106,9 @@ async def _generate_scene(
     except Exception as e:
         logger.warning(
             "Image generation failed for scene %d [request_id=%s]: %s",
-            scene_index, request_id, e,
+            scene_index,
+            request_id,
+            e,
         )
         panel["status"] = "failed"
         panel["error"] = str(e)
@@ -109,7 +121,8 @@ async def scene_image_generation_node(state: StoryState) -> StoryState:
     total_scenes = len(panels)
     logger.info(
         "Scene image generation: generating %d images in parallel [request_id=%s]",
-        total_scenes, request_id,
+        total_scenes,
+        request_id,
     )
 
     rc = get_runtime_config(state)
@@ -119,20 +132,26 @@ async def scene_image_generation_node(state: StoryState) -> StoryState:
 
     # Generate all scene images concurrently
     completed_counter = [0]  # mutable counter (safe: asyncio is single-threaded)
-    results = await asyncio.gather(*(
-        _generate_scene(panel, i, generator, request_id, total_scenes, channel, completed_counter)
-        for i, panel in enumerate(panels)
-    ))
+    results = await asyncio.gather(
+        *(
+            _generate_scene(
+                panel, i, generator, request_id, total_scenes, channel, completed_counter
+            )
+            for i, panel in enumerate(panels)
+        )
+    )
 
     completed_scenes = sum(1 for ok in results if ok)
 
-    trace.append({
-        "agent": "scene_image_generation",
-        "timestamp": time.time(),
-        "total_scenes": total_scenes,
-        "completed_scenes": completed_scenes,
-        "failed_scenes": total_scenes - completed_scenes,
-    })
+    trace.append(
+        {
+            "agent": "scene_image_generation",
+            "timestamp": time.time(),
+            "total_scenes": total_scenes,
+            "completed_scenes": completed_scenes,
+            "failed_scenes": total_scenes - completed_scenes,
+        }
+    )
 
     return {
         "current_agent": "scene_image_generation",

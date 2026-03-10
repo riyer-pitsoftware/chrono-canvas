@@ -1,10 +1,10 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { useGenerations } from "@/api/hooks/useGeneration";
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { useGenerations } from '@/api/hooks/useGeneration';
 
 export function Export() {
   const { data } = useGenerations(0, 50);
-  const completed = data?.items.filter((g) => g.status === "completed") ?? [];
+  const completed = data?.items.filter((g) => g.status === 'completed') ?? [];
 
   return (
     <div>
@@ -20,7 +20,10 @@ export function Export() {
           )}
           <div className="space-y-3">
             {completed.map((gen) => (
-              <div key={gen.id} className="flex items-center justify-between p-3 border border-[var(--border)] rounded-md">
+              <div
+                key={gen.id}
+                className="flex items-center justify-between p-3 border border-[var(--border)] rounded-md"
+              >
                 <div>
                   <p className="font-medium">{gen.input_text.slice(0, 60)}</p>
                   <p className="text-xs text-[var(--muted-foreground)]">{gen.id}</p>

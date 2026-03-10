@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from 'react';
 
 export interface ImageProgress {
   step: number;
@@ -12,7 +12,7 @@ export interface SceneImageEvent {
 }
 
 export interface ArtifactEvent {
-  artifact_type: "image" | "audio" | "video" | "scene_edit";
+  artifact_type: 'image' | 'audio' | 'video' | 'scene_edit';
   scene_index: number | null;
   total: number;
   completed: number;
@@ -30,7 +30,7 @@ export interface ArtifactEvent {
  */
 export function useGenerationWS(requestId: string | null, enabled: boolean) {
   const [imageProgress, setImageProgress] = useState<ImageProgress | null>(null);
-  const [streamingText, setStreamingText] = useState<string>("");
+  const [streamingText, setStreamingText] = useState<string>('');
   const [streamingAgent, setStreamingAgent] = useState<string | null>(null);
   const [sceneImages, setSceneImages] = useState<SceneImageEvent[]>([]);
   const [artifacts, setArtifacts] = useState<ArtifactEvent[]>([]);
@@ -39,15 +39,13 @@ export function useGenerationWS(requestId: string | null, enabled: boolean) {
   useEffect(() => {
     if (!requestId || !enabled) return;
 
-    setStreamingText("");
+    setStreamingText('');
     setStreamingAgent(null);
     setSceneImages([]);
     setArtifacts([]);
 
-    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const ws = new WebSocket(
-      `${protocol}//${window.location.host}/ws/generation/${requestId}`,
-    );
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const ws = new WebSocket(`${protocol}//${window.location.host}/ws/generation/${requestId}`);
     wsRef.current = ws;
 
     ws.onmessage = (event) => {
@@ -58,15 +56,15 @@ export function useGenerationWS(requestId: string | null, enabled: boolean) {
         return;
       }
 
-      if (data.type === "llm_token") {
+      if (data.type === 'llm_token') {
         const agent = data.agent as string;
         const token = data.token as string;
         setStreamingAgent(agent);
         setStreamingText((prev) => prev + token);
-      } else if (data.type === "llm_stream_end") {
+      } else if (data.type === 'llm_stream_end') {
         // Keep text visible until the next agent starts
         setStreamingAgent(null);
-      } else if (data.type === "scene_image_complete") {
+      } else if (data.type === 'scene_image_complete') {
         setSceneImages((prev) => [
           ...prev,
           {
@@ -75,11 +73,11 @@ export function useGenerationWS(requestId: string | null, enabled: boolean) {
             image_path: data.image_path as string,
           },
         ]);
-      } else if (data.type === "artifact_ready") {
+      } else if (data.type === 'artifact_ready') {
         setArtifacts((prev) => [
           ...prev,
           {
-            artifact_type: data.artifact_type as "image" | "audio" | "video" | "scene_edit",
+            artifact_type: data.artifact_type as 'image' | 'audio' | 'video' | 'scene_edit',
             scene_index: data.scene_index as number | null,
             total: data.total as number,
             completed: data.completed as number,
@@ -87,23 +85,23 @@ export function useGenerationWS(requestId: string | null, enabled: boolean) {
             mime_type: data.mime_type as string,
           },
         ]);
-      } else if (data.type === "image_progress") {
+      } else if (data.type === 'image_progress') {
         setImageProgress({
           step: data.step as number,
           total: data.total as number,
         });
       } else {
-        if (data.agent && data.agent !== "image_generation") {
+        if (data.agent && data.agent !== 'image_generation') {
           setImageProgress(null);
         }
         // New agent starting — clear previous streaming text
         if (data.agent) {
-          setStreamingText("");
+          setStreamingText('');
           setStreamingAgent(null);
         }
-        if (data.status === "completed" || data.status === "failed") {
+        if (data.status === 'completed' || data.status === 'failed') {
           setImageProgress(null);
-          setStreamingText("");
+          setStreamingText('');
           setStreamingAgent(null);
           ws.close();
         }

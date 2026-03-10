@@ -102,6 +102,7 @@ def validate_node_output(node_name: str, output: dict[str, Any]) -> None:
 # 2. Node pre/postconditions
 # ---------------------------------------------------------------------------
 
+
 def _require_str(d: dict[str, Any], key: str, context: str) -> None:
     val = d.get(key)
     if not isinstance(val, str) or not val:
@@ -116,6 +117,7 @@ def _require_subdict(d: dict[str, Any], key: str, context: str) -> dict[str, Any
 
 
 # --- Preconditions ---
+
 
 def pre_orchestrator(state: dict[str, Any]) -> None:
     _require_str(state, "input_text", "orchestrator pre")
@@ -160,6 +162,7 @@ def pre_export(state: dict[str, Any]) -> None:
 
 
 # --- Postconditions ---
+
 
 def post_orchestrator(output: dict[str, Any]) -> None:
     _require_str(output, "current_agent", "orchestrator post")
@@ -290,9 +293,7 @@ def validate_all_llm_calls(state: dict[str, Any]) -> None:
         if issues:
             all_violations.append(f"llm_calls[{i}]: {', '.join(issues)}")
     if all_violations:
-        raise InvariantViolationError(
-            "LLM call audit violations:\n" + "\n".join(all_violations)
-        )
+        raise InvariantViolationError("LLM call audit violations:\n" + "\n".join(all_violations))
 
 
 # ---------------------------------------------------------------------------
@@ -309,9 +310,7 @@ def validate_trace_entry(entry: dict[str, Any]) -> None:
         raise InvariantViolationError("trace entry: 'timestamp' must be a positive number")
 
 
-def validate_trace_completeness(
-    state: dict[str, Any], expect_error: bool = False
-) -> None:
+def validate_trace_completeness(state: dict[str, Any], expect_error: bool = False) -> None:
     """Check that all expected nodes appear in the agent trace.
 
     For successful runs, all nodes in ``FULL_PIPELINE_NODES`` must appear.
@@ -398,8 +397,7 @@ def checked(node_name: str) -> Callable:
                     if issues:
                         _report(
                             InvariantViolationError(
-                                f"{node_name} llm_calls[{prev_count + i}]: "
-                                f"{', '.join(issues)}"
+                                f"{node_name} llm_calls[{prev_count + i}]: {', '.join(issues)}"
                             ),
                             strict=strict,
                         )

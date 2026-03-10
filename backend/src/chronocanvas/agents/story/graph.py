@@ -2,19 +2,19 @@ from langgraph.graph import END, StateGraph
 
 import chronocanvas.agents.checkpointer as _ckpt
 from chronocanvas.agents.story.nodes.character_extraction import character_extraction_node
+from chronocanvas.agents.story.nodes.historical_research import historical_research_node
 from chronocanvas.agents.story.nodes.image_to_story import image_to_story_node
 from chronocanvas.agents.story.nodes.narration_audio import narration_audio_node
 from chronocanvas.agents.story.nodes.narration_script import narration_script_node
+from chronocanvas.agents.story.nodes.prompt_validation import prompt_validation_node
 from chronocanvas.agents.story.nodes.reference_image_analysis import reference_image_analysis_node
-from chronocanvas.agents.story.nodes.video_assembly import video_assembly_node
-from chronocanvas.agents.story.nodes.historical_research import historical_research_node
 from chronocanvas.agents.story.nodes.scene_decomposition import scene_decomposition_node
 from chronocanvas.agents.story.nodes.scene_image_generation import scene_image_generation_node
-from chronocanvas.agents.story.nodes.prompt_validation import prompt_validation_node
 from chronocanvas.agents.story.nodes.scene_prompt_generation import scene_prompt_generation_node
 from chronocanvas.agents.story.nodes.story_orchestrator import story_orchestrator_node
 from chronocanvas.agents.story.nodes.storyboard_coherence import storyboard_coherence_node
 from chronocanvas.agents.story.nodes.storyboard_export import storyboard_export_node
+from chronocanvas.agents.story.nodes.video_assembly import video_assembly_node
 from chronocanvas.agents.story.state import StoryState
 from chronocanvas.config import settings
 
@@ -23,6 +23,7 @@ def _rc(state: StoryState):
     """Return RuntimeConfig from state, or a blank one."""
     from chronocanvas.agents.story.state import get_runtime_config
     from chronocanvas.runtime_config import RuntimeConfig
+
     return get_runtime_config(state) or RuntimeConfig()
 
 

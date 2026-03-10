@@ -10,22 +10,25 @@ from urllib.parse import urlparse
 
 # Private / link-local / loopback ranges to block outbound SSRF requests to
 _BLOCKED_NETWORKS = [
-    ipaddress.ip_network("127.0.0.0/8"),      # loopback
-    ipaddress.ip_network("10.0.0.0/8"),       # RFC 1918
-    ipaddress.ip_network("172.16.0.0/12"),    # RFC 1918
-    ipaddress.ip_network("192.168.0.0/16"),   # RFC 1918
-    ipaddress.ip_network("169.254.0.0/16"),   # link-local / cloud metadata
-    ipaddress.ip_network("100.64.0.0/10"),    # carrier-grade NAT
-    ipaddress.ip_network("::1/128"),          # IPv6 loopback
-    ipaddress.ip_network("fc00::/7"),         # IPv6 unique local
-    ipaddress.ip_network("fe80::/10"),        # IPv6 link-local
+    ipaddress.ip_network("127.0.0.0/8"),  # loopback
+    ipaddress.ip_network("10.0.0.0/8"),  # RFC 1918
+    ipaddress.ip_network("172.16.0.0/12"),  # RFC 1918
+    ipaddress.ip_network("192.168.0.0/16"),  # RFC 1918
+    ipaddress.ip_network("169.254.0.0/16"),  # link-local / cloud metadata
+    ipaddress.ip_network("100.64.0.0/10"),  # carrier-grade NAT
+    ipaddress.ip_network("::1/128"),  # IPv6 loopback
+    ipaddress.ip_network("fc00::/7"),  # IPv6 unique local
+    ipaddress.ip_network("fe80::/10"),  # IPv6 link-local
 ]
 
 _ALLOWED_SCHEMES = {"http", "https"}
 
 _BLOCKED_HOSTNAMES = {
-    "localhost", "ip6-localhost", "ip6-loopback",
-    "broadcasthost", "0.0.0.0",
+    "localhost",
+    "ip6-localhost",
+    "ip6-loopback",
+    "broadcasthost",
+    "0.0.0.0",
 }
 
 
@@ -79,7 +82,7 @@ def is_safe_url(url: str) -> bool:
 _IMAGE_SIGNATURES: list[tuple[bytes, int, str]] = [
     (b"\xff\xd8\xff", 3, "JPEG"),
     (b"\x89PNG\r\n\x1a\n", 8, "PNG"),
-    (b"RIFF", 4, "WebP"),   # WebP: RIFF????WEBP, check further below
+    (b"RIFF", 4, "WebP"),  # WebP: RIFF????WEBP, check further below
     (b"GIF87a", 6, "GIF"),
     (b"GIF89a", 6, "GIF"),
 ]
@@ -103,6 +106,7 @@ def validate_image_magic(data: bytes) -> bool:
 
 
 # ── Input sanitisation helpers ─────────────────────────────────────────────────
+
 
 def sanitize_search_query(value: str, max_length: int = 200) -> str:
     """Strip leading/trailing whitespace and truncate to max_length."""
@@ -128,7 +132,5 @@ def confine_path(path: Path, base: Path) -> Path:
     try:
         resolved.relative_to(base_resolved)
     except ValueError:
-        raise PermissionError(
-            f"Path {str(path)!r} escapes allowed directory {str(base)!r}"
-        )
+        raise PermissionError(f"Path {str(path)!r} escapes allowed directory {str(base)!r}")
     return resolved

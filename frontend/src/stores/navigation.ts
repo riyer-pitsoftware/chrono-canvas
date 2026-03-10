@@ -1,4 +1,4 @@
-import { create } from "zustand";
+import { create } from 'zustand';
 
 function currentUrl() {
   const { pathname, search } = window.location;
@@ -13,12 +13,12 @@ interface NavigationState {
 export const useNavigation = create<NavigationState>((set) => ({
   currentPath: currentUrl(),
   navigate: (path) => {
-    window.history.pushState(null, "", path);
+    window.history.pushState(null, '', path);
     set({ currentPath: path });
   },
 }));
 
 // Handle browser back/forward buttons
-window.addEventListener("popstate", () => {
+window.addEventListener('popstate', () => {
   useNavigation.setState({ currentPath: currentUrl() });
 });
