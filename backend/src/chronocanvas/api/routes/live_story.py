@@ -35,10 +35,14 @@ RULES FOR OUTPUT:
 2. ALTERNATE between text paragraphs and images — never put two text blocks or two \
 images in a row. The pattern must be: text → image → text → image → text (→ image).
 3. Each text paragraph should be 2-4 sentences of vivid, noir-style prose.
-4. Each image should be a CINEMATIC STILL PHOTOGRAPH — photorealistic, shot on 35mm \
-film with natural grain, dramatic available lighting, deep shadows, chiaroscuro contrast. \
-Think Roger Deakins cinematography, not illustration. Real people in real places. \
-Never cartoon, comic, or illustrated style.
+4. CRITICAL IMAGE STYLE — every image MUST look like a real photograph taken by a \
+cinematographer on a film set. Photorealistic only. The aesthetic is: a still frame \
+pulled from a real movie shot on 35mm film stock. Shallow depth of field, natural \
+film grain, practical lighting (streetlamps, neon signs, window light, cigarette glow). \
+Real human faces, real textures, real environments. \
+DO NOT generate illustrations, drawings, paintings, comics, cartoons, anime, \
+digital art, or any stylized/artistic rendering. If it looks like it was drawn \
+rather than photographed, you have failed.
 5. Use present tense. Second person ("you") for immersion, or third person for distance.
 6. End with a line that lingers — noir doesn't wrap up clean.
 

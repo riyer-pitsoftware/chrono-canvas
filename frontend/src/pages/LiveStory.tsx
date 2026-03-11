@@ -104,13 +104,17 @@ function SceneViewer({
 }) {
   const [current, setCurrent] = useState(0);
   const [fadeKey, setFadeKey] = useState(0);
+  const [transitioning, setTransitioning] = useState(false);
   const [continueInput, setContinueInput] = useState('');
   const touchStart = useRef<number | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const scene = scenes[current];
   const isLastScene = current === scenes.length - 1;
-  const { displayed, done: textDone } = useTypewriter(scene?.text || '', true);
+  const { displayed, done: textDone } = useTypewriter(
+    transitioning ? '' : scene?.text || '',
+    !transitioning,
+  );
 
   // Jump to last scene when new scenes arrive (continuation)
   const prevSceneCount = useRef(scenes.length);
@@ -122,15 +126,25 @@ function SceneViewer({
     prevSceneCount.current = scenes.length;
   }, [scenes.length]);
 
-  const go = useCallback(
-    (dir: 1 | -1) => {
-      const next = current + dir;
-      if (next >= 0 && next < scenes.length) {
+  // Film dissolve: fade to black → switch scene → fade in
+  const changeTo = useCallback(
+    (next: number) => {
+      if (next < 0 || next >= scenes.length || transitioning) return;
+      setTransitioning(true);
+      // Fade out (500ms), then switch scene, then fade in
+      setTimeout(() => {
         setCurrent(next);
         setFadeKey((k) => k + 1);
-      }
+        // Small delay before removing transition flag so fade-in animation plays
+        setTimeout(() => setTransitioning(false), 50);
+      }, 500);
     },
-    [current, scenes.length],
+    [scenes.length, transitioning],
+  );
+
+  const go = useCallback(
+    (dir: 1 | -1) => changeTo(current + dir),
+    [current, changeTo],
   );
 
   // Keyboard navigation
@@ -184,33 +198,41 @@ function SceneViewer({
         </span>
       </div>
 
-      {/* Scene content — centered */}
+      {/* Scene content — centered, with film dissolve */}
       <div
         key={fadeKey}
         className="flex-1 flex flex-col items-center justify-center px-8 gap-6 min-h-0"
-        style={{ animation: 'fadeIn 400ms ease-out' }}
+        style={{
+          animation: transitioning ? 'none' : 'dissolveIn 800ms ease-out',
+          opacity: transitioning ? 0 : 1,
+          transition: 'opacity 500ms ease-in-out',
+        }}
       >
-        {/* Image */}
+        {/* Image with Ken Burns slow zoom */}
         {scene.imageBase64 && (
-          <img
-            src={`data:${scene.mimeType || 'image/png'};base64,${scene.imageBase64}`}
-            alt={`Scene ${current + 1}`}
-            className="max-h-[50vh] max-w-full rounded-lg object-contain"
-            style={{
-              boxShadow: '0 0 60px rgba(180, 140, 60, 0.15), 0 4px 30px rgba(0,0,0,0.6)',
-              opacity: textDone ? 1 : 0.2,
-              transition: 'opacity 800ms ease-in-out',
-            }}
-          />
+          <div className="overflow-hidden rounded-lg max-h-[50vh] max-w-full">
+            <img
+              src={`data:${scene.mimeType || 'image/png'};base64,${scene.imageBase64}`}
+              alt={`Scene ${current + 1}`}
+              className="max-h-[50vh] max-w-full object-contain"
+              style={{
+                boxShadow: '0 0 80px rgba(180, 140, 60, 0.12), 0 8px 40px rgba(0,0,0,0.7)',
+                opacity: textDone ? 1 : 0.15,
+                transition: 'opacity 1200ms ease-in-out',
+                animation: textDone ? 'kenBurns 12s ease-in-out forwards' : 'none',
+              }}
+            />
+          </div>
         )}
 
         {/* Text */}
         {scene.text && (
           <p
-            className="max-w-2xl text-center leading-relaxed text-base"
+            className="max-w-2xl text-center leading-relaxed text-lg"
             style={{
               fontFamily: "'Georgia', 'Times New Roman', serif",
               color: 'oklch(0.9 0.02 80)',
+              textShadow: '0 1px 8px rgba(0,0,0,0.5)',
             }}
           >
             {displayed}
@@ -298,10 +320,7 @@ function SceneViewer({
           {scenes.map((_, i) => (
             <button
               key={i}
-              onClick={() => {
-                setCurrent(i);
-                setFadeKey((k) => k + 1);
-              }}
+              onClick={() => changeTo(i)}
               className="w-2 h-2 rounded-full transition-colors"
               style={{
                 backgroundColor:
@@ -329,9 +348,18 @@ function SceneViewer({
       </div>
 
       <style>{`
+        @keyframes dissolveIn {
+          0% { opacity: 0; }
+          30% { opacity: 0; }
+          100% { opacity: 1; }
+        }
+        @keyframes kenBurns {
+          0% { transform: scale(1.0); }
+          100% { transform: scale(1.06); }
+        }
         @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(8px); }
-          to { opacity: 1; transform: translateY(0); }
+          from { opacity: 0; }
+          to { opacity: 1; }
         }
         @keyframes blink {
           50% { opacity: 0; }
