@@ -61,28 +61,34 @@ function pairParts(parts: StoryPart[]): Scene[] {
 function useTypewriter(text: string, active: boolean, speed = 25) {
   const [displayed, setDisplayed] = useState('');
   const [done, setDone] = useState(false);
+  const [progress, setProgress] = useState(0);
 
   useEffect(() => {
     if (!active) {
       setDisplayed('');
       setDone(false);
+      setProgress(0);
       return;
     }
     setDisplayed('');
     setDone(false);
+    setProgress(0);
     let idx = 0;
+    const len = text.length || 1;
     const iv = setInterval(() => {
       idx++;
       setDisplayed(text.slice(0, idx));
+      setProgress(idx / len);
       if (idx >= text.length) {
         clearInterval(iv);
         setDone(true);
+        setProgress(1);
       }
     }, speed);
     return () => clearInterval(iv);
   }, [text, active, speed]);
 
-  return { displayed, done };
+  return { displayed, done, progress };
 }
 
 /* ── SceneViewer (full-screen overlay) ─────────────────────────── */
@@ -111,10 +117,13 @@ function SceneViewer({
 
   const scene = scenes[current];
   const isLastScene = current === scenes.length - 1;
-  const { displayed, done: textDone } = useTypewriter(
+  const { displayed, done: textDone, progress } = useTypewriter(
     transitioning ? '' : scene?.text || '',
     !transitioning,
   );
+
+  // Iris opens from 0% to 75% as text is typed
+  const irisRadius = scene?.text ? Math.round(progress * 75) : 75;
 
   // Jump to last scene when new scenes arrive (continuation)
   const prevSceneCount = useRef(scenes.length);
@@ -208,13 +217,13 @@ function SceneViewer({
           transition: 'opacity 500ms ease-in-out',
         }}
       >
-        {/* Image with camera iris reveal */}
+        {/* Image with camera iris — opens as text is read */}
         {scene.imageBase64 && (
           <div
             className="overflow-hidden rounded-lg max-h-[50vh] max-w-full"
             style={{
-              animation: textDone ? 'irisOpen 1.2s cubic-bezier(0.4, 0, 0.2, 1) forwards' : 'none',
-              clipPath: textDone ? undefined : 'circle(0% at 50% 50%)',
+              clipPath: `circle(${irisRadius}% at 50% 50%)`,
+              transition: 'clip-path 300ms ease-out',
             }}
           >
             <img
@@ -356,11 +365,7 @@ function SceneViewer({
           30% { opacity: 0; }
           100% { opacity: 1; }
         }
-        @keyframes irisOpen {
-          0% { clip-path: circle(0% at 50% 50%); }
-          100% { clip-path: circle(75% at 50% 50%); }
-        }
-        @keyframes fadeIn {
+@keyframes fadeIn {
           from { opacity: 0; }
           to { opacity: 1; }
         }
