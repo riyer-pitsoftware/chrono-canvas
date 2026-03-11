@@ -91,6 +91,42 @@ function useTypewriter(text: string, active: boolean, speed = 25) {
   return { displayed, done, progress };
 }
 
+/* ── Narration hook — speaks text aloud via Web Speech API ──── */
+
+function useNarration(text: string, active: boolean) {
+  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+
+  useEffect(() => {
+    if (!active || !text || typeof speechSynthesis === 'undefined') return;
+
+    // Cancel any in-flight speech
+    speechSynthesis.cancel();
+
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.rate = 0.85; // slower, deliberate
+    utter.pitch = 0.8; // deeper
+    utter.volume = 1.0;
+
+    // Prefer a deep English voice if available
+    const voices = speechSynthesis.getVoices();
+    const preferred = voices.find(
+      (v) =>
+        v.lang.startsWith('en') &&
+        /daniel|james|aaron|male|deep/i.test(v.name),
+    );
+    if (preferred) utter.voice = preferred;
+
+    utteranceRef.current = utter;
+    speechSynthesis.speak(utter);
+
+    return () => {
+      speechSynthesis.cancel();
+    };
+  }, [text, active]);
+
+  return utteranceRef;
+}
+
 /* ── SceneViewer (full-screen overlay) ─────────────────────────── */
 
 function SceneViewer({
@@ -124,6 +160,9 @@ function SceneViewer({
 
   // Iris opens from 0% to 75% as text is typed
   const irisRadius = scene?.text ? Math.round(progress * 75) : 75;
+
+  // Narrate current scene aloud
+  useNarration(scene?.text || '', !transitioning);
 
   // Jump to last scene when new scenes arrive (continuation)
   const prevSceneCount = useRef(scenes.length);
