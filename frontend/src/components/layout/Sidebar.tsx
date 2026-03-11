@@ -18,6 +18,7 @@ import {
   ChevronDown,
   Wrench,
   Zap,
+  Mic,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useHackathonMode } from '@/api/hooks/useConfig';
@@ -29,6 +30,7 @@ const defaultNavItems = [
   { label: 'Figures', href: '/figures', icon: Users },
   { label: 'Generate', href: '/generate', icon: Image },
   { label: 'Live Story', href: '/live-story', icon: Zap },
+  { label: 'Live Session', href: '/live-session', icon: Mic },
   { label: 'Validate', href: '/validate', icon: Shield },
   { label: 'Audit', href: '/audit', icon: FileSearch },
   { label: 'Memory', href: '/memory', icon: Database },
@@ -41,6 +43,7 @@ const defaultNavItems = [
 const hackathonPrimaryNav = [
   { label: 'Story Director', href: '/generate?mode=creative_story', icon: Image },
   { label: 'Live Story', href: '/live-story', icon: Zap },
+  { label: 'Live Session', href: '/live-session', icon: Mic },
   { label: 'Storyboard', href: '/export', icon: Download },
 ];
 

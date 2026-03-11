@@ -16,6 +16,7 @@ import { Review } from '@/pages/Review';
 import { EvalViewer } from '@/pages/EvalViewer';
 import { ModeSelector } from '@/pages/ModeSelector';
 import { LiveStory } from '@/pages/LiveStory';
+import { LiveSession } from '@/pages/LiveSession';
 
 function getPage(path: string, hackathonMode: boolean) {
   const qIdx = path.indexOf('?');
@@ -67,6 +68,8 @@ function getPage(path: string, hackathonMode: boolean) {
       return <EvalViewer />;
     case '/live-story':
       return <LiveStory />;
+    case '/live-session':
+      return <LiveSession />;
     case '/dashboard':
       return <Dashboard />;
     default:
