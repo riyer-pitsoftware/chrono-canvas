@@ -91,40 +91,58 @@ function useTypewriter(text: string, active: boolean, speed = 25) {
   return { displayed, done, progress };
 }
 
-/* ── Narration hook — speaks text aloud via Web Speech API ──── */
+/* ── Narration hook — speaks text via Gemini Live API ───────── */
 
 function useNarration(text: string, active: boolean) {
-  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
-    if (!active || !text || typeof speechSynthesis === 'undefined') return;
+    if (!active || !text) return;
 
-    // Cancel any in-flight speech
-    speechSynthesis.cancel();
+    // Stop any in-flight audio
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
+    abortRef.current?.abort();
 
-    const utter = new SpeechSynthesisUtterance(text);
-    utter.rate = 0.85; // slower, deliberate
-    utter.pitch = 0.8; // deeper
-    utter.volume = 1.0;
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
 
-    // Prefer a deep English voice if available
-    const voices = speechSynthesis.getVoices();
-    const preferred = voices.find(
-      (v) =>
-        v.lang.startsWith('en') &&
-        /daniel|james|aaron|male|deep/i.test(v.name),
-    );
-    if (preferred) utter.voice = preferred;
-
-    utteranceRef.current = utter;
-    speechSynthesis.speak(utter);
+    // Fetch narration from Gemini Live API
+    fetch('/api/live-voice/narrate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }),
+      signal: ctrl.signal,
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error(`Narration failed: ${res.status}`);
+        return res.blob();
+      })
+      .then((blob) => {
+        if (ctrl.signal.aborted) return;
+        const url = URL.createObjectURL(blob);
+        const audio = new Audio(url);
+        audio.onended = () => URL.revokeObjectURL(url);
+        audioRef.current = audio;
+        audio.play().catch(() => {});
+      })
+      .catch((err) => {
+        if (err.name !== 'AbortError') {
+          console.warn('Narration failed, continuing silently:', err);
+        }
+      });
 
     return () => {
-      speechSynthesis.cancel();
+      ctrl.abort();
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
     };
   }, [text, active]);
-
-  return utteranceRef;
 }
 
 /* ── SceneViewer (full-screen overlay) ─────────────────────────── */
