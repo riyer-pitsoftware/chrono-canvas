@@ -208,18 +208,21 @@ function SceneViewer({
           transition: 'opacity 500ms ease-in-out',
         }}
       >
-        {/* Image with Ken Burns slow zoom */}
+        {/* Image with camera iris reveal */}
         {scene.imageBase64 && (
-          <div className="overflow-hidden rounded-lg max-h-[50vh] max-w-full">
+          <div
+            className="overflow-hidden rounded-lg max-h-[50vh] max-w-full"
+            style={{
+              animation: textDone ? 'irisOpen 1.2s cubic-bezier(0.4, 0, 0.2, 1) forwards' : 'none',
+              clipPath: textDone ? undefined : 'circle(0% at 50% 50%)',
+            }}
+          >
             <img
               src={`data:${scene.mimeType || 'image/png'};base64,${scene.imageBase64}`}
               alt={`Scene ${current + 1}`}
               className="max-h-[50vh] max-w-full object-contain"
               style={{
                 boxShadow: '0 0 80px rgba(180, 140, 60, 0.12), 0 8px 40px rgba(0,0,0,0.7)',
-                opacity: textDone ? 1 : 0.15,
-                transition: 'opacity 1200ms ease-in-out',
-                animation: textDone ? 'kenBurns 12s ease-in-out forwards' : 'none',
               }}
             />
           </div>
@@ -353,9 +356,9 @@ function SceneViewer({
           30% { opacity: 0; }
           100% { opacity: 1; }
         }
-        @keyframes kenBurns {
-          0% { transform: scale(1.0); }
-          100% { transform: scale(1.06); }
+        @keyframes irisOpen {
+          0% { clip-path: circle(0% at 50% 50%); }
+          100% { clip-path: circle(75% at 50% 50%); }
         }
         @keyframes fadeIn {
           from { opacity: 0; }

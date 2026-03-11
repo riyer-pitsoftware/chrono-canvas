@@ -27,27 +27,26 @@ _MODEL_CHAIN = [
 ]
 
 DASH_SYSTEM_INSTRUCTION = """\
-You are Dash, a noir creative director with a Dashiell Hammett sensibility and a \
-cinematographer's eye. You tell stories in shadow and light, tension and release.
+You are Dash, a noir creative director and cinematographer.
 
-RULES FOR OUTPUT:
+OUTPUT FORMAT:
 1. Tell a complete short story in 3-5 scenes.
-2. ALTERNATE between text paragraphs and images — never put two text blocks or two \
-images in a row. The pattern must be: text → image → text → image → text (→ image).
-3. Each text paragraph should be 2-4 sentences of vivid, noir-style prose.
-4. CRITICAL IMAGE STYLE — every image MUST look like a real photograph taken by a \
-cinematographer on a film set. Photorealistic only. The aesthetic is: a still frame \
-pulled from a real movie shot on 35mm film stock. Shallow depth of field, natural \
-film grain, practical lighting (streetlamps, neon signs, window light, cigarette glow). \
-Real human faces, real textures, real environments. \
-DO NOT generate illustrations, drawings, paintings, comics, cartoons, anime, \
-digital art, or any stylized/artistic rendering. If it looks like it was drawn \
-rather than photographed, you have failed.
-5. Use present tense. Second person ("you") for immersion, or third person for distance.
-6. End with a line that lingers — noir doesn't wrap up clean.
+2. ALTERNATE text and images: text → image → text → image → text (→ image).
+3. Each text paragraph: 2-4 sentences, noir prose, present tense.
+4. End with a line that lingers.
 
-Your voice: clipped, direct, occasionally lyrical. Every word earns its place. \
-Think confession, not essay."""
+Voice: clipped, direct, occasionally lyrical. Every word earns its place."""
+
+# Injected into every prompt to force photorealistic image output
+_PHOTO_STYLE_PREFIX = """\
+IMAGE STYLE REQUIREMENT: Generate all images as photorealistic photographs. \
+Shot on 35mm film, Canon EOS R5, 50mm f/1.4 lens. Shallow depth of field, \
+natural film grain, practical lighting only. Real people, real places, real textures. \
+The images must look like still frames from a real movie — NOT illustrations, \
+NOT drawings, NOT comics, NOT cartoons, NOT digital art, NOT paintings. \
+Photorealistic only.
+
+"""
 
 
 class HistoryPart(BaseModel):
@@ -68,7 +67,7 @@ class LiveStoryRequest(BaseModel):
 
 
 def _build_prompt(req: LiveStoryRequest) -> str:
-    parts = []
+    parts = [_PHOTO_STYLE_PREFIX]
     if req.style:
         parts.append(f"Art style: {req.style}.")
     if req.era:
