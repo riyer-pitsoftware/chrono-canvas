@@ -1,4 +1,6 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
+
+/* ── Types ─────────────────────────────────────────────────────── */
 
 type StoryPart =
   | { type: 'text'; content: string }
@@ -12,6 +14,14 @@ type DoneEvent = {
   image_parts?: number;
 };
 
+type Scene = {
+  text: string;
+  imageBase64?: string;
+  mimeType?: string;
+};
+
+/* ── Suggested prompts ─────────────────────────────────────────── */
+
 const SUGGESTED_PROMPTS = [
   'A jazz singer discovers a coded message hidden in a vinyl record, 1940s Harlem',
   "Hatshepsut's tomb guard witnesses something impossible at midnight",
@@ -19,33 +29,361 @@ const SUGGESTED_PROMPTS = [
   'Two astronomers in 1920s Berlin decode a signal that changes everything',
 ];
 
+/* ── Pair SSE parts into scenes ────────────────────────────────── */
+
+function pairParts(parts: StoryPart[]): Scene[] {
+  const scenes: Scene[] = [];
+  let i = 0;
+  while (i < parts.length) {
+    const p = parts[i];
+    if (p.type === 'text') {
+      const scene: Scene = { text: p.content };
+      if (i + 1 < parts.length && parts[i + 1].type === 'image') {
+        const img = parts[i + 1] as { type: 'image'; content: string; mime_type: string };
+        scene.imageBase64 = img.content;
+        scene.mimeType = img.mime_type;
+        i += 2;
+      } else {
+        i += 1;
+      }
+      scenes.push(scene);
+    } else {
+      const img = p as { type: 'image'; content: string; mime_type: string };
+      scenes.push({ text: '', imageBase64: img.content, mimeType: img.mime_type });
+      i += 1;
+    }
+  }
+  return scenes;
+}
+
+/* ── Typewriter hook ───────────────────────────────────────────── */
+
+function useTypewriter(text: string, active: boolean, speed = 25) {
+  const [displayed, setDisplayed] = useState('');
+  const [done, setDone] = useState(false);
+
+  useEffect(() => {
+    if (!active) {
+      setDisplayed('');
+      setDone(false);
+      return;
+    }
+    setDisplayed('');
+    setDone(false);
+    let idx = 0;
+    const iv = setInterval(() => {
+      idx++;
+      setDisplayed(text.slice(0, idx));
+      if (idx >= text.length) {
+        clearInterval(iv);
+        setDone(true);
+      }
+    }, speed);
+    return () => clearInterval(iv);
+  }, [text, active, speed]);
+
+  return { displayed, done };
+}
+
+/* ── SceneViewer (full-screen overlay) ─────────────────────────── */
+
+function SceneViewer({
+  scenes,
+  stats,
+  continuing,
+  onClose,
+  onContinue,
+  onRashomon,
+}: {
+  scenes: Scene[];
+  stats: DoneEvent | null;
+  continuing: boolean;
+  onClose: () => void;
+  onContinue: (direction: string) => void;
+  onRashomon: () => void;
+}) {
+  const [current, setCurrent] = useState(0);
+  const [fadeKey, setFadeKey] = useState(0);
+  const [continueInput, setContinueInput] = useState('');
+  const touchStart = useRef<number | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const scene = scenes[current];
+  const isLastScene = current === scenes.length - 1;
+  const { displayed, done: textDone } = useTypewriter(scene?.text || '', true);
+
+  // Jump to last scene when new scenes arrive (continuation)
+  const prevSceneCount = useRef(scenes.length);
+  useEffect(() => {
+    if (scenes.length > prevSceneCount.current) {
+      setCurrent(scenes.length - (scenes.length - prevSceneCount.current));
+      setFadeKey((k) => k + 1);
+    }
+    prevSceneCount.current = scenes.length;
+  }, [scenes.length]);
+
+  const go = useCallback(
+    (dir: 1 | -1) => {
+      const next = current + dir;
+      if (next >= 0 && next < scenes.length) {
+        setCurrent(next);
+        setFadeKey((k) => k + 1);
+      }
+    },
+    [current, scenes.length],
+  );
+
+  // Keyboard navigation
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      // Don't capture arrows when input is focused
+      if (document.activeElement === inputRef.current) return;
+      if (e.key === 'ArrowRight') go(1);
+      else if (e.key === 'ArrowLeft') go(-1);
+      else if (e.key === 'Escape') onClose();
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [go, onClose]);
+
+  function onTouchStart(e: React.TouchEvent) {
+    touchStart.current = e.touches[0].clientX;
+  }
+  function onTouchEnd(e: React.TouchEvent) {
+    if (touchStart.current === null) return;
+    const dx = e.changedTouches[0].clientX - touchStart.current;
+    if (Math.abs(dx) > 60) go(dx < 0 ? 1 : -1);
+    touchStart.current = null;
+  }
+
+  function handleContinue() {
+    if (!continueInput.trim() || continuing) return;
+    onContinue(continueInput.trim());
+    setContinueInput('');
+  }
+
+  if (!scene) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex flex-col"
+      style={{ backgroundColor: 'oklch(0.08 0.01 60)' }}
+      onTouchStart={onTouchStart}
+      onTouchEnd={onTouchEnd}
+    >
+      {/* Top bar */}
+      <div className="flex items-center justify-between px-6 py-4 shrink-0">
+        <button
+          onClick={onClose}
+          className="text-xs text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors"
+        >
+          &larr; Back
+        </button>
+        <span className="text-xs text-[var(--muted-foreground)] tabular-nums">
+          {current + 1} / {scenes.length}
+        </span>
+      </div>
+
+      {/* Scene content — centered */}
+      <div
+        key={fadeKey}
+        className="flex-1 flex flex-col items-center justify-center px-8 gap-6 min-h-0"
+        style={{ animation: 'fadeIn 400ms ease-out' }}
+      >
+        {/* Image */}
+        {scene.imageBase64 && (
+          <img
+            src={`data:${scene.mimeType || 'image/png'};base64,${scene.imageBase64}`}
+            alt={`Scene ${current + 1}`}
+            className="max-h-[50vh] max-w-full rounded-lg object-contain"
+            style={{
+              boxShadow: '0 0 60px rgba(180, 140, 60, 0.15), 0 4px 30px rgba(0,0,0,0.6)',
+              opacity: textDone ? 1 : 0.2,
+              transition: 'opacity 800ms ease-in-out',
+            }}
+          />
+        )}
+
+        {/* Text */}
+        {scene.text && (
+          <p
+            className="max-w-2xl text-center leading-relaxed text-base"
+            style={{
+              fontFamily: "'Georgia', 'Times New Roman', serif",
+              color: 'oklch(0.9 0.02 80)',
+            }}
+          >
+            {displayed}
+            {!textDone && (
+              <span
+                className="inline-block w-[2px] h-[1em] ml-0.5 align-text-bottom"
+                style={{
+                  backgroundColor: 'var(--primary)',
+                  animation: 'blink 800ms step-end infinite',
+                }}
+              />
+            )}
+          </p>
+        )}
+
+        {/* "What happens next?" + Rashomon on last scene */}
+        {isLastScene && textDone && !continuing && (
+          <div
+            className="flex flex-col items-center gap-3 max-w-lg w-full mt-2"
+            style={{ animation: 'fadeIn 600ms ease-out' }}
+          >
+            <div className="flex items-center gap-2 w-full">
+              <input
+                ref={inputRef}
+                type="text"
+                value={continueInput}
+                onChange={(e) => setContinueInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleContinue();
+                }}
+                placeholder="What happens next?"
+                className="flex-1 rounded-md border border-[var(--border)] bg-[var(--background)]/50 px-3 py-2 text-sm focus:ring-1 focus:ring-[var(--primary)] focus:border-[var(--primary)] transition-colors"
+                style={{ fontFamily: "'Georgia', 'Times New Roman', serif" }}
+              />
+              <button
+                onClick={handleContinue}
+                disabled={!continueInput.trim()}
+                className="px-4 py-2 rounded-md bg-[var(--primary)] text-[var(--primary-foreground)] text-sm font-medium disabled:opacity-50 transition-opacity shrink-0"
+              >
+                Continue
+              </button>
+            </div>
+            <button
+              onClick={onRashomon}
+              className="text-xs text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors border border-[var(--border)] rounded-md px-3 py-1.5 hover:border-[var(--primary)]"
+              style={{ fontFamily: "'Georgia', 'Times New Roman', serif" }}
+            >
+              Tell it from the other side &hellip;
+            </button>
+          </div>
+        )}
+
+        {/* Continuation loading */}
+        {continuing && (
+          <div className="flex items-center gap-2 text-sm text-[var(--muted-foreground)] italic animate-pulse">
+            <span className="inline-block w-2 h-2 rounded-full bg-[var(--primary)] animate-ping" />
+            Dash picks up the thread...
+          </div>
+        )}
+      </div>
+
+      {/* Navigation arrows */}
+      {current > 0 && (
+        <button
+          onClick={() => go(-1)}
+          className="absolute left-4 top-1/2 -translate-y-1/2 text-3xl text-[var(--muted-foreground)] hover:text-[var(--foreground)] opacity-0 hover:opacity-100 transition-opacity p-4"
+          aria-label="Previous scene"
+        >
+          &lsaquo;
+        </button>
+      )}
+      {current < scenes.length - 1 && (
+        <button
+          onClick={() => go(1)}
+          className="absolute right-4 top-1/2 -translate-y-1/2 text-3xl text-[var(--muted-foreground)] hover:text-[var(--foreground)] opacity-0 hover:opacity-100 transition-opacity p-4"
+          aria-label="Next scene"
+        >
+          &rsaquo;
+        </button>
+      )}
+
+      {/* Dot nav + stats */}
+      <div className="shrink-0 px-6 py-4 flex flex-col items-center gap-2">
+        <div className="flex gap-2 flex-wrap justify-center">
+          {scenes.map((_, i) => (
+            <button
+              key={i}
+              onClick={() => {
+                setCurrent(i);
+                setFadeKey((k) => k + 1);
+              }}
+              className="w-2 h-2 rounded-full transition-colors"
+              style={{
+                backgroundColor:
+                  i === current ? 'var(--primary)' : 'var(--muted-foreground)',
+                opacity: i === current ? 1 : 0.4,
+              }}
+              aria-label={`Go to scene ${i + 1}`}
+            />
+          ))}
+        </div>
+
+        {stats && (
+          <div className="flex items-center gap-4 text-xs text-[var(--muted-foreground)]">
+            <span>
+              {stats.text_parts} text + {stats.image_parts} images
+            </span>
+            <span>{stats.elapsed_s}s</span>
+            {stats.model && <span className="opacity-60">{stats.model}</span>}
+          </div>
+        )}
+
+        <span className="text-xs text-amber-200/60">
+          AI-generated &middot; Powered by Gemini
+        </span>
+      </div>
+
+      <style>{`
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(8px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes blink {
+          50% { opacity: 0; }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+/* ── Main LiveStory page ───────────────────────────────────────── */
+
 export function LiveStory() {
   const [prompt, setPrompt] = useState('');
+  const [originalPrompt, setOriginalPrompt] = useState('');
   const [numScenes, setNumScenes] = useState(4);
   const [parts, setParts] = useState<StoryPart[]>([]);
   const [loading, setLoading] = useState(false);
+  const [continuing, setContinuing] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState<DoneEvent | null>(null);
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const [viewerOpen, setViewerOpen] = useState(false);
 
+  const scenes = pairParts(parts);
+
+  // Auto-open viewer when generation completes
   useEffect(() => {
-    scrollRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [parts]);
+    if (stats && scenes.length > 0 && !viewerOpen && !continuing) {
+      setViewerOpen(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stats]);
 
-  async function generate() {
-    if (!prompt.trim()) return;
-    setParts([]);
+  /** Shared SSE fetch logic */
+  async function fetchSSE(
+    body: Record<string, unknown>,
+    opts: { append?: boolean } = {},
+  ) {
     setError(null);
     setStats(null);
     setStatus(null);
-    setLoading(true);
+
+    if (!opts.append) {
+      setParts([]);
+      setViewerOpen(false);
+    }
 
     try {
       const res = await fetch('/api/live-story', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, num_scenes: numScenes }),
+        body: JSON.stringify(body),
       });
 
       if (!res.ok) {
@@ -82,18 +420,91 @@ export function LiveStory() {
       }
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : String(e));
+    }
+  }
+
+  /** Initial generation */
+  async function generate() {
+    if (!prompt.trim()) return;
+    setOriginalPrompt(prompt.trim());
+    setLoading(true);
+    try {
+      await fetchSSE({ prompt: prompt.trim(), num_scenes: numScenes });
     } finally {
       setLoading(false);
     }
   }
 
+  /** Continue the story with user direction */
+  async function continueStory(direction: string) {
+    setContinuing(true);
+    const history = parts.map((p) =>
+      p.type === 'text'
+        ? { type: 'text', content: p.content }
+        : { type: 'image', content: p.content, mime_type: p.mime_type },
+    );
+
+    try {
+      await fetchSSE(
+        {
+          prompt: direction,
+          original_prompt: originalPrompt,
+          num_scenes: numScenes,
+          history,
+        },
+        { append: true },
+      );
+    } finally {
+      setContinuing(false);
+    }
+  }
+
+  /** Rashomon — retell from the other perspective */
+  async function rashomonRetell() {
+    setLoading(true);
+    // Extract just the text parts to summarize the story for the retelling prompt
+    const storyTexts = parts
+      .filter((p) => p.type === 'text')
+      .map((p) => p.content)
+      .join('\n\n');
+
+    const rashomonPrompt =
+      `Retell this story from the opposite perspective. ` +
+      `If the original was told from the protagonist's view, tell it from the antagonist's. ` +
+      `If it was second person, switch to third. Same events, different truth. ` +
+      `This is the Rashomon — every narrator lies differently.\n\n` +
+      `Original story:\n${storyTexts}`;
+
+    try {
+      await fetchSSE({ prompt: rashomonPrompt, num_scenes: numScenes });
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  /* ── Viewer overlay ──────────────────────────────────────────── */
+  if (viewerOpen && scenes.length > 0) {
+    return (
+      <SceneViewer
+        scenes={scenes}
+        stats={stats}
+        continuing={continuing}
+        onClose={() => setViewerOpen(false)}
+        onContinue={continueStory}
+        onRashomon={rashomonRetell}
+      />
+    );
+  }
+
+  /* ── Prompt input view ───────────────────────────────────────── */
   return (
     <div className="max-w-3xl mx-auto p-6 space-y-6">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold mb-1 tracking-tight">Live Story</h1>
         <p className="text-sm text-[var(--muted-foreground)]">
-          Gemini generates interleaved text and images — the story and its visuals arrive together.
+          Gemini generates interleaved text and images &mdash; the story and its visuals arrive
+          together.
         </p>
       </div>
 
@@ -110,7 +521,6 @@ export function LiveStory() {
           disabled={loading}
         />
 
-        {/* Scene count + generate */}
         <div className="flex items-center gap-3">
           <label className="text-sm text-[var(--muted-foreground)] shrink-0">Scenes:</label>
           <select
@@ -131,7 +541,7 @@ export function LiveStory() {
             disabled={loading || !prompt.trim()}
             className="px-5 py-2 rounded-md bg-[var(--primary)] text-[var(--primary-foreground)] text-sm font-medium disabled:opacity-50 transition-opacity"
           >
-            {loading ? 'Generating...' : 'Generate'}
+            {loading ? 'Rolling...' : 'Action'}
           </button>
         </div>
       </div>
@@ -171,49 +581,24 @@ export function LiveStory() {
         </div>
       )}
 
-      {/* Story output */}
-      {parts.length > 0 && (
-        <div className="rounded-lg border border-[var(--border)] bg-[var(--card)] overflow-hidden">
-          <div className="p-6 space-y-5">
-            {parts.map((part, i) =>
-              part.type === 'text' ? (
-                <p
-                  key={i}
-                  className="text-sm leading-relaxed whitespace-pre-wrap animate-in fade-in duration-500"
-                  style={{ fontFamily: "'Georgia', 'Times New Roman', serif" }}
-                >
-                  {part.content}
-                </p>
-              ) : (
-                <img
-                  key={i}
-                  src={`data:${part.mime_type};base64,${part.content}`}
-                  alt={`Scene ${Math.ceil((i + 1) / 2)}`}
-                  className="rounded-lg max-w-full shadow-lg animate-in fade-in slide-in-from-bottom-2 duration-700"
-                />
-              ),
-            )}
-            <div ref={scrollRef} />
-          </div>
-
-          {/* Completion stats */}
-          {stats && (
-            <div className="border-t border-[var(--border)] px-6 py-3 flex items-center gap-4 text-xs text-[var(--muted-foreground)]">
-              <span>
-                {stats.text_parts} text + {stats.image_parts} images
-              </span>
-              <span>{stats.elapsed_s}s</span>
-              {stats.model && <span className="opacity-60">{stats.model}</span>}
-            </div>
-          )}
-        </div>
+      {/* Re-enter viewer button */}
+      {scenes.length > 0 && !loading && (
+        <button
+          onClick={() => setViewerOpen(true)}
+          className="w-full py-3 rounded-md border border-[var(--border)] text-sm text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:border-[var(--primary)] transition-colors"
+        >
+          View story ({scenes.length} scenes)
+        </button>
       )}
 
-      {/* AI disclaimer */}
-      {parts.length > 0 && (
-        <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-amber-950/30 border border-amber-900/40 text-amber-200/80 text-xs">
-          <span>AI-generated content — for creative entertainment only.</span>
-          <span className="ml-auto opacity-60">Powered by Gemini</span>
+      {/* Stats */}
+      {stats && scenes.length > 0 && (
+        <div className="flex items-center gap-4 text-xs text-[var(--muted-foreground)]">
+          <span>
+            {stats.text_parts} text + {stats.image_parts} images
+          </span>
+          <span>{stats.elapsed_s}s</span>
+          {stats.model && <span className="opacity-60">{stats.model}</span>}
         </div>
       )}
     </div>
