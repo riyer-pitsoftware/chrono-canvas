@@ -112,7 +112,7 @@ def _gen_config() -> types.GenerateContentConfig:
 def _extract_parts(response) -> list[dict]:
     """Extract text and image parts from a Gemini response."""
     results = []
-    if not response.candidates or not response.candidates[0].content.parts:
+    if not response.candidates or not response.candidates[0].content or not response.candidates[0].content.parts:
         return results
     for part in response.candidates[0].content.parts:
         if part.text is not None:

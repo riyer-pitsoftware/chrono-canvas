@@ -94,7 +94,8 @@ gcloud run deploy chronocanvas-api \
   --memory=4Gi \
   --min-instances=1 \
   --max-instances=4 \
-  --timeout=300 \
+  --timeout=600 \
+  --no-cpu-throttling \
   --concurrency=40 \
   --allow-unauthenticated \
   --set-env-vars="${COMMON_ENV},RUN_MIGRATIONS=true,CORS_ORIGINS=[\"*\"]" \
