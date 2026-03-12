@@ -4,7 +4,9 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 
 type StoryPart =
   | { type: 'text'; content: string }
-  | { type: 'image'; content: string; mime_type: string };
+  | { type: 'image'; content: string; mime_type: string }
+  | { type: 'casting'; content: string }
+  | { type: 'casting_image'; content: string; mime_type: string };
 
 type DoneEvent = {
   type: 'done';
@@ -32,14 +34,18 @@ const SUGGESTED_PROMPTS = [
 /* ── Pair SSE parts into scenes ────────────────────────────────── */
 
 function pairParts(parts: StoryPart[]): Scene[] {
+  // Filter out casting parts — they're for visual anchoring, not story display
+  const storyParts = parts.filter(
+    (p) => p.type === 'text' || p.type === 'image',
+  );
   const scenes: Scene[] = [];
   let i = 0;
-  while (i < parts.length) {
-    const p = parts[i];
+  while (i < storyParts.length) {
+    const p = storyParts[i];
     if (p.type === 'text') {
       const scene: Scene = { text: p.content };
-      if (i + 1 < parts.length && parts[i + 1].type === 'image') {
-        const img = parts[i + 1] as { type: 'image'; content: string; mime_type: string };
+      if (i + 1 < storyParts.length && storyParts[i + 1].type === 'image') {
+        const img = storyParts[i + 1] as { type: 'image'; content: string; mime_type: string };
         scene.imageBase64 = img.content;
         scene.mimeType = img.mime_type;
         i += 2;
@@ -54,6 +60,20 @@ function pairParts(parts: StoryPart[]): Scene[] {
     }
   }
   return scenes;
+}
+
+/** Extract casting data (character descriptions + reference photo) from parts */
+function extractCasting(parts: StoryPart[]): { text: string; imageBase64?: string; mimeType?: string } | null {
+  const castingTexts = parts.filter((p) => p.type === 'casting').map((p) => p.content);
+  const castingImg = parts.find((p) => p.type === 'casting_image') as
+    | { type: 'casting_image'; content: string; mime_type: string }
+    | undefined;
+  if (castingTexts.length === 0 && !castingImg) return null;
+  return {
+    text: castingTexts.join('\n'),
+    imageBase64: castingImg?.content,
+    mimeType: castingImg?.mime_type,
+  };
 }
 
 /* ── Typewriter hook ───────────────────────────────────────────── */
@@ -327,7 +347,87 @@ function PipelineProof({
   );
 }
 
+/* ── Wait SFX hook — vinyl crackle + projector tick during narration fetch ── */
+
+function useWaitSFX(active: boolean) {
+  useEffect(() => {
+    if (!active) return;
+
+    let ctx: AudioContext;
+    try {
+      ctx = new AudioContext();
+    } catch {
+      return; // Browser blocked AudioContext — skip silently
+    }
+
+    const gainNode = ctx.createGain();
+    gainNode.gain.value = 0.08; // Very quiet — atmospheric, not distracting
+    gainNode.connect(ctx.destination);
+
+    // Brownian noise buffer — warm vinyl crackle character
+    const bufferSize = 2 * ctx.sampleRate;
+    const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const output = noiseBuffer.getChannelData(0);
+    let lastOut = 0;
+    for (let i = 0; i < bufferSize; i++) {
+      const white = Math.random() * 2 - 1;
+      output[i] = (lastOut + 0.02 * white) / 1.02;
+      lastOut = output[i];
+      output[i] *= 3.5;
+    }
+    const noise = ctx.createBufferSource();
+    noise.buffer = noiseBuffer;
+    noise.loop = true;
+
+    // Bandpass filter for warm vinyl character
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.value = 800;
+    filter.Q.value = 0.5;
+
+    noise.connect(filter);
+    filter.connect(gainNode);
+    noise.start();
+
+    // Projector tick — periodic quiet clicks at ~8Hz
+    const tickInterval = setInterval(() => {
+      try {
+        const osc = ctx.createOscillator();
+        const tickGain = ctx.createGain();
+        osc.frequency.value = 2000 + Math.random() * 500;
+        tickGain.gain.value = 0.03;
+        tickGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.03);
+        osc.connect(tickGain);
+        tickGain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.03);
+      } catch {
+        // AudioContext may have been closed during cleanup race
+      }
+    }, 125);
+
+    return () => {
+      clearInterval(tickInterval);
+      try {
+        gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2);
+      } catch {
+        // Ignore if context already closed
+      }
+      setTimeout(() => {
+        try {
+          noise.stop();
+          ctx.close();
+        } catch {
+          // Already stopped/closed
+        }
+      }, 250);
+    };
+  }, [active]);
+}
+
 /* ── SceneViewer (full-screen overlay) ─────────────────────────── */
+
+type CastingData = { text: string; imageBase64?: string; mimeType?: string };
 
 function SceneViewer({
   scenes,
@@ -336,6 +436,7 @@ function SceneViewer({
   onClose,
   onContinue,
   onRashomon,
+  casting,
 }: {
   scenes: Scene[];
   stats: DoneEvent | null;
@@ -343,11 +444,13 @@ function SceneViewer({
   onClose: () => void;
   onContinue: (direction: string) => void;
   onRashomon: () => void;
+  casting?: CastingData | null;
 }) {
   const [current, setCurrent] = useState(0);
   const [fadeKey, setFadeKey] = useState(0);
   const [transitioning, setTransitioning] = useState(false);
   const [continueInput, setContinueInput] = useState('');
+  const [showCasting, setShowCasting] = useState(false);
   const touchStart = useRef<number | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -356,6 +459,10 @@ function SceneViewer({
 
   // Narrate current scene aloud — cinema waits for audio to arrive
   const { ready: narrationReady } = useNarration(scene?.text || '', !transitioning);
+
+  // Vinyl crackle + projector tick while waiting for narration audio
+  const waitingForNarration = !narrationReady && !transitioning && !!scene?.text;
+  useWaitSFX(waitingForNarration);
 
   const { displayed, done: textDone, progress } = useTypewriter(
     transitioning ? '' : scene?.text || '',
@@ -442,10 +549,40 @@ function SceneViewer({
         >
           &larr; Back
         </button>
-        <span className="text-xs text-[var(--muted-foreground)] tabular-nums">
-          {current + 1} / {scenes.length}
-        </span>
+        <div className="flex items-center gap-4">
+          {casting && (
+            <button
+              onClick={() => setShowCasting(!showCasting)}
+              className="text-xs text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors"
+            >
+              {showCasting ? 'Hide Cast' : 'Show Cast'}
+            </button>
+          )}
+          <span className="text-xs text-[var(--muted-foreground)] tabular-nums">
+            {current + 1} / {scenes.length}
+          </span>
+        </div>
       </div>
+
+      {/* Casting card — collapsible character reference */}
+      {showCasting && casting && (
+        <div className="mx-6 mb-4 p-4 rounded-lg shrink-0 overflow-auto max-h-[30vh]"
+          style={{ backgroundColor: 'oklch(0.12 0.01 60)', border: '1px solid oklch(0.2 0.01 60)' }}>
+          <p className="text-xs font-semibold text-[var(--muted-foreground)] mb-2 uppercase tracking-wider">
+            Casting Reference
+          </p>
+          {casting.imageBase64 && (
+            <img
+              src={`data:${casting.mimeType || 'image/png'};base64,${casting.imageBase64}`}
+              alt="Character casting reference"
+              className="max-h-32 rounded mb-2 object-contain"
+            />
+          )}
+          <p className="text-xs text-[var(--muted-foreground)] whitespace-pre-wrap leading-relaxed">
+            {casting.text}
+          </p>
+        </div>
+      )}
 
       {/* Scene content — centered, with film dissolve */}
       <div
@@ -622,7 +759,6 @@ function SceneViewer({
 export function LiveStory() {
   const [prompt, setPrompt] = useState('');
   const [originalPrompt, setOriginalPrompt] = useState('');
-  const [numScenes, setNumScenes] = useState(4);
   const [parts, setParts] = useState<StoryPart[]>([]);
   const [loading, setLoading] = useState(false);
   const [continuing, setContinuing] = useState(false);
@@ -690,7 +826,12 @@ export function LiveStory() {
             setError(data.content);
           } else if (data.type === 'status') {
             setStatus(data.content);
-          } else {
+          } else if (
+            data.type === 'text' ||
+            data.type === 'image' ||
+            data.type === 'casting' ||
+            data.type === 'casting_image'
+          ) {
             setParts((prev) => [...prev, data as StoryPart]);
           }
         }
@@ -706,7 +847,7 @@ export function LiveStory() {
     setOriginalPrompt(prompt.trim());
     setLoading(true);
     try {
-      await fetchSSE({ prompt: prompt.trim(), num_scenes: numScenes });
+      await fetchSSE({ prompt: prompt.trim(),  });
     } finally {
       setLoading(false);
     }
@@ -715,18 +856,23 @@ export function LiveStory() {
   /** Continue the story with user direction */
   async function continueStory(direction: string) {
     setContinuing(true);
-    const history = parts.map((p) =>
-      p.type === 'text'
-        ? { type: 'text', content: p.content }
-        : { type: 'image', content: p.content, mime_type: p.mime_type },
-    );
+    // Only send last 2 images to stay under body size limits — backend only uses last 2 anyway
+    const imageParts = parts.filter((p) => p.type === 'image' || p.type === 'casting_image');
+    const recentImages = new Set(imageParts.slice(-2));
+    const history = parts
+      .filter((p) => p.type === 'text' || p.type === 'casting' || recentImages.has(p))
+      .map((p) => {
+        if (p.type === 'text' || p.type === 'casting') {
+          return { type: 'text', content: p.content };
+        }
+        return { type: 'image', content: p.content, mime_type: (p as { mime_type: string }).mime_type };
+      });
 
     try {
       await fetchSSE(
         {
           prompt: direction,
           original_prompt: originalPrompt,
-          num_scenes: numScenes,
           history,
         },
         { append: true },
@@ -753,7 +899,7 @@ export function LiveStory() {
       `Original story:\n${storyTexts}`;
 
     try {
-      await fetchSSE({ prompt: rashomonPrompt, num_scenes: numScenes });
+      await fetchSSE({ prompt: rashomonPrompt,  });
     } finally {
       setLoading(false);
     }
@@ -769,6 +915,7 @@ export function LiveStory() {
         onClose={() => setViewerOpen(false)}
         onContinue={continueStory}
         onRashomon={rashomonRetell}
+        casting={extractCasting(parts)}
       />
     );
   }
@@ -805,19 +952,6 @@ export function LiveStory() {
         />
 
         <div className="flex items-center gap-3">
-          <label className="text-sm text-[var(--muted-foreground)] shrink-0">Scenes:</label>
-          <select
-            value={numScenes}
-            onChange={(e) => setNumScenes(Number(e.target.value))}
-            disabled={loading}
-            className="rounded-md border border-[var(--border)] bg-[var(--background)] px-2 py-1.5 text-sm"
-          >
-            {[2, 3, 4, 5, 6].map((n) => (
-              <option key={n} value={n}>
-                {n}
-              </option>
-            ))}
-          </select>
           <div className="flex-1" />
           <button
             onClick={generate}

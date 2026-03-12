@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import re
 import time
 
 from chronocanvas.agents.story.state import StoryState, get_runtime_config
@@ -109,14 +110,17 @@ async def scene_decomposition_node(state: StoryState) -> StoryState:
                 runtime_config=rc,
             )
 
-            # Parse JSON from response
+            # Parse JSON from response — with repair for common LLM quirks
             content = response.content
             json_start = content.find("{")
             json_end = content.rfind("}") + 1
             if json_start == -1 or json_end == 0:
                 raise ValueError("No JSON found in scene decomposition response")
 
-            parsed = json.loads(content[json_start:json_end])
+            json_text = content[json_start:json_end]
+            # Fix trailing commas before } or ] (common LLM error)
+            json_text = re.sub(r",\s*([}\]])", r"\1", json_text)
+            parsed = json.loads(json_text)
             scenes = parsed.get("scenes", [])
 
             # Ensure scene_index is set and continuity fields have defaults

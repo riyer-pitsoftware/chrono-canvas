@@ -23,17 +23,28 @@ router = APIRouter(prefix="/live-session", tags=["live-session"])
 LIVE_MODEL_PRIMARY = "gemini-2.5-flash-native-audio-latest"
 LIVE_MODEL_FALLBACK = "gemini-2.5-flash-native-audio-preview-12-2025"
 
-IMAGE_MODEL = "gemini-2.5-flash-image"
+# Image generation models — try best consistency first
+_IMAGE_MODEL_CHAIN = [
+    "gemini-3.1-flash-image-preview",  # Nano Banana 2: best character consistency
+    "gemini-2.5-flash-image",          # fallback
+]
 
 SYSTEM_INSTRUCTION = """\
 You are Dash, a noir creative director with a deep, gravelly voice. \
 You tell stories in shadow and light. You are in a live session with the audience.
 
+CHARACTER CONSISTENCY (CRITICAL):
+Before starting, mentally cast your characters. Lock in each character's exact \
+physical appearance — face shape, skin tone, hair color/style, eye color, build, \
+age, distinguishing marks, and wardrobe. Once set, NEVER deviate.
+
 RULES:
 1. When the user gives you a story premise, narrate it scene by scene in noir prose.
 2. After narrating each scene, call generate_scene_image() with a detailed visual description. \
    The description MUST specify: photorealistic photograph, 35mm film, Canon EOS R5, 50mm f/1.4, \
-   shallow depth of field, practical lighting. NEVER describe illustrations or drawings.
+   shallow depth of field, practical lighting. NEVER describe illustrations or drawings. \
+   ALWAYS re-state each visible character's key physical features (face, hair, skin tone, \
+   build, clothing) in EVERY image description — do NOT rely on context alone.
 3. If the user asks about history, call search_historical_context() to ground the story.
 4. If the user interrupts or redirects, adapt immediately. You are co-directing with them.
 5. Keep narration to 2-3 sentences per scene, then generate the image, then continue.
@@ -102,23 +113,58 @@ async def _send_json(ws: WebSocket, data: dict) -> bool:
         return False
 
 
-async def _generate_image(client: genai.Client, description: str) -> str | None:
-    """Generate an image via Gemini and return base64 PNG, or None on failure."""
+_IMAGE_STYLE_PREFIX = (
+    "Photorealistic photograph. Shot on 35mm film, Canon EOS R5, 50mm f/1.4 lens. "
+    "Shallow depth of field, natural film grain, practical lighting only. "
+    "Real people, real places, real textures. NOT illustration, NOT drawing, "
+    "NOT cartoon, NOT digital art. Photorealistic only. "
+)
+
+
+async def _generate_image(
+    client: genai.Client, description: str, last_image_b64: str | None = None
+) -> str | None:
+    """Generate an image via Gemini and return base64 PNG, or None on failure.
+
+    If last_image_b64 is provided, it's included as a reference so the model
+    can maintain character consistency with the previous scene.
+    """
+    styled_description = f"{_IMAGE_STYLE_PREFIX}{description}"
+
     try:
-        response = await client.aio.models.generate_content(
-            model=IMAGE_MODEL,
-            contents=description,
-            config=types.GenerateContentConfig(
-                response_modalities=["IMAGE"],
-            ),
-        )
-        if (
-            response.candidates
-            and response.candidates[0].content.parts
-        ):
-            for part in response.candidates[0].content.parts:
-                if part.inline_data and part.inline_data.data:
-                    return base64.b64encode(part.inline_data.data).decode("ascii")
+        # Build contents — include last image as visual reference if available
+        contents: list = []
+        if last_image_b64:
+            image_bytes = base64.b64decode(last_image_b64)
+            contents.append(
+                types.Part.from_bytes(data=image_bytes, mime_type="image/png")
+            )
+            contents.append(types.Part.from_text(
+                text=f"Maintain the same characters with identical faces and features "
+                f"as shown in the reference image above. {styled_description}"
+            ))
+        else:
+            contents.append(types.Part.from_text(text=styled_description))
+
+        for img_model in _IMAGE_MODEL_CHAIN:
+            try:
+                response = await client.aio.models.generate_content(
+                    model=img_model,
+                    contents=contents,
+                    config=types.GenerateContentConfig(
+                        response_modalities=["IMAGE"],
+                    ),
+                )
+                if (
+                    response.candidates
+                    and response.candidates[0].content.parts
+                ):
+                    for part in response.candidates[0].content.parts:
+                        if part.inline_data and part.inline_data.data:
+                            return base64.b64encode(part.inline_data.data).decode("ascii")
+            except Exception as e:
+                logger.warning("Image model %s failed: %s", img_model, e)
+                continue
     except Exception as e:
         logger.error("Image generation failed: %s", e)
     return None
@@ -129,6 +175,7 @@ async def _handle_function_call(
     session,
     ws: WebSocket,
     tool_call: types.FunctionCall,
+    session_state: dict,
 ) -> None:
     """Process a Gemini function call, send results to browser and back to Gemini."""
     fn_name = tool_call.name
@@ -141,9 +188,13 @@ async def _handle_function_call(
 
         await _send_json(ws, {"type": "status", "content": "generating_image"})
 
-        b64_img = await _generate_image(client, description)
+        # Pass last image as reference for character consistency
+        last_img = session_state.get("last_image_b64")
+        b64_img = await _generate_image(client, description, last_image_b64=last_img)
 
         if b64_img:
+            # Track last image for consistency in subsequent scenes
+            session_state["last_image_b64"] = b64_img
             await _send_json(ws, {
                 "type": "image",
                 "data": b64_img,
@@ -233,6 +284,7 @@ async def _receive_from_gemini(
     session,
     ws: WebSocket,
     stop_event: asyncio.Event,
+    session_state: dict | None = None,
 ) -> None:
     """Loop: read responses from Gemini session and forward to browser."""
     try:
@@ -269,7 +321,7 @@ async def _receive_from_gemini(
                 if response.tool_call:
                     for fc in response.tool_call.function_calls:
                         await _send_json(ws, {"type": "status", "content": "narrating"})
-                        await _handle_function_call(client, session, ws, fc)
+                        await _handle_function_call(client, session, ws, fc, session_state)
 
             # If receive() generator exits, session may be done
             break
@@ -332,13 +384,15 @@ async def live_session_ws(ws: WebSocket):
     await _send_json(ws, {"type": "status", "content": "listening"})
 
     stop_event = asyncio.Event()
+    # Track state across the session (e.g., last image for consistency)
+    session_state: dict = {}
 
     # Run browser→Gemini and Gemini→browser loops concurrently
     browser_task = asyncio.create_task(
         _receive_from_browser(ws, session, stop_event)
     )
     gemini_task = asyncio.create_task(
-        _receive_from_gemini(client, session, ws, stop_event)
+        _receive_from_gemini(client, session, ws, stop_event, session_state)
     )
 
     try:
