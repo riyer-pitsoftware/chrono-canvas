@@ -18,8 +18,8 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/live-voice", tags=["live-voice"])
 
-LIVE_MODEL_PRIMARY = "gemini-2.5-flash-preview-native-audio-dialog"
-LIVE_MODEL_FALLBACK = "gemini-2.0-flash-exp"
+LIVE_MODEL_PRIMARY = "gemini-2.5-flash-native-audio-latest"
+LIVE_MODEL_FALLBACK = "gemini-2.5-flash-native-audio-preview-12-2025"
 SAMPLE_RATE = 24000  # Live API outputs 24kHz PCM16
 
 
