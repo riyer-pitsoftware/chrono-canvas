@@ -4,6 +4,7 @@ Uses per-scene chat-based generation so each scene sees prior images in context,
 ensuring character consistency across the storyboard.
 """
 
+import asyncio
 import base64
 import json
 import logging
@@ -26,6 +27,9 @@ _MODEL_CHAIN = [
     "gemini-3.1-flash-image-preview",  # Nano Banana 2: up to 5 character refs
     "gemini-2.5-flash-image",          # fallback
 ]
+
+# Timeout per Gemini chat turn (seconds) — casting and scenes
+_TURN_TIMEOUT_S = 60
 
 DASH_SYSTEM_INSTRUCTION = """\
 You are Dash, a noir creative director and cinematographer.
@@ -142,13 +146,9 @@ async def live_story(req: LiveStoryRequest):
         text_count = 0
         image_count = 0
 
-        # Status: starting
-        status_msg = (
-            "Dash picks up the thread..."
-            if is_continuation
-            else "Dash is casting the characters..."
-        )
-        yield _sse({"type": "status", "content": status_msg})
+        # Stage: init
+        yield _sse(_stage_event("init", "start"))
+        init_t0 = time.perf_counter()
 
         # Find a working model
         chat = None
@@ -166,8 +166,19 @@ async def live_story(req: LiveStoryRequest):
                 continue
 
         if chat is None:
+            yield _sse(_stage_event(
+                "init", "error",
+                elapsed_s=time.perf_counter() - init_t0,
+                detail=f"All models failed: {last_error}",
+            ))
             yield _sse({"type": "error", "content": f"All models failed: {last_error}"})
             return
+
+        yield _sse(_stage_event(
+            "init", "complete",
+            elapsed_s=time.perf_counter() - init_t0,
+            detail=model_used,
+        ))
 
         if is_continuation:
             # Continuation: replay history into chat, then continue
@@ -219,8 +230,9 @@ async def _scene_by_scene_flow(
     all_parts = []
     base_prompt = _build_prompt(req)
 
-    # Scene 0: Casting photo (hidden from viewer)
-    # Generate character portraits to anchor visual consistency in chat history
+    # ── Casting (Scene 0) ───────────────────────────────────────
+    all_parts.append(_stage_event("casting", "start"))
+
     casting_prompt = (
         f"{base_prompt}\n\n"
         f"CASTING CALL: Before we begin filming, generate a casting photo. "
@@ -230,10 +242,13 @@ async def _scene_by_scene_flow(
         f"lineup of the main characters standing side by side, well-lit, "
         f"facing the camera. This is the reference photo for the entire film."
     )
+    casting_t0 = time.perf_counter()
     try:
-        response = await chat.send_message(casting_prompt)
+        response = await asyncio.wait_for(
+            chat.send_message(casting_prompt),
+            timeout=_TURN_TIMEOUT_S,
+        )
         casting_parts = _extract_parts(response)
-        # Send casting text as a "casting" type so frontend can show it differently
         for cp in casting_parts:
             if cp["type"] == "text":
                 all_parts.append({
@@ -246,21 +261,34 @@ async def _scene_by_scene_flow(
                     "content": cp["content"],
                     "mime_type": cp.get("mime_type", "image/png"),
                 })
-        all_parts.append({
-            "type": "status",
-            "content": "Characters cast. Rolling camera...",
-        })
+        all_parts.append(_stage_event(
+            "casting", "complete",
+            elapsed_s=time.perf_counter() - casting_t0,
+        ))
+    except asyncio.TimeoutError:
+        elapsed = time.perf_counter() - casting_t0
+        logger.warning("Casting photo timed out after %.1fs", elapsed)
+        all_parts.append(_stage_event(
+            "casting", "timeout",
+            elapsed_s=elapsed,
+            detail=f"Timed out after {_TURN_TIMEOUT_S}s",
+        ))
     except Exception as e:
+        elapsed = time.perf_counter() - casting_t0
         logger.warning("Casting photo failed (continuing without): %s", e)
-        all_parts.append({
-            "type": "status",
-            "content": "Dash is setting the scene...",
-        })
+        all_parts.append(_stage_event(
+            "casting", "error",
+            elapsed_s=elapsed,
+            detail=str(e),
+        ))
 
-    # Scenes — model decides how many; stops on [END] marker
+    # ── Scenes — model decides how many; stops on [END] marker ──
     max_scenes = 20  # safety cap
     scene_idx = 0
     while scene_idx < max_scenes:
+        all_parts.append(_stage_event("scene", "start", scene_idx=scene_idx + 1))
+        scene_t0 = time.perf_counter()
+
         if scene_idx == 0:
             prompt = (
                 "Now begin the story. Write Scene 1 with text and one image. "
@@ -276,19 +304,29 @@ async def _scene_by_scene_flow(
             )
 
         try:
-            response = await chat.send_message(prompt)
+            response = await asyncio.wait_for(
+                chat.send_message(prompt),
+                timeout=_TURN_TIMEOUT_S,
+            )
             parts = _extract_parts(response)
             if not parts:
+                all_parts.append(_stage_event(
+                    "scene", "error",
+                    scene_idx=scene_idx + 1,
+                    elapsed_s=time.perf_counter() - scene_t0,
+                    detail="Empty response from model",
+                ))
                 all_parts.append({
                     "type": "error",
                     "content": f"Scene {scene_idx + 1}: empty response",
                 })
                 break
             all_parts.extend(parts)
-            all_parts.append({
-                "type": "status",
-                "content": f"Scene {scene_idx + 1} complete...",
-            })
+            all_parts.append(_stage_event(
+                "scene", "complete",
+                scene_idx=scene_idx + 1,
+                elapsed_s=time.perf_counter() - scene_t0,
+            ))
 
             # Check if model signaled story end
             text_content = " ".join(
@@ -302,8 +340,30 @@ async def _scene_by_scene_flow(
                         break
                 break
 
+        except asyncio.TimeoutError:
+            elapsed = time.perf_counter() - scene_t0
+            logger.error("Scene %d timed out after %.1fs", scene_idx + 1, elapsed)
+            all_parts.append(_stage_event(
+                "scene", "timeout",
+                scene_idx=scene_idx + 1,
+                elapsed_s=elapsed,
+                detail=f"Timed out after {_TURN_TIMEOUT_S}s",
+            ))
+            all_parts.append({
+                "type": "error",
+                "content": f"Scene {scene_idx + 1} timed out after {_TURN_TIMEOUT_S}s",
+            })
+            break
+
         except Exception as e:
+            elapsed = time.perf_counter() - scene_t0
             logger.error("Scene %d generation failed: %s", scene_idx + 1, e)
+            all_parts.append(_stage_event(
+                "scene", "error",
+                scene_idx=scene_idx + 1,
+                elapsed_s=elapsed,
+                detail=str(e),
+            ))
             all_parts.append({
                 "type": "error",
                 "content": f"Scene {scene_idx + 1} failed: {e}",
@@ -325,7 +385,10 @@ async def _continuation_flow(
     """
     all_parts = []
 
-    # Turn 1: replay the original prompt
+    # ── Replay original prompt ──────────────────────────────────
+    all_parts.append(_stage_event("replay", "start"))
+    replay_t0 = time.perf_counter()
+
     orig = LiveStoryRequest(
         prompt=req.original_prompt or req.prompt,
         style=req.style,
@@ -335,16 +398,39 @@ async def _continuation_flow(
     initial_prompt = _build_prompt(orig)
 
     try:
-        # Send original prompt (we discard this response since we have history)
-        await chat.send_message(initial_prompt)
+        await asyncio.wait_for(
+            chat.send_message(initial_prompt),
+            timeout=_TURN_TIMEOUT_S,
+        )
+        all_parts.append(_stage_event(
+            "replay", "complete",
+            elapsed_s=time.perf_counter() - replay_t0,
+        ))
+    except asyncio.TimeoutError:
+        elapsed = time.perf_counter() - replay_t0
+        logger.error("Replay timed out after %.1fs", elapsed)
+        all_parts.append(_stage_event(
+            "replay", "timeout",
+            elapsed_s=elapsed,
+            detail=f"Timed out after {_TURN_TIMEOUT_S}s",
+        ))
+        all_parts.append({"type": "error", "content": f"Replay timed out after {_TURN_TIMEOUT_S}s"})
+        return all_parts
     except Exception as e:
+        elapsed = time.perf_counter() - replay_t0
         logger.error("Failed to replay original prompt: %s", e)
+        all_parts.append(_stage_event(
+            "replay", "error",
+            elapsed_s=elapsed,
+            detail=str(e),
+        ))
         all_parts.append({"type": "error", "content": f"Replay failed: {e}"})
         return all_parts
 
-    # Turn 2: feed history as "model" response then ask continuation
-    # Since chat API doesn't let us inject model turns, we send the history
-    # as a user message with context, then ask for continuation
+    # ── Continuation ────────────────────────────────────────────
+    all_parts.append(_stage_event("scene", "start", scene_idx=1))
+    cont_t0 = time.perf_counter()
+
     history_text_parts = []
     history_image_parts = []
     for hp in req.history or []:
@@ -353,10 +439,7 @@ async def _continuation_flow(
         elif hp.type == "image" and hp.content:
             history_image_parts.append(hp)
 
-    # Build continuation message with reference images from history
     continuation_parts = []
-
-    # Include the last 2 images as visual reference (cap to avoid context overflow)
     for img_hp in history_image_parts[-2:]:
         image_bytes = base64.b64decode(img_hp.content)
         continuation_parts.append(
@@ -375,11 +458,36 @@ async def _continuation_flow(
     continuation_parts.append(types.Part.from_text(text=continuation_text))
 
     try:
-        response = await chat.send_message(continuation_parts)
+        response = await asyncio.wait_for(
+            chat.send_message(continuation_parts),
+            timeout=_TURN_TIMEOUT_S,
+        )
         parts = _extract_parts(response)
         all_parts.extend(parts)
+        all_parts.append(_stage_event(
+            "scene", "complete",
+            scene_idx=1,
+            elapsed_s=time.perf_counter() - cont_t0,
+        ))
+    except asyncio.TimeoutError:
+        elapsed = time.perf_counter() - cont_t0
+        logger.error("Continuation timed out after %.1fs", elapsed)
+        all_parts.append(_stage_event(
+            "scene", "timeout",
+            scene_idx=1,
+            elapsed_s=elapsed,
+            detail=f"Timed out after {_TURN_TIMEOUT_S}s",
+        ))
+        all_parts.append({"type": "error", "content": f"Continuation timed out after {_TURN_TIMEOUT_S}s"})
     except Exception as e:
+        elapsed = time.perf_counter() - cont_t0
         logger.error("Continuation generation failed: %s", e)
+        all_parts.append(_stage_event(
+            "scene", "error",
+            scene_idx=1,
+            elapsed_s=elapsed,
+            detail=str(e),
+        ))
         all_parts.append({"type": "error", "content": f"Continuation failed: {e}"})
 
     return all_parts
@@ -387,3 +495,26 @@ async def _continuation_flow(
 
 def _sse(data: dict) -> str:
     return f"data: {json.dumps(data)}\n\n"
+
+
+def _stage_event(
+    stage: str,
+    status: str,
+    *,
+    elapsed_s: float | None = None,
+    scene_idx: int | None = None,
+    detail: str | None = None,
+) -> dict:
+    """Build a structured stage event for pipeline progress tracking.
+
+    stage: "init", "casting", "scene"
+    status: "start", "complete", "error", "timeout"
+    """
+    evt: dict = {"type": "stage", "stage": stage, "status": status}
+    if elapsed_s is not None:
+        evt["elapsed_s"] = round(elapsed_s, 1)
+    if scene_idx is not None:
+        evt["scene_idx"] = scene_idx
+    if detail:
+        evt["detail"] = detail
+    return evt

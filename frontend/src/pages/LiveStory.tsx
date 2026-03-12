@@ -16,6 +16,23 @@ type DoneEvent = {
   image_parts?: number;
 };
 
+type StageEvent = {
+  type: 'stage';
+  stage: string;       // "init", "casting", "scene", "replay"
+  status: string;       // "start", "complete", "error", "timeout"
+  elapsed_s?: number;
+  scene_idx?: number;
+  detail?: string;
+};
+
+type StageState = {
+  stage: string;
+  label: string;
+  status: 'pending' | 'running' | 'complete' | 'error' | 'timeout';
+  elapsed_s?: number;
+  detail?: string;
+};
+
 type Scene = {
   text: string;
   imageBase64?: string;
@@ -175,40 +192,60 @@ function useNarration(text: string, active: boolean) {
   return { ready };
 }
 
-/* ── Pipeline Proof — shows judges why multi-stage > one-shot ── */
+/* ── Pipeline Progress — real stage tracking from backend events ── */
 
-const PIPELINE_STAGES = [
-  { id: 'concept',    label: 'Concept',      detail: 'Extract characters, era, tone from prompt' },
-  { id: 'structure',  label: 'Decompose',    detail: 'Break narrative into scenes with arcs' },
-  { id: 'research',   label: 'Research',     detail: 'Ground details in real history via search' },
-  { id: 'prompts',    label: 'Prompt Craft', detail: 'Per-scene image prompts with validation' },
-  { id: 'generation', label: 'Generate',     detail: 'Interleaved text + photorealistic images' },
-  { id: 'coherence',  label: 'Coherence',    detail: 'Cross-scene consistency, auto-regen' },
-];
-
-function statusToStage(status: string | null): string | null {
-  if (!status) return null;
-  const s = status.toLowerCase();
-  if (s.includes('setting the scene') || s.includes('picks up')) return 'concept';
-  if (s.includes('decompos')) return 'structure';
-  if (s.includes('research') || s.includes('history')) return 'research';
-  if (s.includes('prompt') || s.includes('craft')) return 'prompts';
-  if (s.includes('unfolds') || s.includes('generat')) return 'generation';
-  if (s.includes('coherence') || s.includes('check')) return 'coherence';
-  return 'concept';
+function stageLabel(evt: StageEvent): string {
+  if (evt.stage === 'init') return 'Initialize';
+  if (evt.stage === 'casting') return 'Casting';
+  if (evt.stage === 'replay') return 'Replay History';
+  if (evt.stage === 'scene') return `Scene ${evt.scene_idx ?? '?'}`;
+  return evt.stage;
 }
 
-function PipelineProof({
-  activeStage,
+function buildStageStates(events: StageEvent[]): StageState[] {
+  const stages: StageState[] = [];
+  const seen = new Map<string, number>(); // key → index in stages[]
+
+  for (const evt of events) {
+    const key = evt.stage === 'scene' ? `scene-${evt.scene_idx}` : evt.stage;
+    const label = stageLabel(evt);
+
+    if (evt.status === 'start') {
+      const idx = stages.length;
+      seen.set(key, idx);
+      stages.push({ stage: key, label, status: 'running' });
+    } else {
+      // complete, error, timeout
+      const idx = seen.get(key);
+      if (idx !== undefined) {
+        stages[idx].status = evt.status === 'complete' ? 'complete' : evt.status === 'timeout' ? 'timeout' : 'error';
+        stages[idx].elapsed_s = evt.elapsed_s;
+        stages[idx].detail = evt.detail;
+      } else {
+        // got a complete/error without a start — still show it
+        stages.push({
+          stage: key,
+          label,
+          status: evt.status === 'complete' ? 'complete' : evt.status === 'timeout' ? 'timeout' : 'error',
+          elapsed_s: evt.elapsed_s,
+          detail: evt.detail,
+        });
+      }
+    }
+  }
+  return stages;
+}
+
+function PipelineProgress({
+  stages,
   isGenerating,
 }: {
-  activeStage: string | null;
+  stages: StageState[];
   isGenerating: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
-  const activeIdx = activeStage
-    ? PIPELINE_STAGES.findIndex((s) => s.id === activeStage)
-    : -1;
+
+  if (stages.length === 0 && !isGenerating) return null;
 
   return (
     <div
@@ -218,7 +255,7 @@ function PipelineProof({
         backgroundColor: 'oklch(0.12 0.015 60)',
       }}
     >
-      {/* Header — always visible */}
+      {/* Header */}
       <button
         onClick={() => setExpanded(!expanded)}
         className="w-full flex items-center justify-between px-4 py-2.5 text-left group"
@@ -226,10 +263,12 @@ function PipelineProof({
         <div className="flex items-center gap-3 min-w-0">
           <span className="text-[10px] font-mono uppercase tracking-[0.15em] font-semibold shrink-0"
             style={{ color: 'oklch(0.65 0.12 60)' }}>Pipeline</span>
-          <span className="text-[10px] tracking-wide truncate"
-            style={{ color: 'oklch(0.5 0.02 60)' }}>
-            Why multi-stage beats one-shot prompting
-          </span>
+          {isGenerating && (
+            <span className="text-[10px] tracking-wide truncate"
+              style={{ color: 'oklch(0.5 0.02 60)' }}>
+              {stages.filter((s) => s.status === 'complete').length} / {stages.length} stages
+            </span>
+          )}
         </div>
         <span className="text-xs transition-transform duration-200 shrink-0 ml-2"
           style={{ color: 'oklch(0.5 0.02 60)', transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)' }}>
@@ -237,103 +276,92 @@ function PipelineProof({
         </span>
       </button>
 
-      {/* Compact inline stage flow — always visible when collapsed */}
-      {!expanded && (
+      {/* Compact inline stage flow */}
+      {!expanded && stages.length > 0 && (
         <div className="px-4 pb-3 flex items-center gap-0.5 flex-wrap">
-          {PIPELINE_STAGES.map((stage, i) => {
-            const isActive = isGenerating && i === activeIdx;
-            const isPast = isGenerating && i < activeIdx;
-            const isDone = !isGenerating && activeIdx >= 0 && i <= activeIdx;
+          {stages.map((stage, i) => {
+            const isRunning = stage.status === 'running';
+            const isDone = stage.status === 'complete';
+            const isFailed = stage.status === 'error' || stage.status === 'timeout';
             return (
-              <div key={stage.id} className="flex items-center">
-                <div className="px-2 py-0.5 rounded text-[10px] font-medium transition-all duration-300"
+              <div key={stage.stage} className="flex items-center">
+                <div className="px-2 py-0.5 rounded text-[10px] font-medium transition-all duration-300 flex items-center gap-1"
                   style={{
-                    backgroundColor: isActive ? 'oklch(0.25 0.06 60)' : isPast || isDone ? 'oklch(0.18 0.03 60)' : 'oklch(0.15 0.01 60)',
-                    color: isActive ? 'oklch(0.85 0.12 60)' : isPast || isDone ? 'oklch(0.6 0.06 60)' : 'oklch(0.38 0.02 60)',
-                    border: isActive ? '1px solid oklch(0.4 0.1 60)' : '1px solid oklch(0.22 0.015 60)',
-                    animation: isActive ? 'pipelinePulse 2s ease-in-out infinite' : 'none',
+                    backgroundColor: isFailed ? 'oklch(0.2 0.06 25)' : isRunning ? 'oklch(0.25 0.06 60)' : isDone ? 'oklch(0.18 0.03 60)' : 'oklch(0.15 0.01 60)',
+                    color: isFailed ? 'oklch(0.7 0.15 25)' : isRunning ? 'oklch(0.85 0.12 60)' : isDone ? 'oklch(0.6 0.06 60)' : 'oklch(0.38 0.02 60)',
+                    border: isFailed ? '1px solid oklch(0.4 0.12 25)' : isRunning ? '1px solid oklch(0.4 0.1 60)' : '1px solid oklch(0.22 0.015 60)',
+                    animation: isRunning ? 'pipelinePulse 2s ease-in-out infinite' : 'none',
                   }}>
+                  {isDone && <span>&#x2713;</span>}
+                  {isFailed && <span>&#x2717;</span>}
                   {stage.label}
+                  {isDone && stage.elapsed_s != null && (
+                    <span style={{ opacity: 0.6 }}>{stage.elapsed_s}s</span>
+                  )}
                 </div>
-                {i < PIPELINE_STAGES.length - 1 && (
+                {i < stages.length - 1 && (
                   <span className="mx-0.5 text-[8px]"
-                    style={{ color: isPast || isDone || isActive ? 'oklch(0.5 0.08 60)' : 'oklch(0.25 0.02 60)' }}>
+                    style={{ color: isDone ? 'oklch(0.5 0.08 60)' : 'oklch(0.25 0.02 60)' }}>
                     &#x25B8;
                   </span>
                 )}
               </div>
             );
           })}
+          {isGenerating && (
+            <span className="inline-block w-1.5 h-1.5 rounded-full animate-ping ml-1"
+              style={{ backgroundColor: 'oklch(0.7 0.12 60)' }} />
+          )}
         </div>
       )}
 
       {/* Expanded detail view */}
       {expanded && (
-        <div className="px-4 pb-4 space-y-4" style={{ animation: 'fadeIn 200ms ease-out' }}>
-          {/* One-shot vs pipeline comparison */}
-          <div className="grid grid-cols-2 gap-3 text-xs" style={{ color: 'oklch(0.7 0.02 60)' }}>
-            <div className="rounded-md p-3"
-              style={{ backgroundColor: 'oklch(0.1 0.01 0)', borderLeft: '2px solid oklch(0.35 0.04 0)' }}>
-              <div className="font-semibold mb-1.5 uppercase tracking-wider text-[10px]"
-                style={{ color: 'oklch(0.45 0.04 0)' }}>One-shot prompting</div>
-              <ul className="space-y-1 text-[11px]" style={{ color: 'oklch(0.45 0.02 60)' }}>
-                <li>&bull; Single prompt, single response</li>
-                <li>&bull; No character consistency</li>
-                <li>&bull; No historical grounding</li>
-                <li>&bull; No coherence validation</li>
-                <li>&bull; Hope for the best</li>
-              </ul>
+        <div className="px-4 pb-4 space-y-1" style={{ animation: 'fadeIn 200ms ease-out' }}>
+          {stages.length === 0 && (
+            <div className="text-xs py-2" style={{ color: 'oklch(0.4 0.02 60)' }}>
+              Waiting for pipeline to start...
             </div>
-            <div className="rounded-md p-3"
-              style={{ backgroundColor: 'oklch(0.14 0.025 60)', borderLeft: '2px solid oklch(0.55 0.12 60)' }}>
-              <div className="font-semibold mb-1.5 uppercase tracking-wider text-[10px]"
-                style={{ color: 'oklch(0.7 0.12 60)' }}>ChronoNoir pipeline</div>
-              <ul className="space-y-1 text-[11px]" style={{ color: 'oklch(0.6 0.04 60)' }}>
-                <li>&bull; 6-stage agentic pipeline</li>
-                <li>&bull; Character extraction &amp; tracking</li>
-                <li>&bull; Google Search for real history</li>
-                <li>&bull; Per-scene prompt validation</li>
-                <li>&bull; Coherence check + auto-regen</li>
-              </ul>
-            </div>
-          </div>
-
-          {/* Stages detail list */}
-          <div className="space-y-0.5">
-            {PIPELINE_STAGES.map((stage, i) => {
-              const isActive = isGenerating && i === activeIdx;
-              const isPast = isGenerating && i < activeIdx;
-              const isDone = !isGenerating && activeIdx >= 0 && i <= activeIdx;
-              return (
-                <div key={stage.id}
-                  className="flex items-center gap-3 rounded px-3 py-1.5 transition-all duration-300"
-                  style={{ backgroundColor: isActive ? 'oklch(0.18 0.035 60)' : 'transparent' }}>
-                  <span className="text-[10px] font-mono w-4 text-right shrink-0"
-                    style={{ color: isActive ? 'oklch(0.7 0.12 60)' : isPast || isDone ? 'oklch(0.5 0.06 60)' : 'oklch(0.3 0.02 60)' }}>
-                    {isPast || isDone ? '\u2713' : `${i + 1}`}
+          )}
+          {stages.map((stage) => {
+            const isRunning = stage.status === 'running';
+            const isDone = stage.status === 'complete';
+            const isFailed = stage.status === 'error' || stage.status === 'timeout';
+            return (
+              <div key={stage.stage}
+                className="flex items-center gap-3 rounded px-3 py-1.5 transition-all duration-300"
+                style={{ backgroundColor: isRunning ? 'oklch(0.18 0.035 60)' : isFailed ? 'oklch(0.15 0.03 25)' : 'transparent' }}>
+                <span className="text-[10px] font-mono w-4 text-right shrink-0"
+                  style={{
+                    color: isFailed ? 'oklch(0.6 0.15 25)' : isRunning ? 'oklch(0.7 0.12 60)' : isDone ? 'oklch(0.5 0.06 60)' : 'oklch(0.3 0.02 60)',
+                  }}>
+                  {isDone ? '\u2713' : isFailed ? '\u2717' : isRunning ? '\u25CF' : '\u25CB'}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <span className="text-xs font-medium"
+                    style={{
+                      color: isFailed ? 'oklch(0.7 0.12 25)' : isRunning ? 'oklch(0.85 0.1 60)' : isDone ? 'oklch(0.6 0.06 60)' : 'oklch(0.45 0.02 60)',
+                    }}>
+                    {stage.label}
                   </span>
-                  <div className="flex-1 min-w-0">
-                    <span className="text-xs font-medium"
-                      style={{ color: isActive ? 'oklch(0.85 0.1 60)' : isPast || isDone ? 'oklch(0.6 0.06 60)' : 'oklch(0.45 0.02 60)' }}>
-                      {stage.label}
+                  {stage.elapsed_s != null && (
+                    <span className="text-[10px] ml-2" style={{ color: 'oklch(0.4 0.02 60)' }}>
+                      {stage.elapsed_s}s
                     </span>
-                    <span className="text-[10px] ml-2" style={{ color: 'oklch(0.38 0.02 60)' }}>
+                  )}
+                  {stage.detail && isFailed && (
+                    <span className="text-[10px] ml-2" style={{ color: 'oklch(0.55 0.1 25)' }}>
                       {stage.detail}
                     </span>
-                  </div>
-                  {isActive && (
-                    <span className="inline-block w-1.5 h-1.5 rounded-full animate-ping shrink-0"
-                      style={{ backgroundColor: 'oklch(0.7 0.12 60)' }} />
                   )}
                 </div>
-              );
-            })}
-          </div>
-
-          <div className="text-[10px] text-center pt-1"
-            style={{ color: 'oklch(0.38 0.02 60)', fontFamily: "'Georgia', 'Times New Roman', serif", fontStyle: 'italic' }}>
-            Each stage is a LangGraph node &mdash; debuggable, retryable, independently testable
-          </div>
+                {isRunning && (
+                  <span className="inline-block w-1.5 h-1.5 rounded-full animate-ping shrink-0"
+                    style={{ backgroundColor: 'oklch(0.7 0.12 60)' }} />
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
 
@@ -766,9 +794,10 @@ export function LiveStory() {
   const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState<DoneEvent | null>(null);
   const [viewerOpen, setViewerOpen] = useState(false);
+  const [stageEvents, setStageEvents] = useState<StageEvent[]>([]);
 
   const scenes = pairParts(parts);
-  const pipelineStage = loading || continuing ? statusToStage(status) : (stats ? 'coherence' : null);
+  const stageStates = buildStageStates(stageEvents);
 
   // Auto-open viewer when generation completes
   useEffect(() => {
@@ -790,6 +819,7 @@ export function LiveStory() {
     if (!opts.append) {
       setParts([]);
       setViewerOpen(false);
+      setStageEvents([]);
     }
 
     try {
@@ -822,6 +852,8 @@ export function LiveStory() {
           if (data.type === 'done') {
             setStats(data);
             setStatus(null);
+          } else if (data.type === 'stage') {
+            setStageEvents((prev) => [...prev, data as StageEvent]);
           } else if (data.type === 'error') {
             setError(data.content);
           } else if (data.type === 'status') {
@@ -932,9 +964,9 @@ export function LiveStory() {
         </p>
       </div>
 
-      {/* Pipeline Proof — collapsible section for judges */}
-      <PipelineProof
-        activeStage={pipelineStage}
+      {/* Pipeline progress — real stage tracking from backend */}
+      <PipelineProgress
+        stages={stageStates}
         isGenerating={loading || continuing}
       />
 
