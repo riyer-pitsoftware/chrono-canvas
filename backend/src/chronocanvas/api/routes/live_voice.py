@@ -18,7 +18,8 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/live-voice", tags=["live-voice"])
 
-LIVE_MODEL = "gemini-2.0-flash-live-001"
+LIVE_MODEL_PRIMARY = "gemini-2.5-flash-preview-native-audio-dialog"
+LIVE_MODEL_FALLBACK = "gemini-2.0-flash-exp"
 SAMPLE_RATE = 24000  # Live API outputs 24kHz PCM16
 
 
@@ -76,26 +77,34 @@ async def narrate(req: NarrateRequest):
 
     audio_chunks: list[bytes] = []
 
-    try:
-        async with client.aio.live.connect(model=LIVE_MODEL, config=config) as session:
-            narrator_prompt = (
-                "You are Dash, a noir narrator with a deep, gravelly voice. "
-                "Read the following story text aloud with dramatic flair:\n\n"
-                f"{req.text}"
-            )
-            await session.send(input=narrator_prompt, end_of_turn=True)
+    last_error = None
+    for model in (LIVE_MODEL_PRIMARY, LIVE_MODEL_FALLBACK):
+        try:
+            logger.info("Narrate: trying model %s", model)
+            async with client.aio.live.connect(model=model, config=config) as session:
+                narrator_prompt = (
+                    "You are Dash, a noir narrator with a deep, gravelly voice. "
+                    "Read the following story text aloud with dramatic flair:\n\n"
+                    f"{req.text}"
+                )
+                await session.send(input=narrator_prompt, end_of_turn=True)
 
-            async for response in session.receive():
-                if response.server_content and response.server_content.model_turn:
-                    for part in response.server_content.model_turn.parts:
-                        if part.inline_data and part.inline_data.data:
-                            audio_chunks.append(part.inline_data.data)
-                if response.server_content and response.server_content.turn_complete:
-                    break
+                async for response in session.receive():
+                    if response.server_content and response.server_content.model_turn:
+                        for part in response.server_content.model_turn.parts:
+                            if part.inline_data and part.inline_data.data:
+                                audio_chunks.append(part.inline_data.data)
+                    if response.server_content and response.server_content.turn_complete:
+                        break
+            break  # success
+        except Exception as e:
+            last_error = e
+            logger.warning("Narrate model %s failed: %s, trying fallback", model, e)
+            audio_chunks.clear()
 
-    except Exception as e:
-        logger.error("Live voice narration failed: %s", e)
-        raise HTTPException(status_code=500, detail=f"Narration failed: {e}")
+    if not audio_chunks and last_error:
+        logger.error("Live voice narration failed on all models: %s", last_error)
+        raise HTTPException(status_code=500, detail=f"Narration failed: {last_error}")
 
     if not audio_chunks:
         raise HTTPException(status_code=500, detail="No audio generated")
@@ -127,45 +136,52 @@ async def voice_prompt(req: VoicePromptRequest):
     transcript = ""
     response_text = ""
 
-    try:
-        async with client.aio.live.connect(model=LIVE_MODEL, config=config) as session:
-            instruction = (
-                "The user has spoken a story idea. First transcribe exactly what they said "
-                "on a line starting with 'TRANSCRIPT: ', then on a new line starting with "
-                "'RESPONSE: ' give a creative noir-style expansion of their idea in 2-3 sentences."
-            )
-            await session.send(input=instruction, end_of_turn=False)
+    last_error = None
+    for model in (LIVE_MODEL_PRIMARY, LIVE_MODEL_FALLBACK):
+        try:
+            logger.info("Voice prompt: trying model %s", model)
+            async with client.aio.live.connect(model=model, config=config) as session:
+                instruction = (
+                    "The user has spoken a story idea. First transcribe exactly what they said "
+                    "on a line starting with 'TRANSCRIPT: ', then on a new line starting with "
+                    "'RESPONSE: ' give a creative noir-style expansion of their idea in 2-3 sentences."
+                )
+                await session.send(input=instruction, end_of_turn=False)
 
-            # Send audio as inline data
-            audio_part = types.Part(
-                inline_data=types.Blob(data=audio_bytes, mime_type=req.mime_type)
-            )
-            await session.send(input=audio_part, end_of_turn=True)
+                # Send audio as inline data
+                audio_part = types.Part(
+                    inline_data=types.Blob(data=audio_bytes, mime_type=req.mime_type)
+                )
+                await session.send(input=audio_part, end_of_turn=True)
 
-            full_text = ""
-            async for response in session.receive():
-                if response.server_content and response.server_content.model_turn:
-                    for part in response.server_content.model_turn.parts:
-                        if part.text:
-                            full_text += part.text
-                if response.server_content and response.server_content.turn_complete:
-                    break
+                full_text = ""
+                async for response in session.receive():
+                    if response.server_content and response.server_content.model_turn:
+                        for part in response.server_content.model_turn.parts:
+                            if part.text:
+                                full_text += part.text
+                    if response.server_content and response.server_content.turn_complete:
+                        break
 
-            # Parse TRANSCRIPT: and RESPONSE: sections
-            for line in full_text.split("\n"):
-                line = line.strip()
-                if line.startswith("TRANSCRIPT:"):
-                    transcript = line[len("TRANSCRIPT:") :].strip()
-                elif line.startswith("RESPONSE:"):
-                    response_text = line[len("RESPONSE:") :].strip()
+                # Parse TRANSCRIPT: and RESPONSE: sections
+                for line in full_text.split("\n"):
+                    line = line.strip()
+                    if line.startswith("TRANSCRIPT:"):
+                        transcript = line[len("TRANSCRIPT:") :].strip()
+                    elif line.startswith("RESPONSE:"):
+                        response_text = line[len("RESPONSE:") :].strip()
 
-            # Fallback: if parsing fails, use the whole text
-            if not transcript and not response_text:
-                response_text = full_text.strip()
+                # Fallback: if parsing fails, use the whole text
+                if not transcript and not response_text:
+                    response_text = full_text.strip()
+            break  # success
+        except Exception as e:
+            last_error = e
+            logger.warning("Voice prompt model %s failed: %s, trying fallback", model, e)
 
-    except Exception as e:
-        logger.error("Live voice prompt failed: %s", e)
-        raise HTTPException(status_code=500, detail=f"Voice prompt failed: {e}")
+    if not transcript and not response_text and last_error:
+        logger.error("Live voice prompt failed on all models: %s", last_error)
+        raise HTTPException(status_code=500, detail=f"Voice prompt failed: {last_error}")
 
     duration_ms = int((time.monotonic() - start) * 1000)
 

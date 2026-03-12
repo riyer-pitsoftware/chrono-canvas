@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/live-session", tags=["live-session"])
 
 LIVE_MODEL_PRIMARY = "gemini-2.5-flash-preview-native-audio-dialog"
-LIVE_MODEL_FALLBACK = "gemini-2.0-flash-live-001"
+LIVE_MODEL_FALLBACK = "gemini-2.0-flash-exp"
 
 IMAGE_MODEL = "gemini-2.5-flash-image"
 
