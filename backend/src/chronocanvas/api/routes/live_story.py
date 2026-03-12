@@ -106,6 +106,7 @@ def _gen_config() -> types.GenerateContentConfig:
         response_modalities=["TEXT", "IMAGE"],
         temperature=1.0,
         max_output_tokens=8192,
+        thinking_config=types.ThinkingConfig(thinking_budget=0),
     )
 
 
