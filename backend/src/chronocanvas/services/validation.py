@@ -7,6 +7,13 @@ from chronocanvas.db.models.validation import ValidationResult
 from chronocanvas.db.repositories.validations import ValidationRepository
 
 
+def compute_validation_overall(scores: list[float]) -> float:
+    """Compute the overall validation score from individual scores."""
+    if not scores:
+        return 0.0
+    return sum(scores) / len(scores)
+
+
 def build_summary(
     request_id: uuid.UUID,
     results: list[ValidationResult],
@@ -14,7 +21,7 @@ def build_summary(
 ) -> ValidationSummary:
     """Build a ValidationSummary from DB result rows and the configured pass threshold."""
     scores = [r.score for r in results] if results else [0.0]
-    overall = sum(scores) / len(scores)
+    overall = compute_validation_overall(scores)
     return ValidationSummary(
         request_id=request_id,
         overall_score=overall,

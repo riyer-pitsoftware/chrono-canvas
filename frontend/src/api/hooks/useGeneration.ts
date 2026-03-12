@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, type Query } from '@tanstack/react-query';
 import { api } from '../client';
 import type {
   GenerationRequest,
@@ -9,6 +9,20 @@ import type {
   AuditFeedback,
   AuditFeedbackListResponse,
 } from '../types';
+
+const TERMINAL_STATUSES = new Set(['completed', 'failed']);
+
+export function isTerminalStatus(status: string | undefined): boolean {
+  return status !== undefined && TERMINAL_STATUSES.has(status);
+}
+
+function refetchUntilTerminal<T extends { status?: string }>(intervalMs = 2000) {
+  return (query: Query<T>) => {
+    const data = query.state.data;
+    if (data && isTerminalStatus(data.status)) return false;
+    return intervalMs;
+  };
+}
 
 export function useGenerations(offset = 0, limit = 20, status?: string) {
   return useQuery({
@@ -31,11 +45,7 @@ export function useGeneration(id: string) {
     queryKey: ['generations', id],
     queryFn: () => api.get<GenerationRequest>(`/generate/${id}`),
     enabled: !!id,
-    refetchInterval: (query) => {
-      const data = query.state.data;
-      if (data && (data.status === 'completed' || data.status === 'failed')) return false;
-      return 2000;
-    },
+    refetchInterval: refetchUntilTerminal(),
   });
 }
 
@@ -103,11 +113,7 @@ export function useAuditDetail(id: string) {
     queryKey: ['audit', id],
     queryFn: () => api.get<AuditDetail>(`/generate/${id}/audit`),
     enabled: !!id,
-    refetchInterval: (query) => {
-      const data = query.state.data;
-      if (data && (data.status === 'completed' || data.status === 'failed')) return false;
-      return 2000;
-    },
+    refetchInterval: refetchUntilTerminal(),
   });
 }
 

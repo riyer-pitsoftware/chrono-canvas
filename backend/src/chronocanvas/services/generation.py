@@ -7,6 +7,7 @@ from chronocanvas.agents.state import AgentState, FaceState, ValidationState
 from chronocanvas.db.engine import async_session as _default_session_factory
 from chronocanvas.db.models.request import RequestStatus
 from chronocanvas.db.repositories.images import ImageRepository
+from chronocanvas.services.status_map import AGENT_STATUS_MAP
 from chronocanvas.db.repositories.requests import RequestRepository
 from chronocanvas.db.repositories.validation_rules import (
     AdminSettingRepository,
@@ -59,16 +60,6 @@ _STEPS_CLEAR_IMAGES = frozenset(
     ]
 )
 
-_STATUS_MAP: dict[str, RequestStatus] = {
-    "orchestrator": RequestStatus.PENDING,
-    "extraction": RequestStatus.EXTRACTING,
-    "research": RequestStatus.RESEARCHING,
-    "prompt_generation": RequestStatus.GENERATING_PROMPT,
-    "image_generation": RequestStatus.GENERATING_IMAGE,
-    "validation": RequestStatus.VALIDATING,
-    "facial_compositing": RequestStatus.SWAPPING_FACE,
-    "export": RequestStatus.COMPLETED,
-}
 
 
 def _make_runner(repo: RequestRepository, session: object, graph: object) -> GenerationRunner:
@@ -171,7 +162,7 @@ async def retry_generation_pipeline(
             if not request:
                 raise ValueError(f"Request {request_id} not found")
 
-            retry_status = _STATUS_MAP.get(from_step, RequestStatus.PENDING)
+            retry_status = AGENT_STATUS_MAP.get(from_step, RequestStatus.PENDING)
             await repo.update(
                 request_id,
                 status=retry_status,

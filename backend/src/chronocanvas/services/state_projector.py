@@ -1,17 +1,6 @@
 from typing import Any
 
-from chronocanvas.db.models.request import RequestStatus
-
-_STATUS_MAP: dict[str, RequestStatus] = {
-    "orchestrator": RequestStatus.PENDING,
-    "extraction": RequestStatus.EXTRACTING,
-    "research": RequestStatus.RESEARCHING,
-    "prompt_generation": RequestStatus.GENERATING_PROMPT,
-    "image_generation": RequestStatus.GENERATING_IMAGE,
-    "validation": RequestStatus.VALIDATING,
-    "facial_compositing": RequestStatus.SWAPPING_FACE,
-    "export": RequestStatus.COMPLETED,
-}
+from chronocanvas.services.status_map import status_for_agent
 
 # Keys excluded from per-node state snapshots (noisy, large, or redundant)
 _SNAPSHOT_EXCLUDE = frozenset(
@@ -29,8 +18,8 @@ _SNAPSHOT_EXCLUDE = frozenset(
 class RequestStateProjector:
     """Maps LangGraph node output state to DB update kwargs."""
 
-    def status_for(self, agent: str) -> RequestStatus:
-        return _STATUS_MAP.get(agent, RequestStatus.PENDING)
+    def status_for(self, agent: str):
+        return status_for_agent(agent)
 
     def project(self, node_state: dict[str, Any], current_agent: str) -> dict[str, Any]:
         """Build the kwargs dict for RequestRepository.update from one node's output."""

@@ -9,6 +9,7 @@ from chronocanvas.api.schemas.admin import (
 )
 from chronocanvas.config import settings
 from chronocanvas.db.models.image import GeneratedImage
+from chronocanvas.services.validation import compute_validation_overall
 from chronocanvas.db.models.request import GenerationRequest
 from chronocanvas.db.models.validation import ValidationResult
 
@@ -39,7 +40,7 @@ class ValidationQueueProjector:
             return None
 
         scores = [r.score for r in val_rows]
-        overall = sum(scores) / len(scores)
+        overall = compute_validation_overall(scores)
         if enforce_threshold and overall >= threshold:
             return None
 
