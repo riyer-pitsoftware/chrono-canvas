@@ -96,9 +96,13 @@ function useTypewriter(text: string, active: boolean, speed = 25) {
 function useNarration(text: string, active: boolean) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    if (!active || !text) return;
+    if (!active || !text) {
+      setReady(false);
+      return;
+    }
 
     // Stop any in-flight audio
     if (audioRef.current) {
@@ -106,6 +110,7 @@ function useNarration(text: string, active: boolean) {
       audioRef.current = null;
     }
     abortRef.current?.abort();
+    setReady(false);
 
     const ctrl = new AbortController();
     abortRef.current = ctrl;
@@ -127,12 +132,15 @@ function useNarration(text: string, active: boolean) {
         const audio = new Audio(url);
         audio.onended = () => URL.revokeObjectURL(url);
         audioRef.current = audio;
+        setReady(true);
         audio.play().catch(() => {});
       })
       .catch((err) => {
         if (err.name !== 'AbortError') {
           console.warn('Narration failed, continuing silently:', err);
         }
+        // On failure, unblock the cinema so it proceeds without audio
+        if (!ctrl.signal.aborted) setReady(true);
       });
 
     return () => {
@@ -143,6 +151,8 @@ function useNarration(text: string, active: boolean) {
       }
     };
   }, [text, active]);
+
+  return { ready };
 }
 
 /* ── Pipeline Proof — shows judges why multi-stage > one-shot ── */
@@ -345,14 +355,14 @@ function SceneViewer({
   const isLastScene = current === scenes.length - 1;
   const { displayed, done: textDone, progress } = useTypewriter(
     transitioning ? '' : scene?.text || '',
-    !transitioning,
+    !transitioning && narrationReady,
   );
 
   // Iris opens from 0% to 75% as text is typed
   const irisRadius = scene?.text ? Math.round(progress * 75) : 75;
 
-  // Narrate current scene aloud
-  useNarration(scene?.text || '', !transitioning);
+  // Narrate current scene aloud — cinema waits for audio to arrive
+  const { ready: narrationReady } = useNarration(scene?.text || '', !transitioning);
 
   // Jump to last scene when new scenes arrive (continuation)
   const prevSceneCount = useRef(scenes.length);
