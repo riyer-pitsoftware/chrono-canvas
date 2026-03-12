@@ -353,6 +353,10 @@ function SceneViewer({
 
   const scene = scenes[current];
   const isLastScene = current === scenes.length - 1;
+
+  // Narrate current scene aloud — cinema waits for audio to arrive
+  const { ready: narrationReady } = useNarration(scene?.text || '', !transitioning);
+
   const { displayed, done: textDone, progress } = useTypewriter(
     transitioning ? '' : scene?.text || '',
     !transitioning && narrationReady,
@@ -360,9 +364,6 @@ function SceneViewer({
 
   // Iris opens from 0% to 75% as text is typed
   const irisRadius = scene?.text ? Math.round(progress * 75) : 75;
-
-  // Narrate current scene aloud — cinema waits for audio to arrive
-  const { ready: narrationReady } = useNarration(scene?.text || '', !transitioning);
 
   // Jump to last scene when new scenes arrive (continuation)
   const prevSceneCount = useRef(scenes.length);
