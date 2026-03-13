@@ -140,7 +140,7 @@ gcloud run deploy chronocanvas-frontend \
   --port=8080 \
   --cpu=1 \
   --memory=256Mi \
-  --min-instances=0 \
+  --min-instances=1 \
   --max-instances=4 \
   --concurrency=100 \
   --allow-unauthenticated \

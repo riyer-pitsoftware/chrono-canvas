@@ -250,6 +250,21 @@ async def _handle_function_call(
         )
 
 
+_PING_INTERVAL_S = 20.0
+
+
+async def _keepalive_ping(ws: WebSocket, stop_event: asyncio.Event) -> None:
+    """Send periodic pings to keep proxies and browsers from closing idle connections."""
+    while not stop_event.is_set():
+        await asyncio.sleep(_PING_INTERVAL_S)
+        if stop_event.is_set():
+            break
+        ok = await _send_json(ws, {"type": "ping"})
+        if not ok:
+            stop_event.set()
+            return
+
+
 async def _receive_from_browser(ws: WebSocket, session, stop_event: asyncio.Event) -> None:
     """Loop: read messages from browser WebSocket and forward audio to Gemini."""
     try:
@@ -287,11 +302,23 @@ async def _receive_from_gemini(
     session_state: dict | None = None,
 ) -> None:
     """Loop: read responses from Gemini session and forward to browser."""
+    _RECEIVE_TIMEOUT_S = 120  # Max seconds to wait for a single Gemini response
     try:
         while not stop_event.is_set():
-            async for response in session.receive():
-                if stop_event.is_set():
+            aiter = session.receive().__aiter__()
+            while not stop_event.is_set():
+                try:
+                    response = await asyncio.wait_for(
+                        aiter.__anext__(), timeout=_RECEIVE_TIMEOUT_S,
+                    )
+                except StopAsyncIteration:
                     break
+                except asyncio.TimeoutError:
+                    logger.warning(
+                        "Gemini receive timed out after %ds", _RECEIVE_TIMEOUT_S,
+                    )
+                    stop_event.set()
+                    return
 
                 # Handle audio from model
                 if response.server_content and response.server_content.model_turn:
@@ -387,21 +414,27 @@ async def live_session_ws(ws: WebSocket):
     # Track state across the session (e.g., last image for consistency)
     session_state: dict = {}
 
-    # Run browser→Gemini and Gemini→browser loops concurrently
+    # Run browser→Gemini, Gemini→browser, and keepalive loops concurrently
     browser_task = asyncio.create_task(
         _receive_from_browser(ws, session, stop_event)
     )
     gemini_task = asyncio.create_task(
         _receive_from_gemini(client, session, ws, stop_event, session_state)
     )
+    ping_task = asyncio.create_task(
+        _keepalive_ping(ws, stop_event)
+    )
 
     try:
-        await asyncio.gather(browser_task, gemini_task, return_exceptions=True)
+        await asyncio.gather(
+            browser_task, gemini_task, ping_task, return_exceptions=True,
+        )
     finally:
         # Clean up
         stop_event.set()
         browser_task.cancel()
         gemini_task.cancel()
+        ping_task.cancel()
 
         try:
             await session_ctx.__aexit__(None, None, None)
