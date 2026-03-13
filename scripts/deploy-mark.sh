@@ -50,6 +50,7 @@ case "${1:-}" in
     DEPLOY_TAG="${DEPLOY_TAG:-$CURRENT_COMMIT}"
     API_URL=""
     FRONTEND_URL=""
+    MANIFEST_FILE="deploy/cloudrun/.build-manifest.json"
 
     # Try to fetch Cloud Run URLs
     if [[ "${2:-}" == "--url" ]] || [[ "${2:-}" == "--urls" ]]; then
@@ -65,16 +66,38 @@ case "${1:-}" in
       fi
     fi
 
-    jq --arg c "$CURRENT_COMMIT" --arg t "$NOW" --arg tag "$DEPLOY_TAG" \
-       --arg api "$API_URL" --arg fe "$FRONTEND_URL" \
-      '.remote.last_deployed_commit = $c | .remote.last_deployed_at = $t |
-       .remote.deploy_tag = $tag |
-       (if $api != "" then .remote.api_url = $api else . end) |
-       (if $fe != "" then .remote.frontend_url = $fe else . end)' \
-      "$STATUS_FILE" > "${STATUS_FILE}.tmp" && mv "${STATUS_FILE}.tmp" "$STATUS_FILE"
+    # Merge build manifest if it exists (written by 04-build-push.sh)
+    if [ -f "$MANIFEST_FILE" ]; then
+      jq --arg c "$CURRENT_COMMIT" --arg t "$NOW" --arg tag "$DEPLOY_TAG" \
+         --arg api "$API_URL" --arg fe "$FRONTEND_URL" \
+         --slurpfile manifest "$MANIFEST_FILE" \
+        '.remote.last_deployed_commit = $c | .remote.last_deployed_at = $t |
+         .remote.deploy_tag = $tag |
+         .remote.build = $manifest[0] |
+         (if $api != "" then .remote.api_url = $api else . end) |
+         (if $fe != "" then .remote.frontend_url = $fe else . end)' \
+        "$STATUS_FILE" > "${STATUS_FILE}.tmp" && mv "${STATUS_FILE}.tmp" "$STATUS_FILE"
+    else
+      jq --arg c "$CURRENT_COMMIT" --arg t "$NOW" --arg tag "$DEPLOY_TAG" \
+         --arg api "$API_URL" --arg fe "$FRONTEND_URL" \
+        '.remote.last_deployed_commit = $c | .remote.last_deployed_at = $t |
+         .remote.deploy_tag = $tag |
+         (if $api != "" then .remote.api_url = $api else . end) |
+         (if $fe != "" then .remote.frontend_url = $fe else . end)' \
+        "$STATUS_FILE" > "${STATUS_FILE}.tmp" && mv "${STATUS_FILE}.tmp" "$STATUS_FILE"
+    fi
+
     echo "✔ Marked remote deploy: $CURRENT_COMMIT (tag: $DEPLOY_TAG) @ $NOW"
     [ -n "$API_URL" ] && echo "  API: $API_URL"
     [ -n "$FRONTEND_URL" ] && echo "  Frontend: $FRONTEND_URL"
+    if [ -f "$MANIFEST_FILE" ]; then
+      echo "  API image:      $(jq -r '.images.api.image' "$MANIFEST_FILE")"
+      echo "  API digest:     $(jq -r '.images.api.digest' "$MANIFEST_FILE")"
+      echo "  FE image:       $(jq -r '.images.frontend.image' "$MANIFEST_FILE")"
+      echo "  FE digest:      $(jq -r '.images.frontend.digest' "$MANIFEST_FILE")"
+      echo "  Build commit:   $(jq -r '.git_short' "$MANIFEST_FILE") $(jq -r '.git_message' "$MANIFEST_FILE")"
+      echo "  Dirty build:    $(jq -r '.git_dirty' "$MANIFEST_FILE")"
+    fi
     ;;
 
   *)

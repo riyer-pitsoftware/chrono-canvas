@@ -193,6 +193,17 @@ show_remote() {
     [ -n "$api_url" ] && echo "  API:            $api_url"
     [ -n "$frontend_url" ] && echo "  Frontend:       $frontend_url"
 
+    # Show build manifest details if available
+    local api_digest fe_digest build_dirty build_msg
+    api_digest="$(read_field '.remote.build.images.api.digest')"
+    fe_digest="$(read_field '.remote.build.images.frontend.digest')"
+    build_dirty="$(read_field '.remote.build.git_dirty')"
+    build_msg="$(read_field '.remote.build.git_message')"
+    [ -n "$api_digest" ] && echo "  API digest:     ${api_digest:0:19}"
+    [ -n "$fe_digest" ] && echo "  FE digest:      ${fe_digest:0:19}"
+    [ "$build_dirty" = "true" ] && echo "  ⚠  Built from DIRTY worktree (uncommitted changes baked in)"
+    [ -n "$build_msg" ] && echo "  Build commit:   $last_commit $build_msg"
+
     if [ "$last_commit" = "$CURRENT_COMMIT" ]; then
       echo "  Status:         ✔  Up to date"
     else

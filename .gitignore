@@ -96,6 +96,7 @@ deploy/cloudrun/README.md
 
 # Deploy state (tag pinning between steps)
 deploy/cloudrun/.deploy-state
+deploy/cloudrun/.build-manifest.json
 .agent/**
 .codebuddy/**
 .codex/**
