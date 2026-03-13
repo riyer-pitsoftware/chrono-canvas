@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { useNarrationPipeline } from '../hooks/useNarrationPipeline';
 
 /* ── Types ─────────────────────────────────────────────────────── */
 
@@ -126,70 +127,6 @@ function useTypewriter(text: string, active: boolean, speed = 25) {
   }, [text, active, speed]);
 
   return { displayed, done, progress };
-}
-
-/* ── Narration hook — speaks text via Gemini Live API ───────── */
-
-function useNarration(text: string, active: boolean) {
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const abortRef = useRef<AbortController | null>(null);
-  const [ready, setReady] = useState(false);
-
-  useEffect(() => {
-    if (!active || !text) {
-      setReady(false);
-      return;
-    }
-
-    // Stop any in-flight audio
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current = null;
-    }
-    abortRef.current?.abort();
-    setReady(false);
-
-    const ctrl = new AbortController();
-    abortRef.current = ctrl;
-
-    // Fetch narration from Gemini Live API
-    fetch('/api/live-voice/narrate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text }),
-      signal: ctrl.signal,
-    })
-      .then((res) => {
-        if (!res.ok) throw new Error(`Narration failed: ${res.status}`);
-        return res.blob();
-      })
-      .then((blob) => {
-        if (ctrl.signal.aborted) return;
-        const url = URL.createObjectURL(blob);
-        const audio = new Audio(url);
-        audio.onended = () => URL.revokeObjectURL(url);
-        audioRef.current = audio;
-        setReady(true);
-        audio.play().catch(() => {});
-      })
-      .catch((err) => {
-        if (err.name !== 'AbortError') {
-          console.warn('Narration failed, continuing silently:', err);
-        }
-        // On failure, unblock the cinema so it proceeds without audio
-        if (!ctrl.signal.aborted) setReady(true);
-      });
-
-    return () => {
-      ctrl.abort();
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current = null;
-      }
-    };
-  }, [text, active]);
-
-  return { ready };
 }
 
 /* ── Pipeline Progress — real stage tracking from backend events ── */
@@ -461,32 +398,47 @@ function SceneViewer({
   scenes,
   stats,
   continuing,
+  generating,
   onClose,
   onContinue,
   onRashomon,
   casting,
+  resetKey,
 }: {
   scenes: Scene[];
   stats: DoneEvent | null;
   continuing: boolean;
+  generating: boolean;
   onClose: () => void;
   onContinue: (direction: string) => void;
   onRashomon: () => void;
   casting?: CastingData | null;
+  resetKey?: number;
 }) {
   const [current, setCurrent] = useState(0);
   const [fadeKey, setFadeKey] = useState(0);
   const [transitioning, setTransitioning] = useState(false);
   const [continueInput, setContinueInput] = useState('');
   const [showCasting, setShowCasting] = useState(false);
+  const [autoPlay, setAutoPlay] = useState(true);
   const touchStart = useRef<number | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const scene = scenes[current];
   const isLastScene = current === scenes.length - 1;
 
-  // Narrate current scene aloud — cinema waits for audio to arrive
-  const { ready: narrationReady } = useNarration(scene?.text || '', !transitioning);
+  // Narration pipeline — prefetches upcoming scenes
+  const pipeline = useNarrationPipeline(scenes, current, !transitioning);
+  const narrationReady = pipeline.narrationReady;
+
+  // Reset narration cache when resetKey changes (new story / rashomon)
+  const prevResetKey = useRef(resetKey);
+  useEffect(() => {
+    if (prevResetKey.current !== resetKey) {
+      pipeline.reset();
+      prevResetKey.current = resetKey;
+    }
+  }, [resetKey, pipeline]);
 
   // Vinyl crackle + projector tick while waiting for narration audio
   const waitingForNarration = !narrationReady && !transitioning && !!scene?.text;
@@ -496,6 +448,13 @@ function SceneViewer({
     transitioning ? '' : scene?.text || '',
     !transitioning && narrationReady,
   );
+
+  // Play audio when scene is revealed and narration ready
+  useEffect(() => {
+    if (!transitioning && narrationReady) {
+      pipeline.playCurrentNarration();
+    }
+  }, [transitioning, narrationReady, pipeline]);
 
   // Iris opens from 0% to 75% as text is typed
   const irisRadius = scene?.text ? Math.round(progress * 75) : 75;
@@ -530,6 +489,14 @@ function SceneViewer({
     (dir: 1 | -1) => changeTo(current + dir),
     [current, changeTo],
   );
+
+  // Auto-advance: when typewriter finishes and next scene is ready
+  useEffect(() => {
+    if (!autoPlay || !textDone || isLastScene || generating || continuing) return;
+    if (pipeline.getStatus(current + 1) !== 'ready') return;
+    const timer = setTimeout(() => changeTo(current + 1), 2000);
+    return () => clearTimeout(timer);
+  }, [textDone, current, autoPlay, isLastScene, generating, continuing, pipeline, changeTo]);
 
   // Keyboard navigation
   useEffect(() => {
@@ -578,6 +545,16 @@ function SceneViewer({
           &larr; Back
         </button>
         <div className="flex items-center gap-4">
+          <button
+            onClick={() => setAutoPlay(!autoPlay)}
+            className="text-xs px-2 py-0.5 rounded border transition-colors"
+            style={{
+              borderColor: autoPlay ? 'var(--primary)' : 'var(--border)',
+              color: autoPlay ? 'var(--primary)' : 'var(--muted-foreground)',
+            }}
+          >
+            {autoPlay ? 'Auto' : 'Manual'}
+          </button>
           {casting && (
             <button
               onClick={() => setShowCasting(!showCasting)}
@@ -666,7 +643,7 @@ function SceneViewer({
         )}
 
         {/* "What happens next?" + Rashomon on last scene */}
-        {isLastScene && textDone && !continuing && (
+        {isLastScene && textDone && !continuing && !generating && (
           <div
             className="flex flex-col items-center gap-3 max-w-lg w-full mt-2"
             style={{ animation: 'fadeIn 600ms ease-out' }}
@@ -699,6 +676,14 @@ function SceneViewer({
             >
               Tell it from the other side &hellip;
             </button>
+          </div>
+        )}
+
+        {/* Generating indicator — more scenes incoming */}
+        {generating && isLastScene && textDone && (
+          <div className="flex items-center gap-2 text-sm text-[var(--muted-foreground)] italic animate-pulse">
+            <span className="inline-block w-2 h-2 rounded-full bg-[var(--primary)] animate-ping" />
+            Next scene rolling...
           </div>
         )}
 
@@ -795,17 +780,18 @@ export function LiveStory() {
   const [stats, setStats] = useState<DoneEvent | null>(null);
   const [viewerOpen, setViewerOpen] = useState(false);
   const [stageEvents, setStageEvents] = useState<StageEvent[]>([]);
+  const [resetKey, setResetKey] = useState(0);
 
   const scenes = pairParts(parts);
   const stageStates = buildStageStates(stageEvents);
 
-  // Auto-open viewer when generation completes
+  // Auto-open viewer as soon as first scene arrives (streaming)
   useEffect(() => {
-    if (stats && scenes.length > 0 && !viewerOpen && !continuing) {
+    if (scenes.length > 0 && !viewerOpen && (loading || continuing || stats)) {
       setViewerOpen(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stats]);
+  }, [scenes.length]);
 
   /** Shared SSE fetch logic */
   async function fetchSSE(
@@ -820,6 +806,7 @@ export function LiveStory() {
       setParts([]);
       setViewerOpen(false);
       setStageEvents([]);
+      setResetKey((k) => k + 1);
     }
 
     try {
@@ -944,10 +931,12 @@ export function LiveStory() {
         scenes={scenes}
         stats={stats}
         continuing={continuing}
+        generating={loading}
         onClose={() => setViewerOpen(false)}
         onContinue={continueStory}
         onRashomon={rashomonRetell}
         casting={extractCasting(parts)}
+        resetKey={resetKey}
       />
     );
   }
