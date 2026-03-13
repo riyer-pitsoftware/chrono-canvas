@@ -9,6 +9,7 @@ import base64
 import json
 import logging
 import time
+from collections.abc import AsyncGenerator
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
@@ -182,27 +183,16 @@ async def live_story(req: LiveStoryRequest):
         ))
 
         if is_continuation:
-            # Continuation: replay history into chat, then continue
-            for part_data in await _continuation_flow(
-                chat, req, model_used
-            ):
-                if part_data["type"] == "text":
-                    text_count += 1
-                elif part_data["type"] == "image":
-                    image_count += 1
-                yield _sse(part_data)
+            flow = _continuation_flow(chat, req, model_used)
         else:
-            # Fresh generation: per-scene chat loop
-            for part_data in await _scene_by_scene_flow(
-                chat, req, model_used
-            ):
-                if part_data["type"] == "text":
-                    text_count += 1
-                elif part_data["type"] == "image":
-                    image_count += 1
-                elif part_data["type"] in ("status", "error"):
-                    pass  # don't count status/error as content
-                yield _sse(part_data)
+            flow = _scene_by_scene_flow(chat, req, model_used)
+
+        async for part_data in flow:
+            if part_data["type"] == "text":
+                text_count += 1
+            elif part_data["type"] == "image":
+                image_count += 1
+            yield _sse(part_data)
 
         elapsed = time.perf_counter() - start_time
         yield _sse({
@@ -222,17 +212,16 @@ async def live_story(req: LiveStoryRequest):
 
 async def _scene_by_scene_flow(
     chat, req: LiveStoryRequest, model: str
-) -> list[dict]:
-    """Generate story scene-by-scene via chat turns.
+) -> AsyncGenerator[dict, None]:
+    """Generate story scene-by-scene via chat turns, yielding each part immediately.
 
     Turn 0 (hidden): Casting photo — character portraits for visual anchoring
     Turns 1..N: Model generates scenes until it signals [END]
     """
-    all_parts = []
     base_prompt = _build_prompt(req)
 
     # ── Casting (Scene 0) ───────────────────────────────────────
-    all_parts.append(_stage_event("casting", "start"))
+    yield _stage_event("casting", "start")
 
     casting_prompt = (
         f"{base_prompt}\n\n"
@@ -252,42 +241,39 @@ async def _scene_by_scene_flow(
         casting_parts = _extract_parts(response)
         for cp in casting_parts:
             if cp["type"] == "text":
-                all_parts.append({
-                    "type": "casting",
-                    "content": cp["content"],
-                })
+                yield {"type": "casting", "content": cp["content"]}
             elif cp["type"] == "image":
-                all_parts.append({
+                yield {
                     "type": "casting_image",
                     "content": cp["content"],
                     "mime_type": cp.get("mime_type", "image/png"),
-                })
-        all_parts.append(_stage_event(
+                }
+        yield _stage_event(
             "casting", "complete",
             elapsed_s=time.perf_counter() - casting_t0,
-        ))
+        )
     except asyncio.TimeoutError:
         elapsed = time.perf_counter() - casting_t0
         logger.warning("Casting photo timed out after %.1fs", elapsed)
-        all_parts.append(_stage_event(
+        yield _stage_event(
             "casting", "timeout",
             elapsed_s=elapsed,
             detail=f"Timed out after {_TURN_TIMEOUT_S}s",
-        ))
+        )
     except Exception as e:
         elapsed = time.perf_counter() - casting_t0
         logger.warning("Casting photo failed (continuing without): %s", e)
-        all_parts.append(_stage_event(
+        yield _stage_event(
             "casting", "error",
             elapsed_s=elapsed,
             detail=str(e),
-        ))
+        )
 
     # ── Scenes — model decides how many; stops on [END] marker ──
     max_scenes = 20  # safety cap
     scene_idx = 0
     while scene_idx < max_scenes:
-        all_parts.append(_stage_event("scene", "start", scene_idx=scene_idx + 1))
+        yield _stage_event("scene", "start", scene_idx=scene_idx + 1)
         scene_t0 = time.perf_counter()
 
         if scene_idx == 0:
@@ -311,83 +297,72 @@ async def _scene_by_scene_flow(
             )
             parts = _extract_parts(response)
             if not parts:
-                all_parts.append(_stage_event(
+                yield _stage_event(
                     "scene", "error",
                     scene_idx=scene_idx + 1,
                     elapsed_s=time.perf_counter() - scene_t0,
                     detail="Empty response from model",
-                ))
-                all_parts.append({
-                    "type": "error",
-                    "content": f"Scene {scene_idx + 1}: empty response",
-                })
+                )
+                yield {"type": "error", "content": f"Scene {scene_idx + 1}: empty response"}
                 break
-            all_parts.extend(parts)
-            all_parts.append(_stage_event(
-                "scene", "complete",
-                scene_idx=scene_idx + 1,
-                elapsed_s=time.perf_counter() - scene_t0,
-            ))
 
-            # Check if model signaled story end
+            # Check for [END] marker before yielding
             text_content = " ".join(
                 p["content"] for p in parts if p["type"] == "text"
             )
-            if "[END]" in text_content:
-                # Strip the marker from the last text part
-                for p in reversed(all_parts):
-                    if p.get("type") == "text" and "[END]" in p["content"]:
-                        p["content"] = p["content"].replace("[END]", "").rstrip()
-                        break
+            is_final = "[END]" in text_content
+
+            for p in parts:
+                if is_final and p["type"] == "text" and "[END]" in p["content"]:
+                    p["content"] = p["content"].replace("[END]", "").rstrip()
+                yield p
+
+            yield _stage_event(
+                "scene", "complete",
+                scene_idx=scene_idx + 1,
+                elapsed_s=time.perf_counter() - scene_t0,
+            )
+
+            if is_final:
                 break
 
         except asyncio.TimeoutError:
             elapsed = time.perf_counter() - scene_t0
             logger.error("Scene %d timed out after %.1fs", scene_idx + 1, elapsed)
-            all_parts.append(_stage_event(
+            yield _stage_event(
                 "scene", "timeout",
                 scene_idx=scene_idx + 1,
                 elapsed_s=elapsed,
                 detail=f"Timed out after {_TURN_TIMEOUT_S}s",
-            ))
-            all_parts.append({
-                "type": "error",
-                "content": f"Scene {scene_idx + 1} timed out after {_TURN_TIMEOUT_S}s",
-            })
+            )
+            yield {"type": "error", "content": f"Scene {scene_idx + 1} timed out after {_TURN_TIMEOUT_S}s"}
             break
 
         except Exception as e:
             elapsed = time.perf_counter() - scene_t0
             logger.error("Scene %d generation failed: %s", scene_idx + 1, e)
-            all_parts.append(_stage_event(
+            yield _stage_event(
                 "scene", "error",
                 scene_idx=scene_idx + 1,
                 elapsed_s=elapsed,
                 detail=str(e),
-            ))
-            all_parts.append({
-                "type": "error",
-                "content": f"Scene {scene_idx + 1} failed: {e}",
-            })
+            )
+            yield {"type": "error", "content": f"Scene {scene_idx + 1} failed: {e}"}
             break
 
         scene_idx += 1
 
-    return all_parts
-
 
 async def _continuation_flow(
     chat, req: LiveStoryRequest, model: str
-) -> list[dict]:
-    """Continue an existing story by replaying history through chat.
+) -> AsyncGenerator[dict, None]:
+    """Continue an existing story by replaying history through chat, yielding parts immediately.
 
     Reconstructs the conversation: original prompt → history → continuation.
     Images from history are included so the model sees prior characters.
     """
-    all_parts = []
-
     # ── Replay original prompt ──────────────────────────────────
-    all_parts.append(_stage_event("replay", "start"))
+    yield _stage_event("replay", "start")
     replay_t0 = time.perf_counter()
 
     orig = LiveStoryRequest(
@@ -403,33 +378,33 @@ async def _continuation_flow(
             chat.send_message(initial_prompt),
             timeout=_TURN_TIMEOUT_S,
         )
-        all_parts.append(_stage_event(
+        yield _stage_event(
             "replay", "complete",
             elapsed_s=time.perf_counter() - replay_t0,
-        ))
+        )
     except asyncio.TimeoutError:
         elapsed = time.perf_counter() - replay_t0
         logger.error("Replay timed out after %.1fs", elapsed)
-        all_parts.append(_stage_event(
+        yield _stage_event(
             "replay", "timeout",
             elapsed_s=elapsed,
             detail=f"Timed out after {_TURN_TIMEOUT_S}s",
-        ))
-        all_parts.append({"type": "error", "content": f"Replay timed out after {_TURN_TIMEOUT_S}s"})
-        return all_parts
+        )
+        yield {"type": "error", "content": f"Replay timed out after {_TURN_TIMEOUT_S}s"}
+        return
     except Exception as e:
         elapsed = time.perf_counter() - replay_t0
         logger.error("Failed to replay original prompt: %s", e)
-        all_parts.append(_stage_event(
+        yield _stage_event(
             "replay", "error",
             elapsed_s=elapsed,
             detail=str(e),
-        ))
-        all_parts.append({"type": "error", "content": f"Replay failed: {e}"})
-        return all_parts
+        )
+        yield {"type": "error", "content": f"Replay failed: {e}"}
+        return
 
     # ── Continuation ────────────────────────────────────────────
-    all_parts.append(_stage_event("scene", "start", scene_idx=1))
+    yield _stage_event("scene", "start", scene_idx=1)
     cont_t0 = time.perf_counter()
 
     history_text_parts = []
@@ -464,34 +439,33 @@ async def _continuation_flow(
             timeout=_TURN_TIMEOUT_S,
         )
         parts = _extract_parts(response)
-        all_parts.extend(parts)
-        all_parts.append(_stage_event(
+        for p in parts:
+            yield p
+        yield _stage_event(
             "scene", "complete",
             scene_idx=1,
             elapsed_s=time.perf_counter() - cont_t0,
-        ))
+        )
     except asyncio.TimeoutError:
         elapsed = time.perf_counter() - cont_t0
         logger.error("Continuation timed out after %.1fs", elapsed)
-        all_parts.append(_stage_event(
+        yield _stage_event(
             "scene", "timeout",
             scene_idx=1,
             elapsed_s=elapsed,
             detail=f"Timed out after {_TURN_TIMEOUT_S}s",
-        ))
-        all_parts.append({"type": "error", "content": f"Continuation timed out after {_TURN_TIMEOUT_S}s"})
+        )
+        yield {"type": "error", "content": f"Continuation timed out after {_TURN_TIMEOUT_S}s"}
     except Exception as e:
         elapsed = time.perf_counter() - cont_t0
         logger.error("Continuation generation failed: %s", e)
-        all_parts.append(_stage_event(
+        yield _stage_event(
             "scene", "error",
             scene_idx=1,
             elapsed_s=elapsed,
             detail=str(e),
-        ))
-        all_parts.append({"type": "error", "content": f"Continuation failed: {e}"})
-
-    return all_parts
+        )
+        yield {"type": "error", "content": f"Continuation failed: {e}"}
 
 
 def _sse(data: dict) -> str:
