@@ -111,12 +111,29 @@ def _gen_config() -> types.GenerateContentConfig:
     )
 
 
+def _scrub_thought_parts(chat) -> None:
+    """Remove thought parts from chat history to prevent thought_signature 400 errors.
+
+    Even with thinking_budget=0, the model can occasionally return thought
+    parts that get auto-appended to _curated_history by the SDK.  When replayed
+    on the next turn the API rejects them with INVALID_ARGUMENT.
+    """
+    for content in chat._curated_history:
+        if content.parts:
+            content.parts = [
+                p for p in content.parts
+                if not (isinstance(getattr(p, "thought", None), bool) and p.thought)
+            ]
+
+
 def _extract_parts(response) -> list[dict]:
     """Extract text and image parts from a Gemini response."""
     results = []
     if not response.candidates or not response.candidates[0].content or not response.candidates[0].content.parts:
         return results
     for part in response.candidates[0].content.parts:
+        if getattr(part, "thought", False):
+            continue
         if part.text is not None:
             results.append({"type": "text", "content": part.text})
         elif part.inline_data is not None:
@@ -238,6 +255,7 @@ async def _scene_by_scene_flow(
             chat.send_message(casting_prompt),
             timeout=_TURN_TIMEOUT_S,
         )
+        _scrub_thought_parts(chat)
         casting_parts = _extract_parts(response)
         for cp in casting_parts:
             if cp["type"] == "text":
@@ -295,6 +313,7 @@ async def _scene_by_scene_flow(
                 chat.send_message(prompt),
                 timeout=_TURN_TIMEOUT_S,
             )
+            _scrub_thought_parts(chat)
             parts = _extract_parts(response)
             if not parts:
                 yield _stage_event(
@@ -378,6 +397,7 @@ async def _continuation_flow(
             chat.send_message(initial_prompt),
             timeout=_TURN_TIMEOUT_S,
         )
+        _scrub_thought_parts(chat)
         yield _stage_event(
             "replay", "complete",
             elapsed_s=time.perf_counter() - replay_t0,
@@ -438,6 +458,7 @@ async def _continuation_flow(
             chat.send_message(continuation_parts),
             timeout=_TURN_TIMEOUT_S,
         )
+        _scrub_thought_parts(chat)
         parts = _extract_parts(response)
         for p in parts:
             yield p
