@@ -109,6 +109,7 @@ class Settings(BaseSettings):
     vision_narration_enabled: bool = True
     voice_input_enabled: bool = True
     video_assembly_enabled: bool = True
+    veo_video_enabled: bool = True
     scene_editing_enabled: bool = True
     conversation_mode_enabled: bool = False  # off until stable
 

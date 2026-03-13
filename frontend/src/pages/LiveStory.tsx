@@ -38,6 +38,8 @@ type Scene = {
   text: string;
   imageBase64?: string;
   mimeType?: string;
+  videoBase64?: string;
+  videoMimeType?: string;
 };
 
 /* ── Suggested prompts ─────────────────────────────────────────── */
@@ -402,8 +404,14 @@ function SceneViewer({
   onClose,
   onContinue,
   onRashomon,
+  onGenerateFilm,
+  onDownloadFilm,
   casting,
   resetKey,
+  filmGenerating,
+  filmProgress,
+  filmComplete,
+  veoEnabled,
 }: {
   scenes: Scene[];
   stats: DoneEvent | null;
@@ -412,8 +420,14 @@ function SceneViewer({
   onClose: () => void;
   onContinue: (direction: string) => void;
   onRashomon: () => void;
+  onGenerateFilm: () => void;
+  onDownloadFilm: () => void;
   casting?: CastingData | null;
   resetKey?: number;
+  filmGenerating: boolean;
+  filmProgress: string | null;
+  filmComplete: boolean;
+  veoEnabled: boolean;
 }) {
   const [current, setCurrent] = useState(0);
   const [fadeKey, setFadeKey] = useState(0);
@@ -599,8 +613,22 @@ function SceneViewer({
           transition: 'opacity 500ms ease-in-out',
         }}
       >
-        {/* Image with camera iris — opens as text is read */}
-        {scene.imageBase64 && (
+        {/* Scene visual — video clip (if generated) or image with camera iris */}
+        {scene.videoBase64 ? (
+          <div className="overflow-hidden rounded-lg max-h-[50vh] max-w-full">
+            <video
+              src={`data:${scene.videoMimeType || 'video/mp4'};base64,${scene.videoBase64}`}
+              autoPlay
+              loop
+              muted
+              playsInline
+              className="max-h-[50vh] max-w-full object-contain"
+              style={{
+                boxShadow: '0 0 80px rgba(180, 140, 60, 0.12), 0 8px 40px rgba(0,0,0,0.7)',
+              }}
+            />
+          </div>
+        ) : scene.imageBase64 ? (
           <div
             className="overflow-hidden rounded-lg max-h-[50vh] max-w-full"
             style={{
@@ -617,7 +645,7 @@ function SceneViewer({
               }}
             />
           </div>
-        )}
+        ) : null}
 
         {/* Text */}
         {scene.text && (
@@ -642,7 +670,7 @@ function SceneViewer({
           </p>
         )}
 
-        {/* "What happens next?" + Rashomon on last scene */}
+        {/* "What happens next?" + Rashomon + Generate Film on last scene */}
         {isLastScene && textDone && !continuing && !generating && (
           <div
             className="flex flex-col items-center gap-3 max-w-lg w-full mt-2"
@@ -669,13 +697,42 @@ function SceneViewer({
                 Continue
               </button>
             </div>
-            <button
-              onClick={onRashomon}
-              className="text-xs text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors border border-[var(--border)] rounded-md px-3 py-1.5 hover:border-[var(--primary)]"
-              style={{ fontFamily: "'Georgia', 'Times New Roman', serif" }}
-            >
-              Tell it from the other side &hellip;
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={onRashomon}
+                className="text-xs text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors border border-[var(--border)] rounded-md px-3 py-1.5 hover:border-[var(--primary)]"
+                style={{ fontFamily: "'Georgia', 'Times New Roman', serif" }}
+              >
+                Tell it from the other side &hellip;
+              </button>
+              {veoEnabled && !filmComplete && (
+                <button
+                  onClick={onGenerateFilm}
+                  disabled={filmGenerating}
+                  className="text-xs text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors border border-[var(--border)] rounded-md px-3 py-1.5 hover:border-[var(--primary)] disabled:opacity-50"
+                  style={{ fontFamily: "'Georgia', 'Times New Roman', serif" }}
+                >
+                  {filmGenerating ? 'Generating...' : 'Generate Film'}
+                </button>
+              )}
+              {filmComplete && (
+                <button
+                  onClick={onDownloadFilm}
+                  className="text-xs text-[var(--foreground)] transition-colors border border-[var(--primary)] rounded-md px-3 py-1.5 hover:bg-[var(--primary)] hover:text-[var(--primary-foreground)]"
+                  style={{ fontFamily: "'Georgia', 'Times New Roman', serif" }}
+                >
+                  Download Film
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Film generation progress */}
+        {filmGenerating && filmProgress && (
+          <div className="flex items-center gap-2 text-sm text-[var(--muted-foreground)] italic animate-pulse">
+            <span className="inline-block w-2 h-2 rounded-full bg-[var(--primary)] animate-ping" />
+            {filmProgress}
           </div>
         )}
 
@@ -781,8 +838,19 @@ export function LiveStory() {
   const [viewerOpen, setViewerOpen] = useState(false);
   const [stageEvents, setStageEvents] = useState<StageEvent[]>([]);
   const [resetKey, setResetKey] = useState(0);
+  const [filmGenerating, setFilmGenerating] = useState(false);
+  const [filmProgress, setFilmProgress] = useState<string | null>(null);
+  const [filmComplete, setFilmComplete] = useState(false);
+  const [videoClips, setVideoClips] = useState<Map<number, { base64: string; mimeType: string }>>(new Map());
+  const [veoEnabled, setVeoEnabled] = useState(true);
 
-  const scenes = pairParts(parts);
+  const scenes = pairParts(parts).map((scene, i) => {
+    const clip = videoClips.get(i);
+    if (clip) {
+      return { ...scene, videoBase64: clip.base64, videoMimeType: clip.mimeType };
+    }
+    return scene;
+  });
   const stageStates = buildStageStates(stageEvents);
 
   // Auto-open viewer as soon as first scene arrives (streaming)
@@ -924,6 +992,116 @@ export function LiveStory() {
     }
   }
 
+  /** Generate Veo video clips for all scenes */
+  async function generateFilm() {
+    const rawScenes = pairParts(parts);
+    const scenesWithImages = rawScenes.filter((s) => s.imageBase64);
+    if (scenesWithImages.length === 0) return;
+
+    setFilmGenerating(true);
+    setFilmComplete(false);
+    setFilmProgress(`Starting film generation for ${scenesWithImages.length} scenes...`);
+
+    try {
+      const body = {
+        scenes: scenesWithImages.map((s) => ({
+          text: s.text,
+          image_base64: s.imageBase64,
+          mime_type: s.mimeType || 'image/png',
+        })),
+      };
+
+      const res = await fetch('/api/live-video/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: res.statusText }));
+        if (res.status === 503) setVeoEnabled(false);
+        throw new Error(err.detail || `HTTP ${res.status}`);
+      }
+
+      const reader = res.body!.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let completed = 0;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const data = JSON.parse(line.slice(6));
+
+          if (data.type === 'scene_video') {
+            completed++;
+            setFilmProgress(`Generated scene ${completed} of ${scenesWithImages.length}`);
+            setVideoClips((prev) => {
+              const next = new Map(prev);
+              next.set(data.scene_idx, {
+                base64: data.video_base64,
+                mimeType: data.mime_type || 'video/mp4',
+              });
+              return next;
+            });
+          } else if (data.type === 'scene_video_error') {
+            completed++;
+            setFilmProgress(`Scene ${data.scene_idx + 1} failed, continuing...`);
+          } else if (data.type === 'film_complete') {
+            setFilmComplete(data.completed > 0);
+            setFilmProgress(null);
+          }
+        }
+      }
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : String(e));
+      setFilmProgress(null);
+    } finally {
+      setFilmGenerating(false);
+    }
+  }
+
+  /** Download assembled film */
+  async function downloadFilm() {
+    const clips = Array.from(videoClips.entries())
+      .sort(([a], [b]) => a - b)
+      .map(([, v]) => v.base64);
+
+    if (clips.length === 0) return;
+
+    try {
+      const res = await fetch('/api/live-video/assemble', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ video_base64_list: clips }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: res.statusText }));
+        throw new Error(err.detail || `HTTP ${res.status}`);
+      }
+
+      const data = await res.json();
+      // Trigger download
+      const blob = await fetch(`data:video/mp4;base64,${data.video_base64}`).then((r) => r.blob());
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'chrononoir-film.mp4';
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  }
+
   /* ── Viewer overlay ──────────────────────────────────────────── */
   if (viewerOpen && scenes.length > 0) {
     return (
@@ -935,8 +1113,14 @@ export function LiveStory() {
         onClose={() => setViewerOpen(false)}
         onContinue={continueStory}
         onRashomon={rashomonRetell}
+        onGenerateFilm={generateFilm}
+        onDownloadFilm={downloadFilm}
         casting={extractCasting(parts)}
         resetKey={resetKey}
+        filmGenerating={filmGenerating}
+        filmProgress={filmProgress}
+        filmComplete={filmComplete}
+        veoEnabled={veoEnabled}
       />
     );
   }
