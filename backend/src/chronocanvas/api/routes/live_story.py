@@ -29,7 +29,7 @@ _MODEL_CHAIN = [
 ]
 
 # Timeout per Gemini chat turn (seconds) — casting and scenes
-_TURN_TIMEOUT_S = 60
+_TURN_TIMEOUT_S = 120
 
 DASH_SYSTEM_INSTRUCTION = """\
 You are Dash, a noir creative director and cinematographer.
