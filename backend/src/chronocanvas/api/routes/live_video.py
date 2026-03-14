@@ -53,6 +53,87 @@ _VEO_STYLE_PREFIX = (
 )
 
 
+# Camera motion directives — matched by scene content keywords
+_CAMERA_DIRECTIVES = [
+    # Emotional/intimate scenes
+    {
+        "keywords": ["whisper", "kiss", "tears", "face", "eyes", "close", "secret", "confession"],
+        "directive": "Slow push-in to extreme close-up. Rack focus from background to face. Intimate framing.",
+    },
+    # Action/chase scenes
+    {
+        "keywords": ["run", "chase", "escape", "fight", "crash", "gun", "shot", "sprint", "flee"],
+        "directive": "Handheld tracking shot with kinetic energy. Quick lateral movement. Slight camera shake.",
+    },
+    # Establishing/arrival scenes
+    {
+        "keywords": ["arrive", "enter", "door", "building", "city", "street", "skyline", "morning", "night"],
+        "directive": "Slow crane shot or dolly establishing the scene. Wide to medium framing. Measured pace.",
+    },
+    # Revelation/discovery scenes
+    {
+        "keywords": ["discover", "reveal", "found", "realize", "truth", "letter", "evidence", "photograph"],
+        "directive": "Slow dolly-in revealing the subject. Dramatic rack focus. Hold on the reveal.",
+    },
+    # Dialogue/confrontation scenes
+    {
+        "keywords": ["said", "told", "asked", "demanded", "argue", "confront", "accuse", "question"],
+        "directive": "Over-the-shoulder framing. Slow pan between speakers. Steady medium shots.",
+    },
+    # Walking/journey scenes
+    {
+        "keywords": ["walk", "stroll", "path", "road", "follow", "trail", "journey", "wander"],
+        "directive": "Steadicam tracking shot following the subject. Smooth lateral or forward movement.",
+    },
+    # Contemplation/stillness scenes
+    {
+        "keywords": ["wait", "think", "stare", "silence", "alone", "shadow", "smoke", "rain", "window"],
+        "directive": "Static locked-off shot. Minimal camera movement. Let the scene breathe.",
+    },
+]
+
+# Default when no keywords match
+_DEFAULT_CAMERA_DIRECTIVE = "Slow dolly shot with subtle parallax. Classical noir framing. Measured, deliberate movement."
+
+
+def _select_camera_directive(scene_text: str) -> str:
+    """Select camera motion directive based on scene content."""
+    text_lower = scene_text.lower()
+    best_match = None
+    best_count = 0
+
+    for entry in _CAMERA_DIRECTIVES:
+        count = sum(1 for kw in entry["keywords"] if kw in text_lower)
+        if count > best_count:
+            best_count = count
+            best_match = entry["directive"]
+
+    return best_match or _DEFAULT_CAMERA_DIRECTIVE
+
+
+def _build_veo_prompt(
+    scene_text: str, scene_idx: int, total_scenes: int, style: str | None,
+) -> str:
+    """Build enriched Veo prompt with camera directives and scene context."""
+    parts = [_VEO_STYLE_PREFIX]
+
+    if style:
+        parts.append(f"{style}. ")
+
+    # Camera motion based on content
+    camera = _select_camera_directive(scene_text)
+    parts.append(f"Camera: {camera} ")
+
+    # Scene pacing hints based on position
+    if scene_idx == 0:
+        parts.append("Opening shot — set the mood. ")
+    elif scene_idx == total_scenes - 1:
+        parts.append("Final shot — linger on the moment. Slow, contemplative. ")
+
+    parts.append(scene_text)
+    return "".join(parts)
+
+
 class SceneInput(BaseModel):
     text: str
     image_base64: str
@@ -102,18 +183,15 @@ async def _generate_scene_video(
     client: genai.Client,
     scene: SceneInput,
     scene_idx: int,
+    total_scenes: int,
     style: str | None,
     aspect_ratio: str,
 ) -> dict:
     """Generate a Veo video for a single scene. Returns SSE event dict."""
     t0 = time.perf_counter()
 
-    # Build prompt with noir styling
-    prompt_parts = [_VEO_STYLE_PREFIX]
-    if style:
-        prompt_parts.append(f"{style}. ")
-    prompt_parts.append(scene.text)
-    prompt = "".join(prompt_parts)
+    # Build enriched prompt with camera directives and scene context
+    prompt = _build_veo_prompt(scene.text, scene_idx, total_scenes, style)
 
     # Decode scene image for first-frame reference
     raw_image_bytes = base64.b64decode(scene.image_base64)
@@ -275,7 +353,7 @@ async def generate_videos(req: SceneVideoRequest):
         async def process_scene(idx: int, scene: SceneInput):
             async with semaphore:
                 return await _generate_scene_video(
-                    client, scene, idx, req.style, req.aspect_ratio,
+                    client, scene, idx, total, req.style, req.aspect_ratio,
                 )
 
         # Launch all tasks
