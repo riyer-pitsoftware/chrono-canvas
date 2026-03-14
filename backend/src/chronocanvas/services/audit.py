@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from chronocanvas.services.path_utils import file_path_to_url
 from chronocanvas.api.schemas.generation import (
     AuditDetailResponse,
     ImageResponse,
@@ -134,7 +135,11 @@ class AuditProjector:
             validation_categories=validation_categories,
             images=[ImageResponse.model_validate(img) for img in images],
             state_snapshots=state_snapshots,
-            agent_trace=request.agent_trace or [],
+            agent_trace=[
+                {**entry, "local_path": file_path_to_url(entry["local_path"])}
+                if "local_path" in entry else entry
+                for entry in (request.agent_trace or [])
+            ],
             storyboard_data=request.storyboard_data,
             narration_audio_urls=narration_audio_urls,
             run_type=request.run_type or "portrait",

@@ -7,20 +7,11 @@ from chronocanvas.api.schemas.admin import (
     ValidationQueueItem,
     ValidationQueueResponse,
 )
-from chronocanvas.config import settings
 from chronocanvas.db.models.image import GeneratedImage
+from chronocanvas.services.path_utils import file_path_to_url
 from chronocanvas.services.validation import compute_validation_overall
 from chronocanvas.db.models.request import GenerationRequest
 from chronocanvas.db.models.validation import ValidationResult
-
-
-def image_path_to_url(file_path: str) -> str | None:
-    """Convert a filesystem path to a URL served via StaticFiles."""
-    if not file_path:
-        return None
-    output_dir = str(settings.output_dir).rstrip("/")
-    rel = file_path.replace(output_dir, "").lstrip("/")
-    return f"/output/{rel}" if rel else None
 
 
 class ValidationQueueProjector:
@@ -65,7 +56,7 @@ class ValidationQueueProjector:
             figure_name=figure_name,
             overall_score=round(overall, 1),
             categories=categories,
-            image_url=image_path_to_url(img.file_path) if img else None,
+            image_url=file_path_to_url(img.file_path) if img else None,
             human_review_status=req.human_review_status,
             created_at=req.created_at,
         )

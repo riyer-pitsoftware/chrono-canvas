@@ -22,18 +22,7 @@ function formatNotes(action: string, score: number | null, notes: string) {
   return parts.join('; ');
 }
 
-function resolveOutputUrl(filePath: unknown): string | null {
-  if (typeof filePath !== 'string' || !filePath.length) return null;
-  const outputIndex = filePath.indexOf('/output/');
-  if (outputIndex >= 0) {
-    return filePath.slice(outputIndex);
-  }
-  if (filePath.startsWith('/')) {
-    return filePath.replace(/^.*output\//, '/output/');
-  }
-  if (filePath.startsWith('http')) return filePath;
-  return `/output/${filePath}`;
-}
+/** Backend now returns browser-ready /output/... URLs in agent_trace.local_path */
 
 function CategoryList({ item }: { item: ValidationQueueItem }) {
   return (
@@ -90,7 +79,7 @@ export function Review({ requestId }: { requestId: string }) {
       (entry) => entry.agent === 'face_search' && entry.local_path,
     );
     if (!trace) return null;
-    return resolveOutputUrl(trace.local_path);
+    return (trace.local_path as string) ?? null;
   }, [auditDetail.data?.agent_trace]);
 
   const generationPrompt = auditDetail.data?.generated_prompt ?? auditDetail.data?.input_text ?? '';
