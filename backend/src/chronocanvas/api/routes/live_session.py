@@ -153,7 +153,7 @@ async def _generate_image(
                     contents=contents,
                     config=types.GenerateContentConfig(
                         response_modalities=["IMAGE"],
-                        thinking_config=types.ThinkingConfig(thinking_budget=0),
+                        thinking_config=types.ThinkingConfig(thinking_level="MINIMAL"),
                     ),
                 )
                 if (
@@ -210,6 +210,7 @@ async def _handle_function_call(
             input=types.LiveClientToolResponse(
                 function_responses=[
                     types.FunctionResponse(
+                        id=tool_call.id,
                         name=fn_name,
                         response=result,
                     )
@@ -227,6 +228,7 @@ async def _handle_function_call(
             input=types.LiveClientToolResponse(
                 function_responses=[
                     types.FunctionResponse(
+                        id=tool_call.id,
                         name=fn_name,
                         response={
                             "success": True,
@@ -243,6 +245,7 @@ async def _handle_function_call(
             input=types.LiveClientToolResponse(
                 function_responses=[
                     types.FunctionResponse(
+                        id=tool_call.id,
                         name=fn_name,
                         response={"error": f"Unknown function: {fn_name}"},
                     )
