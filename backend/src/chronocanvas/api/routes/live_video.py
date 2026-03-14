@@ -327,6 +327,78 @@ async def generate_videos(req: SceneVideoRequest):
 # ── POST /api/live-video/assemble ───────────────────────────────
 
 
+# ── GET /api/live-video/demo-fallback ─────────────────────────
+
+
+@router.get("/demo-fallback")
+async def demo_fallback():
+    """Serve pre-baked demo film assets when live Veo generation fails.
+
+    Reads from the configured demo_fallback_dir (default: demo/fallback/).
+    Returns 404 if no pre-baked assets are available.
+    """
+    fallback_dir = Path(settings.demo_fallback_dir)
+    if not fallback_dir.is_absolute():
+        # Resolve relative to project root (two levels up from this file,
+        # or relative to cwd which is typically the backend root)
+        fallback_dir = Path.cwd() / fallback_dir
+
+    manifest_path = fallback_dir / "manifest.json"
+    if not manifest_path.exists():
+        raise HTTPException(status_code=404, detail="No demo fallback assets available")
+
+    try:
+        manifest = json.loads(manifest_path.read_text())
+    except (json.JSONDecodeError, OSError) as e:
+        logger.error("Failed to read demo manifest: %s", e)
+        raise HTTPException(status_code=500, detail="Corrupt demo manifest")
+
+    scene_count = manifest.get("scene_count", 0)
+    if scene_count == 0:
+        raise HTTPException(status_code=404, detail="Demo manifest has no scenes")
+
+    scenes = []
+    for i in range(scene_count):
+        scene_data: dict = {}
+
+        # Text
+        text_path = fallback_dir / f"scene_{i}.txt"
+        scene_data["text"] = text_path.read_text() if text_path.exists() else ""
+
+        # Image (base64)
+        img_path = fallback_dir / f"scene_{i}.png"
+        if img_path.exists():
+            scene_data["image_base64"] = base64.b64encode(img_path.read_bytes()).decode("ascii")
+        else:
+            scene_data["image_base64"] = ""
+
+        # Video (base64)
+        vid_path = fallback_dir / f"scene_{i}.mp4"
+        if vid_path.exists():
+            scene_data["video_base64"] = base64.b64encode(vid_path.read_bytes()).decode("ascii")
+        else:
+            scene_data["video_base64"] = ""
+
+        scenes.append(scene_data)
+
+    # Assembled film (optional)
+    film_path = fallback_dir / "film.mp4"
+    film_b64 = ""
+    if film_path.exists():
+        film_b64 = base64.b64encode(film_path.read_bytes()).decode("ascii")
+
+    return {
+        "scenes": scenes,
+        "film_base64": film_b64,
+        "prompt": manifest.get("prompt", ""),
+        "model": manifest.get("model", ""),
+        "baked_at": manifest.get("baked_at", ""),
+    }
+
+
+# ── POST /api/live-video/assemble ───────────────────────────────
+
+
 async def _check_ffmpeg() -> bool:
     try:
         proc = await asyncio.create_subprocess_exec(

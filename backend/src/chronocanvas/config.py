@@ -113,6 +113,9 @@ class Settings(BaseSettings):
     scene_editing_enabled: bool = True
     conversation_mode_enabled: bool = False  # off until stable
 
+    # Demo fallback (pre-baked Veo film clips for reliable demo presentations)
+    demo_fallback_dir: str = "demo/fallback"
+
     # Hackathon mode
     hackathon_mode: bool = False  # When True, UI defaults to Story Director
 

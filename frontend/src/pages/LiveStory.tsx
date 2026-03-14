@@ -413,6 +413,7 @@ function SceneViewer({
   filmProgress,
   filmComplete,
   veoEnabled,
+  isDemoReel,
 }: {
   scenes: Scene[];
   stats: DoneEvent | null;
@@ -429,6 +430,7 @@ function SceneViewer({
   filmProgress: string | null;
   filmComplete: boolean;
   veoEnabled: boolean;
+  isDemoReel?: boolean;
 }) {
   const [current, setCurrent] = useState(0);
   const [fadeKey, setFadeKey] = useState(0);
@@ -749,13 +751,27 @@ function SceneViewer({
                 </button>
               )}
               {filmComplete && (
-                <button
-                  onClick={onDownloadFilm}
-                  className="text-xs text-[var(--foreground)] transition-colors border border-[var(--primary)] rounded-md px-3 py-1.5 hover:bg-[var(--primary)] hover:text-[var(--primary-foreground)]"
-                  style={{ fontFamily: "'Georgia', 'Times New Roman', serif" }}
-                >
-                  Download Film
-                </button>
+                <>
+                  <button
+                    onClick={onDownloadFilm}
+                    className="text-xs text-[var(--foreground)] transition-colors border border-[var(--primary)] rounded-md px-3 py-1.5 hover:bg-[var(--primary)] hover:text-[var(--primary-foreground)]"
+                    style={{ fontFamily: "'Georgia', 'Times New Roman', serif" }}
+                  >
+                    Download Film
+                  </button>
+                  {isDemoReel && (
+                    <span
+                      className="text-[10px] uppercase tracking-widest px-2 py-0.5 rounded border"
+                      style={{
+                        color: 'oklch(0.75 0.12 80)',
+                        borderColor: 'oklch(0.55 0.08 80)',
+                        fontFamily: "'Georgia', 'Times New Roman', serif",
+                      }}
+                    >
+                      Demo Reel
+                    </span>
+                  )}
+                </>
               )}
             </div>
           </div>
@@ -925,6 +941,7 @@ export function LiveStory() {
   const [videoClips, setVideoClips] = useState<Map<number, { base64: string; mimeType: string }>>(new Map());
   const [failedScenes, setFailedScenes] = useState<Set<number>>(new Set());
   const [veoEnabled, setVeoEnabled] = useState(true);
+  const [isDemoReel, setIsDemoReel] = useState(false);
 
   const scenes = pairParts(parts).map((scene, i) => {
     const clip = videoClips.get(i);
@@ -1086,6 +1103,7 @@ export function LiveStory() {
     setFilmGenerating(true);
     setFilmComplete(false);
     setFailedScenes(new Set());
+    setIsDemoReel(false);
     setFilmProgress(`Starting film generation for ${scenesWithImages.length} scenes...`);
 
     try {
@@ -1142,16 +1160,55 @@ export function LiveStory() {
             setFailedScenes((prev) => new Set(prev).add(data.scene_idx));
             setFilmProgress(`Scene ${data.scene_idx + 1} using still frame, continuing...`);
           } else if (data.type === 'film_complete') {
-            setFilmComplete(data.completed > 0);
-            setFilmProgress(null);
+            if (data.completed > 0) {
+              setFilmComplete(true);
+              setFilmProgress(null);
+            } else {
+              // All scenes failed — try demo fallback
+              await tryDemoFallback();
+            }
           }
         }
       }
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : String(e));
+      // Total failure (network, 503, etc.) — try demo fallback
+      const fell = await tryDemoFallback();
+      if (!fell) {
+        setError(e instanceof Error ? e.message : String(e));
+      }
       setFilmProgress(null);
     } finally {
       setFilmGenerating(false);
+    }
+  }
+
+  /** Try loading pre-baked demo fallback clips. Returns true if successful. */
+  async function tryDemoFallback(): Promise<boolean> {
+    try {
+      setFilmProgress('Trying demo reel fallback...');
+      const res = await fetch('/api/live-video/demo-fallback');
+      if (!res.ok) return false;
+      const data = await res.json();
+      if (!data.scenes || data.scenes.length === 0) return false;
+
+      // Load pre-baked video clips into state
+      const newClips = new Map<number, { base64: string; mimeType: string }>();
+      for (let i = 0; i < data.scenes.length; i++) {
+        const s = data.scenes[i];
+        if (s.video_base64) {
+          newClips.set(i, { base64: s.video_base64, mimeType: 'video/mp4' });
+        }
+      }
+
+      if (newClips.size === 0) return false;
+
+      setVideoClips(newClips);
+      setIsDemoReel(true);
+      setFilmComplete(true);
+      setFilmProgress(null);
+      return true;
+    } catch {
+      return false;
     }
   }
 
@@ -1208,6 +1265,7 @@ export function LiveStory() {
         filmProgress={filmProgress}
         filmComplete={filmComplete}
         veoEnabled={veoEnabled}
+        isDemoReel={isDemoReel}
       />
     );
   }
