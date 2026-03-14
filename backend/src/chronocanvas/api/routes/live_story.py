@@ -19,6 +19,11 @@ from pydantic import BaseModel
 
 from chronocanvas.config import settings
 
+try:
+    from PIL import Image as _PILImage
+except ImportError:
+    _PILImage = None
+
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/live-story", tags=["live-story"])
@@ -28,6 +33,9 @@ _MODEL_CHAIN = [
     "gemini-3.1-flash-image-preview",  # Nano Banana 2: up to 5 character refs
     "gemini-2.5-flash-image",          # fallback
 ]
+
+# Fast text-only model for parallel fallback (no image capability needed)
+_TEXT_ONLY_MODEL = "gemini-2.5-flash"
 
 # Timeout per Gemini chat turn (seconds) — casting and scenes
 _TURN_TIMEOUT_S = 120
@@ -218,6 +226,7 @@ async def _stream_scene_parts(
 
     accumulated_text: list[str] = []
     text_yielded = False
+    text_early = False  # True if text was flushed before first image arrived
     got_any_content = False
 
     while True:
@@ -246,6 +255,7 @@ async def _stream_scene_parts(
                 if clean:
                     yield {"type": "text", "content": clean}
                 text_yielded = True
+                text_early = True  # text flushed before image — streaming works
             else:
                 yield _KEEPALIVE_EVENT
             continue
@@ -273,11 +283,15 @@ async def _stream_scene_parts(
                     if clean:
                         yield {"type": "text", "content": clean}
                     text_yielded = True
-                b64 = base64.b64encode(part.inline_data.data).decode("ascii")
+                compressed, mime = _compress_image(
+                    part.inline_data.data,
+                    part.inline_data.mime_type or "image/png",
+                )
+                b64 = base64.b64encode(compressed).decode("ascii")
                 yield {
                     "type": "image",
                     "content": b64,
-                    "mime_type": part.inline_data.mime_type or "image/png",
+                    "mime_type": mime,
                 }
 
     # Flush any remaining text (e.g. text-only scene with no image)
@@ -297,7 +311,168 @@ async def _stream_scene_parts(
         "type": "_meta",
         "is_final": is_final,
         "empty": not got_any_content,
+        "text_early": text_early,
     }
+
+
+async def _parallel_scene_parts(
+    chat,
+    prompt: str,
+    client,
+    *,
+    timeout_s: float = _TURN_TIMEOUT_S,
+    keepalive_s: float = _KEEPALIVE_INTERVAL_S,
+) -> AsyncGenerator[dict, None]:
+    """Generate text and image in parallel for faster perceived response.
+
+    When streaming doesn't separate text from image (both arrive together after
+    ~2min), this fallback runs two concurrent tasks:
+      - Text task: fast text-only model (~3s) for immediate narration
+      - Image task: main chat (for character consistency) for the scene image
+
+    Text is yielded first so the frontend can start typewriter + narration
+    while the image is still generating.
+    """
+    # Text-only prompt — strip image generation instructions
+    text_prompt = (
+        f"Write ONLY the prose text for this scene. No image. "
+        f"2-4 sentences of noir prose, present tense.\n\n{prompt}"
+    )
+
+    text_config = types.GenerateContentConfig(
+        system_instruction=DASH_SYSTEM_INSTRUCTION,
+        response_modalities=["TEXT"],
+        temperature=1.0,
+        max_output_tokens=2048,
+    )
+
+    async def _get_text():
+        text_chat = client.aio.chats.create(
+            model=_TEXT_ONLY_MODEL, config=text_config
+        )
+        return await asyncio.wait_for(
+            text_chat.send_message(text_prompt),
+            timeout=30,  # text should be fast
+        )
+
+    async def _get_image():
+        return await asyncio.wait_for(
+            chat.send_message(prompt),
+            timeout=timeout_s,
+        )
+
+    text_task = asyncio.create_task(_get_text())
+    image_task = asyncio.create_task(_get_image())
+
+    # Wait for text first (should be ~3s)
+    text_succeeded = False
+    try:
+        text_response = await text_task
+        text_parts = _extract_parts(text_response)
+        text_content = " ".join(
+            p["content"] for p in text_parts if p["type"] == "text"
+        )
+        if text_content:
+            clean = text_content.replace("[END]", "").rstrip()
+            if clean:
+                yield {"type": "text", "content": clean}
+                text_succeeded = True
+    except Exception as e:
+        logger.warning("Parallel text generation failed: %s", e)
+        # Fall through — image task response will have text too
+
+    # Wait for image (longer), with keepalives
+    loop = asyncio.get_event_loop()
+    deadline = loop.time() + timeout_s
+    while not image_task.done():
+        remaining = deadline - loop.time()
+        if remaining <= 0:
+            image_task.cancel()
+            raise asyncio.TimeoutError()
+        try:
+            await asyncio.wait_for(
+                asyncio.shield(image_task),
+                timeout=min(keepalive_s, remaining),
+            )
+        except asyncio.TimeoutError:
+            if not image_task.done():
+                yield _KEEPALIVE_EVENT
+
+    image_response = image_task.result()
+    _scrub_thought_parts(chat)
+
+    parts = _extract_parts(image_response)
+
+    # Yield image; if parallel text failed, also yield text from image model
+    text_from_image = []
+    for p in parts:
+        if p["type"] == "image":
+            yield p
+        elif p["type"] == "text":
+            text_from_image.append(p["content"])
+
+    # If text task failed, fall back to text from image model
+    if not text_succeeded and text_from_image:
+        full_text = " ".join(text_from_image)
+        clean = full_text.replace("[END]", "").rstrip()
+        if clean:
+            yield {"type": "text", "content": clean}
+
+    # Check [END] from the authoritative image model response
+    full_text = " ".join(text_from_image)
+    is_final = "[END]" in full_text
+
+    yield {
+        "type": "_meta",
+        "is_final": is_final,
+        "empty": not parts,
+        "text_early": True,  # parallel mode always delivers text early
+    }
+
+
+def _compress_image(
+    raw_bytes: bytes,
+    mime_type: str = "image/png",
+    *,
+    max_width: int = 1280,
+    jpeg_quality: int = 85,
+) -> tuple[bytes, str]:
+    """Compress an image to JPEG, capping width at *max_width* px.
+
+    Returns ``(compressed_bytes, mime_type)``.  Falls back to the original
+    bytes if Pillow is unavailable or an error occurs.
+    """
+    if _PILImage is None:
+        return raw_bytes, mime_type
+    try:
+        import io
+
+        img = _PILImage.open(io.BytesIO(raw_bytes))
+
+        # Cap width while preserving aspect ratio
+        if img.width > max_width:
+            ratio = max_width / img.width
+            new_height = int(img.height * ratio)
+            img = img.resize((max_width, new_height), _PILImage.LANCZOS)
+
+        # JPEG doesn't support alpha
+        if img.mode in ("RGBA", "P", "LA"):
+            img = img.convert("RGB")
+
+        buf = io.BytesIO()
+        img.save(buf, format="JPEG", quality=jpeg_quality, optimize=True)
+        compressed = buf.getvalue()
+
+        logger.debug(
+            "Image compressed: %d -> %d bytes (%.0f%% reduction)",
+            len(raw_bytes),
+            len(compressed),
+            (1 - len(compressed) / len(raw_bytes)) * 100,
+        )
+        return compressed, "image/jpeg"
+    except Exception:
+        logger.warning("Image compression failed, sending original", exc_info=True)
+        return raw_bytes, mime_type
 
 
 def _extract_parts(response) -> list[dict]:
@@ -311,11 +486,14 @@ def _extract_parts(response) -> list[dict]:
         if part.text is not None:
             results.append({"type": "text", "content": part.text})
         elif part.inline_data is not None:
-            b64 = base64.b64encode(part.inline_data.data).decode("ascii")
+            compressed, mime = _compress_image(
+                part.inline_data.data, part.inline_data.mime_type or "image/png"
+            )
+            b64 = base64.b64encode(compressed).decode("ascii")
             results.append({
                 "type": "image",
                 "content": b64,
-                "mime_type": part.inline_data.mime_type or "image/png",
+                "mime_type": mime,
             })
     return results
 
@@ -376,7 +554,7 @@ async def live_story(req: LiveStoryRequest):
         if is_continuation:
             flow = _continuation_flow(chat, req, model_used)
         else:
-            flow = _scene_by_scene_flow(chat, req, model_used)
+            flow = _scene_by_scene_flow(chat, req, model_used, client=client)
 
         async for part_data in flow:
             if part_data.get("type") == "keepalive":
@@ -405,12 +583,16 @@ async def live_story(req: LiveStoryRequest):
 
 
 async def _scene_by_scene_flow(
-    chat, req: LiveStoryRequest, model: str
+    chat, req: LiveStoryRequest, model: str, *, client=None
 ) -> AsyncGenerator[dict, None]:
     """Generate story scene-by-scene via chat turns, yielding each part immediately.
 
     Turn 0 (hidden): Casting photo — character portraits for visual anchoring
     Turns 1..N: Model generates scenes until it signals [END]
+
+    If the first scene's streaming doesn't separate text from image (both arrive
+    together), automatically switches to parallel text+image generation for the
+    remaining scenes when *client* is provided.
     """
     base_prompt = _build_prompt(req)
 
@@ -469,6 +651,7 @@ async def _scene_by_scene_flow(
     # ── Scenes — model decides how many; stops on [END] marker ──
     max_scenes = 20  # safety cap
     scene_idx = 0
+    use_parallel = False  # switch to parallel text+image after first scene if needed
     while scene_idx < max_scenes:
         yield _stage_event("scene", "start", scene_idx=scene_idx + 1)
         scene_t0 = time.perf_counter()
@@ -489,9 +672,25 @@ async def _scene_by_scene_flow(
 
         try:
             is_final = False
-            async for item in _stream_scene_parts(chat, prompt):
+            # Choose streaming vs parallel generation
+            if use_parallel and client is not None:
+                flow = _parallel_scene_parts(chat, prompt, client)
+            else:
+                flow = _stream_scene_parts(chat, prompt)
+
+            async for item in flow:
                 if item.get("type") == "_meta":
                     is_final = item["is_final"]
+                    # After first scene, check if text arrived early
+                    if (
+                        not item.get("text_early", True)
+                        and scene_idx == 0
+                        and client is not None
+                    ):
+                        use_parallel = True
+                        logger.info(
+                            "Switching to parallel text+image for remaining scenes"
+                        )
                     if item["empty"]:
                         yield _stage_event(
                             "scene", "error",
@@ -507,7 +706,8 @@ async def _scene_by_scene_flow(
                     yield item
             else:
                 # Loop completed without break — stream finished normally
-                _scrub_thought_parts(chat)
+                if not use_parallel:
+                    _scrub_thought_parts(chat)
                 yield _stage_event(
                     "scene", "complete",
                     scene_idx=scene_idx + 1,
@@ -519,7 +719,8 @@ async def _scene_by_scene_flow(
                 continue
 
             # If we broke out of the for-loop (empty response), stop
-            _scrub_thought_parts(chat)
+            if not use_parallel:
+                _scrub_thought_parts(chat)
             break
 
         except asyncio.TimeoutError:
