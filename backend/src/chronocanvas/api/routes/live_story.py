@@ -151,6 +151,10 @@ def _scrub_thought_parts(chat) -> None:
 
 _RESULT = object()  # sentinel for _call_with_keepalives
 
+# How long to wait between stream chunks before assuming text is "done" and
+# yielding accumulated text early (while image is still generating).
+_TEXT_FLUSH_TIMEOUT_S = 3.0
+
 
 async def _call_with_keepalives(
     coro,
@@ -185,6 +189,115 @@ async def _call_with_keepalives(
     except asyncio.CancelledError:
         task.cancel()
         raise
+
+
+async def _stream_scene_parts(
+    chat,
+    prompt,
+    *,
+    timeout_s: float = _TURN_TIMEOUT_S,
+    flush_timeout_s: float = _TEXT_FLUSH_TIMEOUT_S,
+    keepalive_s: float = _KEEPALIVE_INTERVAL_S,
+) -> AsyncGenerator[dict, None]:
+    """Stream scene text+image from ``send_message_stream()``.
+
+    Yields text as a single ``{"type": "text", ...}`` as soon as a gap of
+    *flush_timeout_s* is detected between chunks (text finishes fast, image
+    takes much longer).  Images are yielded as ``{"type": "image", ...}`` when
+    they arrive.  Keepalive events are emitted while waiting for the image so
+    the SSE connection stays alive.
+
+    After the generator is exhausted the caller MUST run
+    ``_scrub_thought_parts(chat)`` to clean the chat history.
+    """
+    loop = asyncio.get_event_loop()
+    deadline = loop.time() + timeout_s
+
+    stream = chat.send_message_stream(prompt)
+    stream_iter = stream.__aiter__()
+
+    accumulated_text: list[str] = []
+    text_yielded = False
+    got_any_content = False
+
+    while True:
+        remaining = deadline - loop.time()
+        if remaining <= 0:
+            raise asyncio.TimeoutError()
+
+        # Choose how long to wait for the next chunk:
+        # - If we have un-yielded text, use a short timeout so we flush quickly.
+        # - Otherwise, use the keepalive interval.
+        wait = flush_timeout_s if (accumulated_text and not text_yielded) else keepalive_s
+        wait = min(wait, remaining)
+
+        try:
+            chunk = await asyncio.wait_for(stream_iter.__anext__(), timeout=wait)
+        except StopAsyncIteration:
+            break
+        except asyncio.TimeoutError:
+            # Timed out waiting for next chunk.
+            if loop.time() >= deadline:
+                raise asyncio.TimeoutError()
+            # Flush accumulated text if we've been waiting long enough.
+            if accumulated_text and not text_yielded:
+                full_text = "".join(accumulated_text)
+                clean = full_text.replace("[END]", "").rstrip()
+                if clean:
+                    yield {"type": "text", "content": clean}
+                text_yielded = True
+            else:
+                yield _KEEPALIVE_EVENT
+            continue
+
+        # Process chunk parts
+        if (
+            not chunk.candidates
+            or not chunk.candidates[0].content
+            or not chunk.candidates[0].content.parts
+        ):
+            continue
+
+        for part in chunk.candidates[0].content.parts:
+            if getattr(part, "thought", False):
+                continue
+            if part.text is not None:
+                accumulated_text.append(part.text)
+                got_any_content = True
+            elif part.inline_data is not None:
+                got_any_content = True
+                # Flush any pending text before the image
+                if accumulated_text and not text_yielded:
+                    full_text = "".join(accumulated_text)
+                    clean = full_text.replace("[END]", "").rstrip()
+                    if clean:
+                        yield {"type": "text", "content": clean}
+                    text_yielded = True
+                b64 = base64.b64encode(part.inline_data.data).decode("ascii")
+                yield {
+                    "type": "image",
+                    "content": b64,
+                    "mime_type": part.inline_data.mime_type or "image/png",
+                }
+
+    # Flush any remaining text (e.g. text-only scene with no image)
+    if accumulated_text and not text_yielded:
+        full_text = "".join(accumulated_text)
+        clean = full_text.replace("[END]", "").rstrip()
+        if clean:
+            yield {"type": "text", "content": clean}
+        text_yielded = True
+
+    # Determine whether the model signalled end-of-story
+    raw_text = "".join(accumulated_text)
+    is_final = "[END]" in raw_text
+
+    # Yield metadata so the caller knows if the story ended and if content was empty
+    yield {
+        "type": "_meta",
+        "is_final": is_final,
+        "empty": not got_any_content,
+    }
 
 
 def _extract_parts(response) -> list[dict]:
@@ -375,43 +488,39 @@ async def _scene_by_scene_flow(
             )
 
         try:
-            response = None
-            async for item in _call_with_keepalives(chat.send_message(prompt)):
-                if isinstance(item, tuple) and item[0] is _RESULT:
-                    response = item[1]
+            is_final = False
+            async for item in _stream_scene_parts(chat, prompt):
+                if item.get("type") == "_meta":
+                    is_final = item["is_final"]
+                    if item["empty"]:
+                        yield _stage_event(
+                            "scene", "error",
+                            scene_idx=scene_idx + 1,
+                            elapsed_s=time.perf_counter() - scene_t0,
+                            detail="Empty response from model",
+                        )
+                        yield {"type": "error", "content": f"Scene {scene_idx + 1}: empty response"}
+                        break
+                elif item.get("type") == "keepalive":
+                    yield item
                 else:
                     yield item
-            _scrub_thought_parts(chat)
-            parts = _extract_parts(response)
-            if not parts:
+            else:
+                # Loop completed without break — stream finished normally
+                _scrub_thought_parts(chat)
                 yield _stage_event(
-                    "scene", "error",
+                    "scene", "complete",
                     scene_idx=scene_idx + 1,
                     elapsed_s=time.perf_counter() - scene_t0,
-                    detail="Empty response from model",
                 )
-                yield {"type": "error", "content": f"Scene {scene_idx + 1}: empty response"}
-                break
+                if is_final:
+                    break
+                scene_idx += 1
+                continue
 
-            # Check for [END] marker before yielding
-            text_content = " ".join(
-                p["content"] for p in parts if p["type"] == "text"
-            )
-            is_final = "[END]" in text_content
-
-            for p in parts:
-                if is_final and p["type"] == "text" and "[END]" in p["content"]:
-                    p["content"] = p["content"].replace("[END]", "").rstrip()
-                yield p
-
-            yield _stage_event(
-                "scene", "complete",
-                scene_idx=scene_idx + 1,
-                elapsed_s=time.perf_counter() - scene_t0,
-            )
-
-            if is_final:
-                break
+            # If we broke out of the for-loop (empty response), stop
+            _scrub_thought_parts(chat)
+            break
 
         except asyncio.TimeoutError:
             elapsed = time.perf_counter() - scene_t0
@@ -436,8 +545,6 @@ async def _scene_by_scene_flow(
             )
             yield {"type": "error", "content": f"Scene {scene_idx + 1} failed: {e}"}
             break
-
-        scene_idx += 1
 
 
 async def _continuation_flow(
@@ -523,18 +630,23 @@ async def _continuation_flow(
     continuation_parts.append(types.Part.from_text(text=continuation_text))
 
     try:
-        response = None
-        async for item in _call_with_keepalives(
-            chat.send_message(continuation_parts),
-        ):
-            if isinstance(item, tuple) and item[0] is _RESULT:
-                response = item[1]
-            else:
+        async for item in _stream_scene_parts(chat, continuation_parts):
+            if item.get("type") == "_meta":
+                if item["empty"]:
+                    yield _stage_event(
+                        "scene", "error",
+                        scene_idx=1,
+                        elapsed_s=time.perf_counter() - cont_t0,
+                        detail="Empty response from model",
+                    )
+                    yield {"type": "error", "content": "Continuation: empty response"}
+                # _meta is internal — don't forward to client
+                continue
+            if item.get("type") == "keepalive":
                 yield item
+                continue
+            yield item
         _scrub_thought_parts(chat)
-        parts = _extract_parts(response)
-        for p in parts:
-            yield p
         yield _stage_event(
             "scene", "complete",
             scene_idx=1,
