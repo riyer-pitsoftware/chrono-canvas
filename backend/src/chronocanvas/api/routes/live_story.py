@@ -112,18 +112,37 @@ def _gen_config() -> types.GenerateContentConfig:
 
 
 def _scrub_thought_parts(chat) -> None:
-    """Remove thought parts from chat history to prevent thought_signature 400 errors.
+    """Rebuild model responses in chat history with clean Part objects.
 
-    Even with thinking_budget=0, the model can occasionally return thought
-    parts that get auto-appended to _curated_history by the SDK.  When replayed
-    on the next turn the API rejects them with INVALID_ARGUMENT.
+    Even with thinking_budget=0, the model can return thought parts that get
+    auto-appended to _curated_history by the SDK.  Replaying these on the next
+    turn triggers INVALID_ARGUMENT (thought_signature errors).
+
+    Rather than patching existing Part objects (which can leave orphaned
+    thought_signature fields), we rebuild each content entry with brand-new
+    Part objects containing only text and inline_data — no thought metadata.
     """
     for content in chat._curated_history:
-        if content.parts:
-            content.parts = [
-                p for p in content.parts
-                if not (isinstance(getattr(p, "thought", None), bool) and p.thought)
-            ]
+        if not content.parts:
+            continue
+        clean_parts = []
+        for p in content.parts:
+            # Skip thought parts entirely
+            if isinstance(getattr(p, "thought", None), bool) and p.thought:
+                continue
+            # Rebuild text parts as fresh objects (drops thought_signature)
+            if p.text is not None:
+                clean_parts.append(types.Part.from_text(text=p.text))
+            # Rebuild image parts as fresh objects
+            elif p.inline_data is not None:
+                clean_parts.append(types.Part.from_bytes(
+                    data=p.inline_data.data,
+                    mime_type=p.inline_data.mime_type or "image/png",
+                ))
+            # Keep other part types as-is (e.g. function calls)
+            else:
+                clean_parts.append(p)
+        content.parts = clean_parts
 
 
 def _extract_parts(response) -> list[dict]:

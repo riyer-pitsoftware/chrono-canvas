@@ -153,6 +153,7 @@ async def _generate_image(
                     contents=contents,
                     config=types.GenerateContentConfig(
                         response_modalities=["IMAGE"],
+                        thinking_config=types.ThinkingConfig(thinking_budget=0),
                     ),
                 )
                 if (
