@@ -3,6 +3,7 @@ import json
 import logging
 import uuid
 import zipfile
+from dataclasses import dataclass
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Response
@@ -14,11 +15,93 @@ from chronocanvas.db.engine import get_session
 from chronocanvas.db.repositories.images import ImageRepository
 from chronocanvas.db.repositories.requests import RequestRepository
 from chronocanvas.security import confine_path
-from chronocanvas.services.storage import get_storage_backend
+from chronocanvas.services.storage import StorageBackend, get_storage_backend
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/export", tags=["export"])
+
+
+# ── Asset serving helpers ────────────────────────────────────────────────────
+
+
+@dataclass(frozen=True)
+class _CloudAsset:
+    """Asset resolved to cloud storage (GCS)."""
+
+    data: bytes
+
+
+@dataclass(frozen=True)
+class _LocalAsset:
+    """Asset resolved to a confined local path."""
+
+    path: Path
+
+
+_AssetSource = _CloudAsset | _LocalAsset
+
+
+async def resolve_asset_source(
+    relative_key: str,
+    local_path: Path,
+    backend: StorageBackend,
+    *,
+    not_found_detail: str = "File not found",
+) -> _AssetSource:
+    """Determine storage backend and resolve the asset to a serveable source.
+
+    Cloud mode: downloads the blob bytes via *backend*.
+    Local mode: confines *local_path* inside ``settings.output_dir`` and
+    verifies the file exists on disk.
+
+    Raises ``HTTPException`` (403 or 404) on access or existence errors.
+    """
+    if backend.is_cloud():
+        data = await backend.download(relative_key)
+        if data is None:
+            logger.warning(
+                "Asset not found in cloud storage: %s", relative_key
+            )
+            raise HTTPException(status_code=404, detail=not_found_detail)
+        return _CloudAsset(data=data)
+
+    # Local mode — confine path then verify existence
+    try:
+        confined = confine_path(local_path, Path(settings.output_dir))
+    except PermissionError:
+        raise HTTPException(status_code=403, detail="Access denied")
+    if not confined.exists():
+        raise HTTPException(status_code=404, detail=not_found_detail)
+    return _LocalAsset(path=confined)
+
+
+def serve_asset_response(
+    source: _AssetSource,
+    *,
+    media_type: str,
+    filename: str,
+    cache_control: str = "public, max-age=3600",
+) -> Response:
+    """Return the appropriate FastAPI response for a resolved asset source.
+
+    Cloud assets are served as inline ``Response`` with cache headers.
+    Local assets are served via ``FileResponse``.
+    """
+    if isinstance(source, _CloudAsset):
+        return Response(
+            content=source.data,
+            media_type=media_type,
+            headers={"Cache-Control": cache_control},
+        )
+    return FileResponse(
+        path=str(source.path),
+        media_type=media_type,
+        filename=filename,
+    )
+
+
+# ── Route handlers ───────────────────────────────────────────────────────────
 
 
 @router.get("/{request_id}/download")
@@ -31,95 +114,55 @@ async def download_image(request_id: uuid.UUID, session: AsyncSession = Depends(
     image = images[0]
     file_path = Path(image.file_path)
 
-    # Cloud mode: redirect to signed GCS URL
+    # Derive the cloud-relative key from the stored path
+    try:
+        relative_key = str(file_path.relative_to(settings.output_dir))
+    except ValueError:
+        relative_key = f"{request_id}/{file_path.name}"
+
     backend = get_storage_backend()
+
+    # Images use redirect for cloud (signed URL) instead of download
     if backend.is_cloud():
-        try:
-            relative = str(file_path.relative_to(settings.output_dir))
-        except ValueError:
-            relative = f"{request_id}/{file_path.name}"
-        url = await backend.get_url(relative)
+        url = await backend.get_url(relative_key)
         return RedirectResponse(url=url)
 
-    try:
-        file_path = confine_path(file_path, Path(settings.output_dir))
-    except PermissionError:
-        raise HTTPException(status_code=403, detail="Access denied")
-    if not file_path.exists():
-        raise HTTPException(status_code=404, detail="Image file not found on disk")
-
-    return FileResponse(
-        path=str(file_path),
-        media_type="image/png",
-        filename=file_path.name,
+    source = await resolve_asset_source(
+        relative_key, file_path, backend,
+        not_found_detail="Image file not found on disk",
+    )
+    return serve_asset_response(
+        source, media_type="image/png", filename=file_path.name,
     )
 
 
 @router.get("/{request_id}/audio/{scene_index}")
 async def download_audio(request_id: uuid.UUID, scene_index: int):
+    relative_key = f"{request_id}/audio/scene_{scene_index}.wav"
+    local_path = Path(settings.output_dir) / str(request_id) / "audio" / f"scene_{scene_index}.wav"
     backend = get_storage_backend()
-    if backend.is_cloud():
-        relative = f"{request_id}/audio/scene_{scene_index}.wav"
-        data = await backend.download(relative)
-        if data is None:
-            logger.warning(
-                "Audio not found in GCS: %s [request_id=%s, scene=%d]",
-                relative,
-                request_id,
-                scene_index,
-            )
-            raise HTTPException(status_code=404, detail="Audio file not found in GCS")
-        return Response(
-            content=data,
-            media_type="audio/wav",
-            headers={
-                "Cache-Control": "public, max-age=3600",
-            },
-        )
 
-    audio_path = Path(settings.output_dir) / str(request_id) / "audio" / f"scene_{scene_index}.wav"
-    try:
-        audio_path = confine_path(audio_path, Path(settings.output_dir))
-    except PermissionError:
-        raise HTTPException(status_code=403, detail="Access denied")
-    if not audio_path.exists():
-        raise HTTPException(status_code=404, detail="Audio file not found")
-
-    return FileResponse(
-        path=str(audio_path),
-        media_type="audio/wav",
-        filename=audio_path.name,
+    source = await resolve_asset_source(
+        relative_key, local_path, backend,
+        not_found_detail="Audio file not found",
+    )
+    return serve_asset_response(
+        source, media_type="audio/wav", filename=f"scene_{scene_index}.wav",
     )
 
 
 @router.get("/{request_id}/video")
 async def download_video(request_id: uuid.UUID):
+    relative_key = f"{request_id}/export/storyboard.mp4"
+    local_path = Path(settings.output_dir) / str(request_id) / "export" / "storyboard.mp4"
     backend = get_storage_backend()
-    if backend.is_cloud():
-        relative = f"{request_id}/export/storyboard.mp4"
-        data = await backend.download(relative)
-        if data is None:
-            raise HTTPException(status_code=404, detail="Video not yet available")
-        return Response(
-            content=data,
-            media_type="video/mp4",
-            headers={
-                "Cache-Control": "public, max-age=3600",
-            },
-        )
 
-    video_path = Path(settings.output_dir) / str(request_id) / "export" / "storyboard.mp4"
-    try:
-        video_path = confine_path(video_path, Path(settings.output_dir))
-    except PermissionError:
-        raise HTTPException(status_code=403, detail="Access denied")
-    if not video_path.exists():
-        raise HTTPException(status_code=404, detail="Video not yet available")
-
-    return FileResponse(
-        path=str(video_path),
-        media_type="video/mp4",
-        filename=f"storyboard_{request_id}.mp4",
+    source = await resolve_asset_source(
+        relative_key, local_path, backend,
+        not_found_detail="Video not yet available",
+    )
+    return serve_asset_response(
+        source, media_type="video/mp4", filename=f"storyboard_{request_id}.mp4",
     )
 
 

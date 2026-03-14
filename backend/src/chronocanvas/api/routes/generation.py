@@ -24,6 +24,7 @@ from chronocanvas.api.schemas.generation import (
 from chronocanvas.config import settings
 from chronocanvas.content_moderation import check_input
 from chronocanvas.db.engine import get_session
+from chronocanvas.db.models.request import GenerationRequest
 from chronocanvas.db.repositories.feedback import FeedbackRepository
 from chronocanvas.db.repositories.images import ImageRepository
 from chronocanvas.db.repositories.requests import RequestRepository
@@ -53,15 +54,16 @@ async def create_generation(
         raise HTTPException(status_code=422, detail="Provide either text or an image")
 
     repo = RequestRepository(session)
-    gen_request = await repo.create(
-        input_text=data.input_text,
-        figure_id=data.figure_id,
-        run_type=data.run_type,
-        status="pending",
-    )
-    await session.commit()
 
     if data.run_type == "creative_story":
+        gen_request = await repo.create(
+            input_text=data.input_text,
+            figure_id=data.figure_id,
+            run_type=data.run_type,
+            status="pending",
+        )
+        await session.commit()
+
         # Resolve optional reference image for image-to-story
         ref_image_path: str | None = None
         ref_image_mime: str | None = None
@@ -124,6 +126,7 @@ async def create_generation(
             config_payload=data.config,
         )
     else:
+        # Resolve optional face image for standard generation
         source_face_path: str | None = None
         if data.face_id:
             faces_base = Path(settings.upload_dir) / "faces"
@@ -139,15 +142,47 @@ async def create_generation(
                 raise HTTPException(status_code=404, detail="Face not found")
             source_face_path = safe_matches[0]
 
-        await request.app.state.arq_pool.enqueue_job(
-            "run_generation_pipeline_task",
-            str(gen_request.id),
-            data.input_text,
+        gen_request = await create_and_enqueue_generation(
+            repo,
+            request.app.state.arq_pool,
+            session,
+            input_text=data.input_text,
+            figure_id=data.figure_id,
+            run_type=data.run_type,
             source_face_path=source_face_path,
             config_payload=data.config,
         )
 
     return GenerationResponse.model_validate(gen_request)
+
+
+async def create_and_enqueue_generation(
+    repo: RequestRepository,
+    arq_pool,
+    session: AsyncSession,
+    *,
+    input_text: str,
+    figure_id: str | None = None,
+    run_type: str | None = None,
+    source_face_path: str | None = None,
+    config_payload: dict | None = None,
+) -> GenerationRequest:
+    """Create a generation request in the DB, commit, and enqueue the pipeline job."""
+    gen_request = await repo.create(
+        input_text=input_text,
+        figure_id=figure_id,
+        run_type=run_type,
+        status="pending",
+    )
+    await session.commit()
+    await arq_pool.enqueue_job(
+        "run_generation_pipeline_task",
+        str(gen_request.id),
+        input_text,
+        source_face_path=source_face_path,
+        config_payload=config_payload,
+    )
+    return gen_request
 
 
 @router.post("/batch", response_model=BatchGenerationResponse, status_code=201)
@@ -159,18 +194,14 @@ async def create_batch_generation(
     repo = RequestRepository(session)
     request_ids = []
     for item in data.items:
-        gen_request = await repo.create(
+        gen_request = await create_and_enqueue_generation(
+            repo,
+            request.app.state.arq_pool,
+            session,
             input_text=item.input_text,
             figure_id=item.figure_id,
-            status="pending",
         )
         request_ids.append(gen_request.id)
-    await session.commit()
-
-    for i, item in enumerate(data.items):
-        await request.app.state.arq_pool.enqueue_job(
-            "run_generation_pipeline_task", str(request_ids[i]), item.input_text
-        )
 
     return BatchGenerationResponse(request_ids=request_ids, total=len(request_ids))
 

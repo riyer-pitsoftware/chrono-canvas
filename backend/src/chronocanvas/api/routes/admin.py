@@ -111,6 +111,26 @@ async def update_pass_threshold(
 # ── Review Queue ─────────────────────────────────────────────────────────────
 
 
+async def build_validation_queue_item(
+    session: AsyncSession,
+    req: GenerationRequest,
+    threshold: float,
+    projector: ValidationQueueProjector,
+    *,
+    enforce_threshold: bool = True,
+) -> ValidationQueueItem | None:
+    """Fetch validations + image for a request and project into a queue item."""
+    val_stmt = select(ValidationResult).where(ValidationResult.request_id == req.id)
+    val_result = await session.execute(val_stmt)
+    val_rows = list(val_result.scalars().all())
+
+    img_stmt = select(GeneratedImage).where(GeneratedImage.request_id == req.id).limit(1)
+    img_result = await session.execute(img_stmt)
+    img = img_result.scalars().first()
+
+    return projector.build_item(req, val_rows, threshold, img, enforce_threshold=enforce_threshold)
+
+
 @router.get("/validation/queue", response_model=ValidationQueueResponse)
 async def get_validation_queue(
     skip: int = 0,
@@ -136,15 +156,7 @@ async def get_validation_queue(
     projector = ValidationQueueProjector()
     items = []
     for req in requests:
-        val_stmt = select(ValidationResult).where(ValidationResult.request_id == req.id)
-        val_result = await session.execute(val_stmt)
-        val_rows = list(val_result.scalars().all())
-
-        img_stmt = select(GeneratedImage).where(GeneratedImage.request_id == req.id).limit(1)
-        img_result = await session.execute(img_stmt)
-        img = img_result.scalars().first()
-
-        item = projector.build_item(req, val_rows, threshold, img)
+        item = await build_validation_queue_item(session, req, threshold, projector)
         if item is not None:
             items.append(item)
 
@@ -161,26 +173,39 @@ async def get_validation_item(
     if request is None:
         raise HTTPException(status_code=404, detail="Request not found")
 
-    val_stmt = select(ValidationResult).where(ValidationResult.request_id == request_id)
-    val_result = await session.execute(val_stmt)
-    val_rows = list(val_result.scalars().all())
-
-    img_stmt = select(GeneratedImage).where(GeneratedImage.request_id == request_id).limit(1)
-    img_result = await session.execute(img_stmt)
-    img = img_result.scalars().first()
-
     threshold = await AdminSettingRepository(session).get_pass_threshold()
     projector = ValidationQueueProjector()
-    item = projector.build_item(
-        request,
-        val_rows,
-        threshold,
-        img,
-        enforce_threshold=False,
+    item = await build_validation_queue_item(
+        session, request, threshold, projector, enforce_threshold=False
     )
     if item is None:
         raise HTTPException(status_code=404, detail="Validation details not found")
     return item
+
+
+async def _apply_human_review_status(
+    request_id: uuid.UUID,
+    status: str,
+    body: HumanReviewRequest,
+    session: AsyncSession,
+) -> HumanReviewResponse:
+    """Load request, apply human review status, commit, and return response."""
+    repo = RequestRepository(session)
+    request = await repo.get(request_id)
+    if request is None:
+        raise HTTPException(status_code=404, detail="Request not found")
+    await repo.update(
+        request_id,
+        human_review_status=status,
+        human_review_notes=body.notes,
+        human_reviewed_at=datetime.now(timezone.utc),
+    )
+    await session.commit()
+    return HumanReviewResponse(
+        request_id=request_id,
+        status=status,
+        notes=body.notes,
+    )
 
 
 @router.post("/validation/{request_id}/accept", response_model=HumanReviewResponse)
@@ -189,22 +214,7 @@ async def accept_validation(
     body: HumanReviewRequest,
     session: AsyncSession = Depends(get_session),
 ):
-    repo = RequestRepository(session)
-    request = await repo.get(request_id)
-    if request is None:
-        raise HTTPException(status_code=404, detail="Request not found")
-    await repo.update(
-        request_id,
-        human_review_status="accepted",
-        human_review_notes=body.notes,
-        human_reviewed_at=datetime.now(timezone.utc),
-    )
-    await session.commit()
-    return HumanReviewResponse(
-        request_id=request_id,
-        status="accepted",
-        notes=body.notes,
-    )
+    return await _apply_human_review_status(request_id, "accepted", body, session)
 
 
 @router.post("/validation/{request_id}/reject", response_model=HumanReviewResponse)
@@ -213,22 +223,7 @@ async def reject_validation(
     body: HumanReviewRequest,
     session: AsyncSession = Depends(get_session),
 ):
-    repo = RequestRepository(session)
-    request = await repo.get(request_id)
-    if request is None:
-        raise HTTPException(status_code=404, detail="Request not found")
-    await repo.update(
-        request_id,
-        human_review_status="rejected",
-        human_review_notes=body.notes,
-        human_reviewed_at=datetime.now(timezone.utc),
-    )
-    await session.commit()
-    return HumanReviewResponse(
-        request_id=request_id,
-        status="rejected",
-        notes=body.notes,
-    )
+    return await _apply_human_review_status(request_id, "rejected", body, session)
 
 
 @router.post("/validation/{request_id}/flag", response_model=HumanReviewResponse)
@@ -237,22 +232,7 @@ async def flag_validation(
     body: HumanReviewRequest,
     session: AsyncSession = Depends(get_session),
 ):
-    repo = RequestRepository(session)
-    request = await repo.get(request_id)
-    if request is None:
-        raise HTTPException(status_code=404, detail="Request not found")
-    await repo.update(
-        request_id,
-        human_review_status="flagged",
-        human_review_notes=body.notes,
-        human_reviewed_at=datetime.now(timezone.utc),
-    )
-    await session.commit()
-    return HumanReviewResponse(
-        request_id=request_id,
-        status="flagged",
-        notes=body.notes,
-    )
+    return await _apply_human_review_status(request_id, "flagged", body, session)
 
 
 # ── Archive ──────────────────────────────────────────────────────────────────
