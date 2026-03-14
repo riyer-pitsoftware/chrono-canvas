@@ -1,10 +1,10 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { useGenerations } from '@/api/hooks/useGeneration';
+import { useCompletedGenerations } from '@/api/hooks/useGeneration';
 
 export function Export() {
-  const { data } = useGenerations(0, 50);
-  const completed = data?.items.filter((g) => g.status === 'completed') ?? [];
+  const { data } = useCompletedGenerations(50);
+  const completed = data?.items ?? [];
 
   return (
     <div>
