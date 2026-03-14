@@ -1,24 +1,6 @@
-import { useQuery } from '@tanstack/react-query';
-import { api } from '../client';
+import { createGetQueryHook } from './shared';
 import type { AgentListResponse, LLMAvailability, CostSummary } from '../types';
 
-export function useAgents() {
-  return useQuery({
-    queryKey: ['agents'],
-    queryFn: () => api.get<AgentListResponse>('/agents'),
-  });
-}
-
-export function useLLMStatus() {
-  return useQuery({
-    queryKey: ['agents', 'llm-status'],
-    queryFn: () => api.get<LLMAvailability>('/agents/llm-status'),
-  });
-}
-
-export function useCostSummary() {
-  return useQuery({
-    queryKey: ['agents', 'costs'],
-    queryFn: () => api.get<CostSummary>('/agents/costs'),
-  });
-}
+export const useAgents = createGetQueryHook<AgentListResponse>(['agents'], '/agents');
+export const useLLMStatus = createGetQueryHook<LLMAvailability>(['agents', 'llm-status'], '/agents/llm-status');
+export const useCostSummary = createGetQueryHook<CostSummary>(['agents', 'costs'], '/agents/costs');

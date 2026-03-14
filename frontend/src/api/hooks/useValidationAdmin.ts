@@ -52,35 +52,27 @@ export function useValidationReviewItem(requestId: string | undefined) {
   });
 }
 
-export function useAcceptValidation() {
+type ReviewAction = 'accept' | 'reject' | 'flag';
+
+export function useReviewValidationAction(action: ReviewAction) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ requestId, notes }: { requestId: string; notes?: string }) =>
-      api.post(`/admin/validation/${requestId}/accept`, { notes: notes ?? null }),
+      api.post(`/admin/validation/${requestId}/${action}`, { notes: notes ?? null }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['admin', 'validation-queue'] });
     },
   });
+}
+
+export function useAcceptValidation() {
+  return useReviewValidationAction('accept');
 }
 
 export function useRejectValidation() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ requestId, notes }: { requestId: string; notes?: string }) =>
-      api.post(`/admin/validation/${requestId}/reject`, { notes: notes ?? null }),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['admin', 'validation-queue'] });
-    },
-  });
+  return useReviewValidationAction('reject');
 }
 
 export function useFlagValidation() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ requestId, notes }: { requestId: string; notes?: string }) =>
-      api.post(`/admin/validation/${requestId}/flag`, { notes: notes ?? null }),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['admin', 'validation-queue'] });
-    },
-  });
+  return useReviewValidationAction('flag');
 }

@@ -1,5 +1,6 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { api } from '../client';
+import { createDetailQueryHook, createGetQueryHook, createMutationHook } from './shared';
 import type { DashboardData, EvalCase, EvalRunDetail, EvalRunSummary } from '../types';
 
 export function useEvalRuns(condition?: string, caseId?: string, includeRejected?: boolean) {
@@ -14,53 +15,18 @@ export function useEvalRuns(condition?: string, caseId?: string, includeRejected
   });
 }
 
-export function useEvalRun(runId: string | undefined) {
-  return useQuery({
-    queryKey: ['eval', 'run', runId],
-    enabled: Boolean(runId),
-    queryFn: () => api.get<EvalRunDetail>(`/eval/runs/${runId}`),
-  });
-}
+export const useEvalRun = createDetailQueryHook<EvalRunDetail>('eval', 'run', '/eval/runs');
+export const useEvalCases = createGetQueryHook<EvalCase[]>(['eval', 'cases'], '/eval/cases');
+export const useEvalCase = createDetailQueryHook<EvalCase>('eval', 'case', '/eval/cases');
+export const useEvalDashboard = createGetQueryHook<DashboardData>(['eval', 'dashboard'], '/eval/dashboard');
 
-export function useEvalCases() {
-  return useQuery({
-    queryKey: ['eval', 'cases'],
-    queryFn: () => api.get<EvalCase[]>('/eval/cases'),
-  });
-}
+export const useRejectEvalRun = createMutationHook(
+  ({ runId, reason }: { runId: string; reason?: string }) =>
+    api.post(`/eval/runs/${runId}/reject`, { reason }),
+  ['eval'],
+);
 
-export function useEvalCase(caseId: string | undefined) {
-  return useQuery({
-    queryKey: ['eval', 'case', caseId],
-    enabled: Boolean(caseId),
-    queryFn: () => api.get<EvalCase>(`/eval/cases/${caseId}`),
-  });
-}
-
-export function useEvalDashboard() {
-  return useQuery({
-    queryKey: ['eval', 'dashboard'],
-    queryFn: () => api.get<DashboardData>('/eval/dashboard'),
-  });
-}
-
-export function useRejectEvalRun() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ runId, reason }: { runId: string; reason?: string }) =>
-      api.post(`/eval/runs/${runId}/reject`, { reason }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['eval'] });
-    },
-  });
-}
-
-export function useUnrejectEvalRun() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (runId: string) => api.post(`/eval/runs/${runId}/unreject`, {}),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['eval'] });
-    },
-  });
-}
+export const useUnrejectEvalRun = createMutationHook(
+  (runId: string) => api.post(`/eval/runs/${runId}/unreject`, {}),
+  ['eval'],
+);
