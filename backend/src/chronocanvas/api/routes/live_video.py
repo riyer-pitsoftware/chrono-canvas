@@ -10,6 +10,7 @@ Videos stream back as SSE events as each completes (~1-3 min per clip).
 
 import asyncio
 import base64
+import io
 import json
 import logging
 import shutil
@@ -115,11 +116,28 @@ async def _generate_scene_video(
     prompt = "".join(prompt_parts)
 
     # Decode scene image for first-frame reference
-    image_bytes = base64.b64decode(scene.image_base64)
-    reference_image = types.Image(
-        image_bytes=image_bytes,
-        mime_type=scene.mime_type,
-    )
+    raw_image_bytes = base64.b64decode(scene.image_base64)
+
+    # Upload image as a file — Veo may reject raw image bytes (SDK issue #1988)
+    # Fall back to types.Image if upload fails
+    reference_image = None
+    uploaded_file = None
+    try:
+        uploaded_file = await client.aio.files.upload(
+            file=io.BytesIO(raw_image_bytes),
+            config={"mime_type": scene.mime_type},
+        )
+        reference_image = uploaded_file
+        logger.info("Veo scene %d: uploaded reference image as file", scene_idx)
+    except Exception as upload_err:
+        logger.warning(
+            "Veo scene %d: file upload failed (%s), falling back to inline image",
+            scene_idx, upload_err,
+        )
+        reference_image = types.Image(
+            image_bytes=raw_image_bytes,
+            mime_type=scene.mime_type,
+        )
 
     last_error = None
     for model in _VEO_MODEL_CHAIN:
@@ -148,13 +166,47 @@ async def _generate_scene_video(
             if not operation.done:
                 raise TimeoutError(f"Veo operation timed out after {_VEO_TIMEOUT}s")
 
-            # Extract video from completed operation
-            result = operation.result
-            if not result or not result.generated_videos:
+            # Extract video — try operation.response first (documented),
+            # fall back to operation.result (older SDK versions)
+            response = getattr(operation, "response", None) or getattr(operation, "result", None)
+            if not response or not response.generated_videos:
                 raise RuntimeError("Veo returned no video")
 
-            video = result.generated_videos[0]
-            video_bytes = video.video.video_bytes
+            video = response.generated_videos[0]
+            video_data = video.video
+            logger.info(
+                "Veo scene %d response format: type=%s, has_bytes=%s, has_uri=%s",
+                scene_idx,
+                type(video_data).__name__,
+                bool(getattr(video_data, "video_bytes", None)),
+                bool(getattr(video_data, "uri", None)),
+            )
+
+            # Download video file if bytes not yet populated
+            # (SDK requires client.files.download() before video_bytes is available)
+            if not getattr(video_data, "video_bytes", None):
+                try:
+                    await client.aio.files.download(file=video_data)
+                    logger.info("Veo scene %d: downloaded video via files.download()", scene_idx)
+                except Exception as dl_err:
+                    logger.warning("Veo scene %d: files.download() failed: %s", scene_idx, dl_err)
+
+            # Extract bytes — inline, post-download, or via URI
+            if getattr(video_data, "video_bytes", None):
+                video_bytes = video_data.video_bytes
+            elif getattr(video_data, "uri", None):
+                import httpx
+                async with httpx.AsyncClient() as http:
+                    resp = await http.get(video_data.uri, timeout=60)
+                    resp.raise_for_status()
+                    video_bytes = resp.content
+                logger.info("Veo scene %d: downloaded video from URI fallback", scene_idx)
+            else:
+                raise RuntimeError(
+                    f"Veo returned unrecognized video format: {type(video_data)}, "
+                    f"attrs={[a for a in dir(video_data) if not a.startswith('_')]}"
+                )
+
             video_b64 = base64.b64encode(video_bytes).decode("ascii")
 
             elapsed_s = time.perf_counter() - t0

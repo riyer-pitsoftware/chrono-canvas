@@ -40,6 +40,7 @@ type Scene = {
   mimeType?: string;
   videoBase64?: string;
   videoMimeType?: string;
+  videoFailed?: boolean;
 };
 
 /* ── Suggested prompts ─────────────────────────────────────────── */
@@ -613,9 +614,21 @@ function SceneViewer({
           transition: 'opacity 500ms ease-in-out',
         }}
       >
-        {/* Scene visual — video clip (if generated) or image with camera iris */}
+        {/* Scene visual — video clip (dissolve from image) or image with camera iris */}
         {scene.videoBase64 ? (
-          <div className="overflow-hidden rounded-lg max-h-[50vh] max-w-full">
+          <div className="relative overflow-hidden rounded-lg max-h-[50vh] max-w-full">
+            {/* Image underneath fades out during dissolve */}
+            {scene.imageBase64 && (
+              <img
+                src={`data:${scene.mimeType || 'image/png'};base64,${scene.imageBase64}`}
+                alt=""
+                className="absolute inset-0 w-full h-full object-contain"
+                style={{
+                  animation: 'dissolveOut 500ms ease-in forwards',
+                  boxShadow: '0 0 80px rgba(180, 140, 60, 0.12), 0 8px 40px rgba(0,0,0,0.7)',
+                }}
+              />
+            )}
             <video
               src={`data:${scene.videoMimeType || 'video/mp4'};base64,${scene.videoBase64}`}
               autoPlay
@@ -624,26 +637,41 @@ function SceneViewer({
               playsInline
               className="max-h-[50vh] max-w-full object-contain"
               style={{
+                animation: 'dissolveIn 800ms ease-out',
                 boxShadow: '0 0 80px rgba(180, 140, 60, 0.12), 0 8px 40px rgba(0,0,0,0.7)',
               }}
             />
           </div>
         ) : scene.imageBase64 ? (
-          <div
-            className="overflow-hidden rounded-lg max-h-[50vh] max-w-full"
-            style={{
-              clipPath: `circle(${irisRadius}% at 50% 50%)`,
-              transition: 'clip-path 300ms ease-out',
-            }}
-          >
-            <img
-              src={`data:${scene.mimeType || 'image/png'};base64,${scene.imageBase64}`}
-              alt={`Scene ${current + 1}`}
-              className="max-h-[50vh] max-w-full object-contain"
+          <div className="relative overflow-hidden rounded-lg max-h-[50vh] max-w-full">
+            <div
               style={{
-                boxShadow: '0 0 80px rgba(180, 140, 60, 0.12), 0 8px 40px rgba(0,0,0,0.7)',
+                clipPath: `circle(${irisRadius}% at 50% 50%)`,
+                transition: 'clip-path 300ms ease-out',
               }}
-            />
+            >
+              <img
+                src={`data:${scene.mimeType || 'image/png'};base64,${scene.imageBase64}`}
+                alt={`Scene ${current + 1}`}
+                className="max-h-[50vh] max-w-full object-contain"
+                style={{
+                  boxShadow: '0 0 80px rgba(180, 140, 60, 0.12), 0 8px 40px rgba(0,0,0,0.7)',
+                }}
+              />
+            </div>
+            {/* Graceful "still frame" badge when video generation failed */}
+            {scene.videoFailed && (
+              <div
+                className="absolute bottom-2 right-2 px-2 py-1 rounded text-[10px] tracking-wide uppercase"
+                style={{
+                  background: 'rgba(0,0,0,0.6)',
+                  color: 'oklch(0.7 0.02 80)',
+                  backdropFilter: 'blur(4px)',
+                }}
+              >
+                Still frame
+              </div>
+            )}
           </div>
         ) : null}
 
@@ -709,10 +737,15 @@ function SceneViewer({
                 <button
                   onClick={onGenerateFilm}
                   disabled={filmGenerating}
-                  className="text-xs text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors border border-[var(--border)] rounded-md px-3 py-1.5 hover:border-[var(--primary)] disabled:opacity-50"
-                  style={{ fontFamily: "'Georgia', 'Times New Roman', serif" }}
+                  className="text-xs font-medium transition-all rounded-md px-4 py-1.5 disabled:opacity-50"
+                  style={{
+                    fontFamily: "'Georgia', 'Times New Roman', serif",
+                    background: filmGenerating ? 'var(--border)' : 'var(--primary)',
+                    color: filmGenerating ? 'var(--muted-foreground)' : 'var(--primary-foreground)',
+                    boxShadow: filmGenerating ? 'none' : '0 0 12px rgba(180, 140, 60, 0.3)',
+                  }}
                 >
-                  {filmGenerating ? 'Generating...' : 'Generate Film'}
+                  {filmGenerating ? 'Generating...' : '\u25B6 Generate Film'}
                 </button>
               )}
               {filmComplete && (
@@ -728,11 +761,51 @@ function SceneViewer({
           </div>
         )}
 
-        {/* Film generation progress */}
-        {filmGenerating && filmProgress && (
-          <div className="flex items-center gap-2 text-sm text-[var(--muted-foreground)] italic animate-pulse">
-            <span className="inline-block w-2 h-2 rounded-full bg-[var(--primary)] animate-ping" />
-            {filmProgress}
+        {/* Film generation progress grid */}
+        {filmGenerating && (
+          <div className="flex flex-col items-center gap-3 mt-2" style={{ animation: 'fadeIn 400ms ease-out' }}>
+            <div className="flex items-center gap-1.5 flex-wrap justify-center max-w-md">
+              {scenes.map((s, i) => (
+                <div
+                  key={i}
+                  className="relative w-12 h-8 rounded overflow-hidden border"
+                  style={{
+                    borderColor: s.videoBase64
+                      ? 'var(--primary)'
+                      : s.videoFailed
+                        ? 'oklch(0.6 0.15 30)'
+                        : 'var(--border)',
+                    opacity: s.videoBase64 || s.videoFailed ? 1 : 0.6,
+                  }}
+                >
+                  {s.imageBase64 && (
+                    <img
+                      src={`data:${s.mimeType || 'image/png'};base64,${s.imageBase64}`}
+                      alt=""
+                      className="absolute inset-0 w-full h-full object-cover"
+                    />
+                  )}
+                  {/* Spinner overlay for pending scenes */}
+                  {!s.videoBase64 && !s.videoFailed && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                      <span
+                        className="w-3 h-3 border-2 border-[var(--primary)] border-t-transparent rounded-full"
+                        style={{ animation: 'spin 800ms linear infinite' }}
+                      />
+                    </div>
+                  )}
+                  {/* Check for completed scenes */}
+                  {s.videoBase64 && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                      <span className="text-[var(--primary)] text-xs font-bold">&#x2713;</span>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+            {filmProgress && (
+              <p className="text-xs text-[var(--muted-foreground)] italic">{filmProgress}</p>
+            )}
           </div>
         )}
 
@@ -812,12 +885,20 @@ function SceneViewer({
           30% { opacity: 0; }
           100% { opacity: 1; }
         }
-@keyframes fadeIn {
+        @keyframes dissolveOut {
+          0% { opacity: 1; }
+          70% { opacity: 0.3; }
+          100% { opacity: 0; }
+        }
+        @keyframes fadeIn {
           from { opacity: 0; }
           to { opacity: 1; }
         }
         @keyframes blink {
           50% { opacity: 0; }
+        }
+        @keyframes spin {
+          to { transform: rotate(360deg); }
         }
       `}</style>
     </div>
@@ -842,12 +923,16 @@ export function LiveStory() {
   const [filmProgress, setFilmProgress] = useState<string | null>(null);
   const [filmComplete, setFilmComplete] = useState(false);
   const [videoClips, setVideoClips] = useState<Map<number, { base64: string; mimeType: string }>>(new Map());
+  const [failedScenes, setFailedScenes] = useState<Set<number>>(new Set());
   const [veoEnabled, setVeoEnabled] = useState(true);
 
   const scenes = pairParts(parts).map((scene, i) => {
     const clip = videoClips.get(i);
     if (clip) {
       return { ...scene, videoBase64: clip.base64, videoMimeType: clip.mimeType };
+    }
+    if (failedScenes.has(i)) {
+      return { ...scene, videoFailed: true };
     }
     return scene;
   });
@@ -1000,6 +1085,7 @@ export function LiveStory() {
 
     setFilmGenerating(true);
     setFilmComplete(false);
+    setFailedScenes(new Set());
     setFilmProgress(`Starting film generation for ${scenesWithImages.length} scenes...`);
 
     try {
@@ -1053,7 +1139,8 @@ export function LiveStory() {
             });
           } else if (data.type === 'scene_video_error') {
             completed++;
-            setFilmProgress(`Scene ${data.scene_idx + 1} failed, continuing...`);
+            setFailedScenes((prev) => new Set(prev).add(data.scene_idx));
+            setFilmProgress(`Scene ${data.scene_idx + 1} using still frame, continuing...`);
           } else if (data.type === 'film_complete') {
             setFilmComplete(data.completed > 0);
             setFilmProgress(null);
