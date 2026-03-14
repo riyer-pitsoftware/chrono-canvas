@@ -32,6 +32,10 @@ _MODEL_CHAIN = [
 # Timeout per Gemini chat turn (seconds) — casting and scenes
 _TURN_TIMEOUT_S = 120
 
+# Keepalive interval (seconds) — SSE comment sent while waiting for Gemini
+_KEEPALIVE_INTERVAL_S = 15
+_KEEPALIVE_EVENT = {"type": "keepalive"}
+
 DASH_SYSTEM_INSTRUCTION = """\
 You are Dash, a noir creative director and cinematographer.
 
@@ -145,6 +149,44 @@ def _scrub_thought_parts(chat) -> None:
         content.parts = clean_parts
 
 
+_RESULT = object()  # sentinel for _call_with_keepalives
+
+
+async def _call_with_keepalives(
+    coro,
+    timeout_s: float = _TURN_TIMEOUT_S,
+    interval_s: float = _KEEPALIVE_INTERVAL_S,
+) -> AsyncGenerator:
+    """Async generator that yields keepalive events while awaiting a coroutine.
+
+    Yields ``_KEEPALIVE_EVENT`` dicts every *interval_s* seconds while *coro*
+    is running.  The final yield is the tuple ``(_RESULT, response)``.
+    Raises ``asyncio.TimeoutError`` if the coroutine exceeds *timeout_s*.
+    """
+    task = asyncio.ensure_future(coro)
+    deadline = asyncio.get_event_loop().time() + timeout_s
+    try:
+        while not task.done():
+            remaining = deadline - asyncio.get_event_loop().time()
+            if remaining <= 0:
+                task.cancel()
+                raise asyncio.TimeoutError()
+            try:
+                await asyncio.wait_for(
+                    asyncio.shield(task),
+                    timeout=min(interval_s, remaining),
+                )
+            except asyncio.TimeoutError:
+                if task.done():
+                    break
+                yield _KEEPALIVE_EVENT
+        # Propagate any exception from the task
+        yield (_RESULT, task.result())
+    except asyncio.CancelledError:
+        task.cancel()
+        raise
+
+
 def _extract_parts(response) -> list[dict]:
     """Extract text and image parts from a Gemini response."""
     results = []
@@ -224,6 +266,9 @@ async def live_story(req: LiveStoryRequest):
             flow = _scene_by_scene_flow(chat, req, model_used)
 
         async for part_data in flow:
+            if part_data.get("type") == "keepalive":
+                yield ": keepalive\n\n"
+                continue
             if part_data["type"] == "text":
                 text_count += 1
             elif part_data["type"] == "image":
@@ -270,10 +315,12 @@ async def _scene_by_scene_flow(
     )
     casting_t0 = time.perf_counter()
     try:
-        response = await asyncio.wait_for(
-            chat.send_message(casting_prompt),
-            timeout=_TURN_TIMEOUT_S,
-        )
+        response = None
+        async for item in _call_with_keepalives(chat.send_message(casting_prompt)):
+            if isinstance(item, tuple) and item[0] is _RESULT:
+                response = item[1]
+            else:
+                yield item
         _scrub_thought_parts(chat)
         casting_parts = _extract_parts(response)
         for cp in casting_parts:
@@ -328,10 +375,12 @@ async def _scene_by_scene_flow(
             )
 
         try:
-            response = await asyncio.wait_for(
-                chat.send_message(prompt),
-                timeout=_TURN_TIMEOUT_S,
-            )
+            response = None
+            async for item in _call_with_keepalives(chat.send_message(prompt)):
+                if isinstance(item, tuple) and item[0] is _RESULT:
+                    response = item[1]
+                else:
+                    yield item
             _scrub_thought_parts(chat)
             parts = _extract_parts(response)
             if not parts:
@@ -412,10 +461,11 @@ async def _continuation_flow(
     initial_prompt = _build_prompt(orig)
 
     try:
-        await asyncio.wait_for(
-            chat.send_message(initial_prompt),
-            timeout=_TURN_TIMEOUT_S,
-        )
+        async for item in _call_with_keepalives(chat.send_message(initial_prompt)):
+            if isinstance(item, tuple) and item[0] is _RESULT:
+                pass  # replay result discarded
+            else:
+                yield item
         _scrub_thought_parts(chat)
         yield _stage_event(
             "replay", "complete",
@@ -473,10 +523,14 @@ async def _continuation_flow(
     continuation_parts.append(types.Part.from_text(text=continuation_text))
 
     try:
-        response = await asyncio.wait_for(
+        response = None
+        async for item in _call_with_keepalives(
             chat.send_message(continuation_parts),
-            timeout=_TURN_TIMEOUT_S,
-        )
+        ):
+            if isinstance(item, tuple) and item[0] is _RESULT:
+                response = item[1]
+            else:
+                yield item
         _scrub_thought_parts(chat)
         parts = _extract_parts(response)
         for p in parts:
