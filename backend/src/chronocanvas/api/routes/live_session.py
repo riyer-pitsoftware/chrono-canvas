@@ -148,13 +148,17 @@ async def _generate_image(
 
         for img_model in _IMAGE_MODEL_CHAIN:
             try:
+                gen_config = types.GenerateContentConfig(
+                    response_modalities=["IMAGE"],
+                )
+                # Only models that support thinking get the config
+                if "3.1" in img_model:
+                    gen_config.thinking_config = types.ThinkingConfig(thinking_level="MINIMAL")
+
                 response = await client.aio.models.generate_content(
                     model=img_model,
                     contents=contents,
-                    config=types.GenerateContentConfig(
-                        response_modalities=["IMAGE"],
-                        thinking_config=types.ThinkingConfig(thinking_level="MINIMAL"),
-                    ),
+                    config=gen_config,
                 )
                 if (
                     response.candidates

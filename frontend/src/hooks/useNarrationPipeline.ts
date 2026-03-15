@@ -6,6 +6,7 @@ type CacheEntry = {
   status: NarrationStatus;
   audio: HTMLAudioElement | null;
   blobUrl: string | null;
+  retries: number;
 };
 
 type Scene = {
@@ -46,16 +47,20 @@ export function useNarrationPipeline(
     [],
   );
 
+  const MAX_RETRIES = 2;
+
   // Fetch narration for a single scene
   const fetchNarration = useCallback((idx: number, text: string) => {
     if (!text) {
       // No text → mark ready immediately (image-only scene)
-      cache.current.set(idx, { status: 'ready', audio: null, blobUrl: null });
+      cache.current.set(idx, { status: 'ready', audio: null, blobUrl: null, retries: 0 });
       if (idx === currentRef.current) setCurrentReady(true);
       return;
     }
 
-    cache.current.set(idx, { status: 'fetching', audio: null, blobUrl: null });
+    const prev = cache.current.get(idx);
+    const retryCount = prev?.retries ?? 0;
+    cache.current.set(idx, { status: 'fetching', audio: null, blobUrl: null, retries: retryCount });
     inflightCount.current++;
 
     const ctrl = new AbortController();
@@ -76,22 +81,28 @@ export function useNarrationPipeline(
         const url = URL.createObjectURL(blob);
         const audio = new Audio(url);
         audio.onended = () => URL.revokeObjectURL(url);
-        cache.current.set(idx, { status: 'ready', audio, blobUrl: url });
+        cache.current.set(idx, { status: 'ready', audio, blobUrl: url, retries: retryCount });
         if (idx === currentRef.current) setCurrentReady(true);
       })
       .catch((err) => {
         if (err.name === 'AbortError') return;
-        console.warn(`Narration failed for scene ${idx}:`, err);
-        cache.current.set(idx, { status: 'error', audio: null, blobUrl: null });
-        // Unblock cinema on error so it proceeds without audio
-        if (idx === currentRef.current) setCurrentReady(true);
+        console.warn(`Narration failed for scene ${idx} (attempt ${retryCount + 1}):`, err);
+
+        if (retryCount < MAX_RETRIES) {
+          // Mark idle with incremented retry count so drainQueue re-fetches it
+          cache.current.set(idx, { status: 'idle', audio: null, blobUrl: null, retries: retryCount + 1 });
+        } else {
+          // Exhausted retries — unblock cinema without audio
+          cache.current.set(idx, { status: 'error', audio: null, blobUrl: null, retries: retryCount });
+          if (idx === currentRef.current) setCurrentReady(true);
+        }
       })
       .finally(() => {
         if (!ctrl.signal.aborted) {
           inflightCount.current--;
           abortMap.current.delete(idx);
         }
-        // Drain queue — schedule next fetch
+        // Drain queue — schedule next fetch (will pick up retries)
         drainQueue();
       });
   }, []);
@@ -138,7 +149,7 @@ export function useNarrationPipeline(
           abortMap.current.delete(worstIdx);
           inflightCount.current--;
           // Reset the aborted entry so it can be re-queued later
-          cache.current.set(worstIdx, { status: 'idle', audio: null, blobUrl: null });
+          cache.current.set(worstIdx, { status: 'idle', audio: null, blobUrl: null, retries: 0 });
         }
       }
     },

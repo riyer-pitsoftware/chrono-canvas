@@ -116,8 +116,9 @@ class Settings(BaseSettings):
     # Demo fallback (pre-baked Veo film clips for reliable demo presentations)
     demo_fallback_dir: str = "demo/fallback"
 
-    # Hackathon mode
-    hackathon_mode: bool = False  # When True, UI defaults to Story Director
+    # Hackathon mode — derived from deployment_mode; no separate env var needed.
+    # Automatically True when DEPLOYMENT_MODE=gcp.
+    hackathon_mode: bool = False
 
     # Hackathon strict Gemini mode
     hackathon_strict_gemini: bool = (
@@ -133,8 +134,20 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     log_format: str = "json"  # "json" for structured Cloud Logging, "text" for local dev
 
+    # App-level password gate (required for remote; optional locally)
+    # When set, users must log in before accessing any page.
+    app_password: str = ""
+
     # Admin API authentication (required when enable_admin_api=True on GCP)
     admin_api_key: str = ""
+
+    @model_validator(mode="after")
+    def _unify_gcp_and_hackathon(self) -> "Settings":
+        """GCP deployment mode implies hackathon mode and strict Gemini."""
+        if self.deployment_mode == "gcp":
+            self.hackathon_mode = True
+            self.hackathon_strict_gemini = True
+        return self
 
     @model_validator(mode="after")
     def _reject_insecure_secret_key(self) -> "Settings":

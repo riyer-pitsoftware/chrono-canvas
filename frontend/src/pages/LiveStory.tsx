@@ -393,9 +393,82 @@ function useWaitSFX(active: boolean) {
   }, [active]);
 }
 
-/* ── SceneViewer (full-screen overlay) ─────────────────────────── */
+/* ── CastingInterstitial (full-screen title card while scenes generate) ── */
 
 type CastingData = { text: string; imageBase64?: string; mimeType?: string };
+
+function CastingInterstitial({
+  casting,
+  onClose,
+}: {
+  casting: CastingData;
+  onClose: () => void;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex flex-col"
+      style={{ backgroundColor: 'oklch(0.08 0.01 60)' }}
+    >
+      {/* Top bar */}
+      <div className="flex items-center justify-between px-6 py-4 shrink-0">
+        <button
+          onClick={onClose}
+          className="text-xs text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors"
+        >
+          &larr; Back
+        </button>
+        <span className="text-xs text-[var(--muted-foreground)] uppercase tracking-wider">
+          Casting
+        </span>
+      </div>
+
+      {/* Casting content — centered */}
+      <div
+        className="flex-1 flex flex-col items-center justify-center px-8 gap-6 min-h-0 overflow-auto"
+        style={{ animation: 'dissolveIn 800ms ease-out' }}
+      >
+        {casting.imageBase64 && (
+          <img
+            src={`data:${casting.mimeType || 'image/png'};base64,${casting.imageBase64}`}
+            alt="Character casting photo"
+            className="max-h-[45vh] max-w-full rounded-lg object-contain"
+            style={{ animation: 'dissolveIn 1200ms ease-out' }}
+          />
+        )}
+        <div className="max-w-2xl text-center space-y-3">
+          <p
+            className="text-sm leading-relaxed whitespace-pre-wrap"
+            style={{ color: 'oklch(0.75 0.02 60)' }}
+          >
+            {casting.text}
+          </p>
+        </div>
+        {/* Loading indicator */}
+        <div className="flex items-center gap-2 text-xs animate-pulse"
+          style={{ color: 'oklch(0.5 0.02 60)' }}>
+          <span
+            className="inline-block w-1.5 h-1.5 rounded-full"
+            style={{ backgroundColor: 'var(--primary)', animation: 'blink 1.2s infinite' }}
+          />
+          Scenes generating...
+        </div>
+      </div>
+
+      <style>{`
+        @keyframes dissolveIn {
+          0% { opacity: 0; }
+          30% { opacity: 0; }
+          100% { opacity: 1; }
+        }
+        @keyframes blink {
+          50% { opacity: 0; }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+/* ── SceneViewer (full-screen overlay) ─────────────────────────── */
 
 function SceneViewer({
   scenes,
@@ -408,12 +481,13 @@ function SceneViewer({
   onGenerateFilm,
   onDownloadFilm,
   casting,
-  resetKey,
   filmGenerating,
   filmProgress,
   filmComplete,
   veoEnabled,
   isDemoReel,
+  pipeline,
+  onSceneChange,
 }: {
   scenes: Scene[];
   stats: DoneEvent | null;
@@ -425,12 +499,13 @@ function SceneViewer({
   onGenerateFilm: () => void;
   onDownloadFilm: () => void;
   casting?: CastingData | null;
-  resetKey?: number;
   filmGenerating: boolean;
   filmProgress: string | null;
   filmComplete: boolean;
   veoEnabled: boolean;
   isDemoReel?: boolean;
+  pipeline: ReturnType<typeof useNarrationPipeline>;
+  onSceneChange: (idx: number) => void;
 }) {
   const [current, setCurrent] = useState(0);
   const [fadeKey, setFadeKey] = useState(0);
@@ -444,18 +519,13 @@ function SceneViewer({
   const scene = scenes[current];
   const isLastScene = current === scenes.length - 1;
 
-  // Narration pipeline — prefetches upcoming scenes
-  const pipeline = useNarrationPipeline(scenes, current, !transitioning);
+  // Narration pipeline is owned by parent — use it via props
   const narrationReady = pipeline.narrationReady;
 
-  // Reset narration cache when resetKey changes (new story / rashomon)
-  const prevResetKey = useRef(resetKey);
+  // Report scene changes to parent so pipeline tracks the right index
   useEffect(() => {
-    if (prevResetKey.current !== resetKey) {
-      pipeline.reset();
-      prevResetKey.current = resetKey;
-    }
-  }, [resetKey, pipeline]);
+    onSceneChange(current);
+  }, [current, onSceneChange]);
 
   // Vinyl crackle + projector tick while waiting for narration audio
   const waitingForNarration = !narrationReady && !transitioning && !!scene?.text;
@@ -955,13 +1025,37 @@ export function LiveStory() {
   });
   const stageStates = buildStageStates(stageEvents);
 
-  // Auto-open viewer as soon as first scene arrives (streaming)
+  const casting = extractCasting(parts);
+
+  // ── Narration pipeline (page-level) ──────────────────────────
+  // Lifted here so narration prefetch starts as soon as scene text
+  // arrives, even while the CastingInterstitial is displayed.
+  const [currentSceneIdx, setCurrentSceneIdx] = useState(0);
+  const pipeline = useNarrationPipeline(scenes, currentSceneIdx, scenes.length > 0);
+
+  // Reset narration cache on new story / rashomon
+  const prevResetKey = useRef(resetKey);
   useEffect(() => {
-    if (scenes.length > 0 && !viewerOpen && (loading || continuing || stats)) {
-      setViewerOpen(true);
+    if (prevResetKey.current !== resetKey) {
+      pipeline.reset();
+      setCurrentSceneIdx(0);
+      prevResetKey.current = resetKey;
+    }
+  }, [resetKey, pipeline]);
+
+  // Gate: scene 0 narration ready → safe to transition from casting to SceneViewer.
+  // pipeline.narrationReady is reactive state tracking currentSceneIdx (starts at 0).
+  const firstSceneNarrationReady = scenes.length > 0 && pipeline.narrationReady;
+
+  // Auto-open viewer as soon as casting or first scene arrives (streaming)
+  useEffect(() => {
+    if (!viewerOpen && (loading || continuing || stats)) {
+      if (scenes.length > 0 || casting) {
+        setViewerOpen(true);
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scenes.length]);
+  }, [scenes.length, !!casting]);
 
   /** Shared SSE fetch logic */
   async function fetchSSE(
@@ -1247,7 +1341,9 @@ export function LiveStory() {
   }
 
   /* ── Viewer overlay ──────────────────────────────────────────── */
-  if (viewerOpen && scenes.length > 0) {
+  // SceneViewer mounts only when scene 0 narration is ready (or on
+  // non-generating views like re-entering a finished story).
+  if (viewerOpen && scenes.length > 0 && (firstSceneNarrationReady || !loading)) {
     return (
       <SceneViewer
         scenes={scenes}
@@ -1259,13 +1355,25 @@ export function LiveStory() {
         onRashomon={rashomonRetell}
         onGenerateFilm={generateFilm}
         onDownloadFilm={downloadFilm}
-        casting={extractCasting(parts)}
-        resetKey={resetKey}
+        casting={casting}
         filmGenerating={filmGenerating}
         filmProgress={filmProgress}
         filmComplete={filmComplete}
         veoEnabled={veoEnabled}
         isDemoReel={isDemoReel}
+        pipeline={pipeline}
+        onSceneChange={setCurrentSceneIdx}
+      />
+    );
+  }
+
+  /* ── Casting interstitial — shown while casting/scenes stream in ── */
+  // Stays visible until scene 0 narration is ready, then dissolves to SceneViewer.
+  if (viewerOpen && loading && (casting || scenes.length > 0)) {
+    return (
+      <CastingInterstitial
+        casting={casting ?? { text: '' }}
+        onClose={() => setViewerOpen(false)}
       />
     );
   }

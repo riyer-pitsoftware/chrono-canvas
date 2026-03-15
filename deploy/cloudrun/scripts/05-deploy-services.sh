@@ -65,8 +65,6 @@ LLM_MAX_CONCURRENT=5,\
 OUTPUT_DIR=/app/output,\
 UPLOAD_DIR=/app/uploads,\
 LOG_LEVEL=INFO,\
-HACKATHON_MODE=true,\
-HACKATHON_STRICT_GEMINI=true,\
 ENABLE_ADMIN_API=true,\
 ENABLE_AUDIT_UI=true,\
 ENABLE_FACE_UPLOAD=false,\
@@ -77,7 +75,8 @@ GOOGLE_API_KEY=chronocanvas-google-api-key:latest,\
 ANTHROPIC_API_KEY=chronocanvas-anthropic-api-key:latest,\
 SECRET_KEY=chronocanvas-secret-key:latest,\
 DATABASE_PASSWORD=chronocanvas-db-password:latest,\
-ADMIN_API_KEY=chronocanvas-admin-api-key:latest"
+ADMIN_API_KEY=chronocanvas-admin-api-key:latest,\
+APP_PASSWORD=chronocanvas-app-password:latest"
 
 # ── Deploy API ────────────────────────────────────────────────────────
 echo "=== Deploying API service ==="

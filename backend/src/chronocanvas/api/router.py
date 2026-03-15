@@ -3,6 +3,7 @@ from fastapi import APIRouter
 from chronocanvas.api.routes import (
     admin,
     agents,
+    auth,
     config,
     conversation,
     diagnostics,
@@ -26,6 +27,7 @@ from chronocanvas.config import settings
 
 api_router = APIRouter(prefix="/api")
 
+api_router.include_router(auth.router)
 api_router.include_router(health.router)
 api_router.include_router(figures.router)
 api_router.include_router(timeline.router)

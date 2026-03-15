@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { useNavigation } from '@/stores/navigation';
 import { useHackathonMode } from '@/api/hooks/useConfig';
@@ -17,6 +18,7 @@ import { EvalViewer } from '@/pages/EvalViewer';
 import { ModeSelector } from '@/pages/ModeSelector';
 import { LiveStory } from '@/pages/LiveStory';
 import { LiveSession } from '@/pages/LiveSession';
+import { Login } from '@/pages/Login';
 
 function getPage(path: string, hackathonMode: boolean) {
   const qIdx = path.indexOf('?');
@@ -84,6 +86,28 @@ function getPage(path: string, hackathonMode: boolean) {
 export default function App() {
   const { currentPath, navigate } = useNavigation();
   const hackathonMode = useHackathonMode();
+  const [authState, setAuthState] = useState<'checking' | 'login' | 'authenticated'>('checking');
+
+  useEffect(() => {
+    fetch('/api/auth/check')
+      .then((res) => res.json())
+      .then((data) => {
+        setAuthState(data.authenticated ? 'authenticated' : 'login');
+      })
+      .catch(() => setAuthState('login'));
+  }, []);
+
+  if (authState === 'checking') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-zinc-950">
+        <div className="text-zinc-500">Loading...</div>
+      </div>
+    );
+  }
+
+  if (authState === 'login') {
+    return <Login onSuccess={() => setAuthState('authenticated')} />;
+  }
 
   return (
     <Layout currentPath={currentPath} onNavigate={navigate}>

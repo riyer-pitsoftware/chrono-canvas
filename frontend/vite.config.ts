@@ -15,6 +15,10 @@ export default defineConfig({
   server: {
     port: 3000,
     proxy: {
+      "/api/live-session/ws": {
+        target: apiTarget,
+        ws: true,
+      },
       "/api": apiTarget,
       "/output": apiTarget,
       "/uploads": apiTarget,

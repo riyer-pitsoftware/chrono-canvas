@@ -1,11 +1,14 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 
-/* ── Status label mapping ─────────────────────────────────────── */
+/* ── Turn state — drives all visual cues ──────────────────────── */
 
-const STATUS_LABELS: Record<string, string> = {
-  listening: 'Listening\u2026',
-  narrating: 'Narrating\u2026',
-  generating_image: 'Finding the right shadows\u2026',
+type TurnState = 'idle' | 'listening' | 'narrating' | 'generating_image';
+
+const TURN_LABELS: Record<TurnState, string> = {
+  idle: '',
+  listening: 'Your turn \u2014 speak now',
+  narrating: 'Dash is speaking\u2026',
+  generating_image: 'Conjuring the scene\u2026',
 };
 
 /* ── Audio helpers ────────────────────────────────────────────── */
@@ -44,11 +47,44 @@ function fromBase64(base64: string): Uint8Array {
   return bytes;
 }
 
+/**
+ * Play a short "your turn" chime using Web Audio API oscillators.
+ * Two quick ascending tones — subtle but unmistakable.
+ */
+function playTurnChime(ctx: AudioContext) {
+  const now = ctx.currentTime;
+  const gain = ctx.createGain();
+  gain.connect(ctx.destination);
+  gain.gain.setValueAtTime(0.08, now);
+  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+
+  // First tone
+  const osc1 = ctx.createOscillator();
+  osc1.type = 'sine';
+  osc1.frequency.setValueAtTime(880, now);
+  osc1.connect(gain);
+  osc1.start(now);
+  osc1.stop(now + 0.12);
+
+  // Second tone (higher)
+  const gain2 = ctx.createGain();
+  gain2.connect(ctx.destination);
+  gain2.gain.setValueAtTime(0.08, now + 0.12);
+  gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+
+  const osc2 = ctx.createOscillator();
+  osc2.type = 'sine';
+  osc2.frequency.setValueAtTime(1175, now + 0.12); // D6
+  osc2.connect(gain2);
+  osc2.start(now + 0.12);
+  osc2.stop(now + 0.3);
+}
+
 /* ── LiveSession component ────────────────────────────────────── */
 
 export function LiveSession() {
   const [sessionActive, setSessionActive] = useState(false);
-  const [status, setStatus] = useState('');
+  const [turn, setTurn] = useState<TurnState>('idle');
   const [currentImage, setCurrentImage] = useState<{ data: string; description: string } | null>(null);
   const [prevImage, setPrevImage] = useState<{ data: string; description: string } | null>(null);
   const [transcript, setTranscript] = useState('');
@@ -65,6 +101,10 @@ export function LiveSession() {
   const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
   const nextPlayTimeRef = useRef(0);
   const sceneCountRef = useRef(0);
+  // True while Gemini is speaking — suppress mic audio to avoid self-interruption
+  const geminiSpeakingRef = useRef(false);
+  // Track previous turn to detect transitions
+  const prevTurnRef = useRef<TurnState>('idle');
 
   /* ── Audio playback ─────────────────────────────────────────── */
 
@@ -114,6 +154,26 @@ export function LiveSession() {
     }
   }, [currentImage]);
 
+  /* ── Turn transition handler ─────────────────────────────────── */
+
+  const handleTurnChange = useCallback((newTurn: TurnState) => {
+    const prev = prevTurnRef.current;
+    prevTurnRef.current = newTurn;
+    setTurn(newTurn);
+
+    if (newTurn === 'listening') {
+      geminiSpeakingRef.current = false;
+      // Play chime when transitioning TO listening from narrating/generating
+      if (prev === 'narrating' || prev === 'generating_image') {
+        if (playbackCtxRef.current) {
+          playTurnChime(playbackCtxRef.current);
+        }
+      }
+    } else if (newTurn === 'narrating') {
+      geminiSpeakingRef.current = true;
+    }
+  }, []);
+
   /* ── WebSocket message handler ──────────────────────────────── */
 
   const handleMessage = useCallback((event: MessageEvent) => {
@@ -121,13 +181,22 @@ export function LiveSession() {
       const msg = JSON.parse(event.data);
       switch (msg.type) {
         case 'audio':
+          if (prevTurnRef.current !== 'narrating') {
+            handleTurnChange('narrating');
+          }
           playAudioChunk(msg.data);
           break;
         case 'image':
           handleImageArrival(msg.data, msg.description || '');
           break;
         case 'status':
-          setStatus(STATUS_LABELS[msg.content] || msg.content);
+          if (msg.content === 'listening') {
+            handleTurnChange('listening');
+          } else if (msg.content === 'generating_image') {
+            handleTurnChange('generating_image');
+          } else if (msg.content === 'narrating') {
+            handleTurnChange('narrating');
+          }
           break;
         case 'transcript':
           setTranscript(msg.content || '');
@@ -141,7 +210,7 @@ export function LiveSession() {
     } catch {
       console.warn('LiveSession: failed to parse WS message');
     }
-  }, [playAudioChunk, handleImageArrival]);
+  }, [playAudioChunk, handleImageArrival, handleTurnChange]);
 
   /* ── Start session ──────────────────────────────────────────── */
 
@@ -152,8 +221,11 @@ export function LiveSession() {
     setCurrentImage(null);
     setPrevImage(null);
     setImageTransition('idle');
+    setTurn('idle');
+    prevTurnRef.current = 'idle';
     sceneCountRef.current = 0;
     nextPlayTimeRef.current = 0;
+    geminiSpeakingRef.current = false;
 
     // Request mic access
     let stream: MediaStream;
@@ -173,7 +245,7 @@ export function LiveSession() {
     ws.onopen = () => {
       ws.send(JSON.stringify({ type: 'start' }));
       setSessionActive(true);
-      setStatus('Listening\u2026');
+      handleTurnChange('listening');
       setSessionStats({ scenes: 0, startTime: Date.now() });
 
       // Set up audio capture at 16kHz
@@ -188,7 +260,20 @@ export function LiveSession() {
 
       processor.onaudioprocess = (e) => {
         if (ws.readyState !== WebSocket.OPEN) return;
+        // Don't send mic audio while Gemini is speaking
+        if (geminiSpeakingRef.current) return;
+
         const float32 = e.inputBuffer.getChannelData(0);
+
+        // Simple VAD: compute RMS and skip silence
+        let sumSq = 0;
+        for (let i = 0; i < float32.length; i++) {
+          sumSq += float32[i] * float32[i];
+        }
+        const rms = Math.sqrt(sumSq / float32.length);
+        // Threshold ~0.01 filters quiet background noise
+        if (rms < 0.01) return;
+
         const int16 = float32ToInt16(float32);
         const base64 = toBase64(int16.buffer);
         ws.send(JSON.stringify({ type: 'audio', data: base64 }));
@@ -207,14 +292,14 @@ export function LiveSession() {
     ws.onclose = () => {
       cleanupCapture();
       setSessionActive(false);
-      setStatus('');
+      setTurn('idle');
       // Show summary
       if (sessionStats) {
         const elapsed = (Date.now() - sessionStats.startTime) / 60000;
         setSummary({ scenes: sceneCountRef.current, minutes: Math.round(elapsed * 10) / 10 });
       }
     };
-  }, [handleMessage, sessionStats]);
+  }, [handleMessage, handleTurnChange, sessionStats]);
 
   /* ── Stop session ───────────────────────────────────────────── */
 
@@ -236,7 +321,7 @@ export function LiveSession() {
     }
     cleanupCapture();
     setSessionActive(false);
-    setStatus('');
+    setTurn('idle');
 
     if (sessionStats) {
       const elapsed = (Date.now() - sessionStats.startTime) / 60000;
@@ -269,6 +354,55 @@ export function LiveSession() {
         ? 'circle(0% at 50% 50%)'
         : 'circle(75% at 50% 50%)';
 
+  /* ── Turn-dependent styles ───────────────────────────────────── */
+
+  const isListening = turn === 'listening';
+  const isNarrating = turn === 'narrating';
+
+  // Status indicator dot color
+  const dotColor = isListening
+    ? '#4ade80'   // green — your turn
+    : isNarrating
+      ? 'var(--primary)'  // amber — Dash speaking
+      : '#f59e0b';        // orange — generating
+
+  // Mic button appearance changes with turn state
+  const micBorder = isListening
+    ? '3px solid #4ade80'
+    : isNarrating
+      ? '2px solid oklch(0.25 0.02 60)'
+      : '2px solid #f59e0b';
+
+  const micBg = isListening
+    ? 'oklch(0.12 0.03 145)'   // faint green tint
+    : 'oklch(0.1 0.01 60)';
+
+  const micStroke = isListening
+    ? '#4ade80'
+    : isNarrating
+      ? 'oklch(0.35 0.02 60)'  // dimmed when not your turn
+      : '#f59e0b';
+
+  const micShadow = isListening
+    ? '0 0 0 6px rgba(74, 222, 128, 0.15), 0 0 30px rgba(74, 222, 128, 0.08)'
+    : isNarrating
+      ? '0 0 15px rgba(0,0,0,0.4)'
+      : '0 0 0 4px rgba(245, 158, 11, 0.12)';
+
+  const micLabel = !sessionActive
+    ? 'Tap to begin'
+    : isListening
+      ? 'Speak now'
+      : isNarrating
+        ? 'Dash is speaking'
+        : 'Generating\u2026';
+
+  const micLabelColor = isListening
+    ? '#4ade80'
+    : isNarrating
+      ? 'oklch(0.4 0.02 60)'
+      : '#f59e0b';
+
   /* ── Render ─────────────────────────────────────────────────── */
 
   return (
@@ -278,23 +412,27 @@ export function LiveSession() {
     >
       {/* ── Top: Status ──────────────────────────────────────── */}
       <div className="pt-8 pb-4 flex items-center gap-2 min-h-[48px]">
-        {status && (
+        {sessionActive && turn !== 'idle' && (
           <div
+            key={turn}
             className="flex items-center gap-2 text-sm"
             style={{
-              color: 'oklch(0.65 0.03 80)',
+              color: isListening ? '#4ade80' : 'oklch(0.65 0.03 80)',
               fontFamily: "'Georgia', 'Times New Roman', serif",
-              animation: 'fadeIn 400ms ease-out',
+              animation: 'fadeIn 300ms ease-out',
+              fontWeight: isListening ? 600 : 400,
             }}
           >
             <span
-              className="inline-block w-1.5 h-1.5 rounded-full"
+              className="inline-block w-2 h-2 rounded-full"
               style={{
-                backgroundColor: 'var(--primary)',
-                animation: 'pulse-dot 1.5s ease-in-out infinite',
+                backgroundColor: dotColor,
+                animation: isListening
+                  ? 'pulse-dot-listening 1s ease-in-out infinite'
+                  : 'pulse-dot 1.5s ease-in-out infinite',
               }}
             />
-            {status}
+            {TURN_LABELS[turn]}
           </div>
         )}
       </div>
@@ -408,12 +546,12 @@ export function LiveSession() {
           style={{
             width: 80,
             height: 80,
-            backgroundColor: sessionActive ? 'oklch(0.15 0.02 60)' : 'oklch(0.12 0.01 60)',
-            border: sessionActive ? '3px solid var(--primary)' : '2px solid oklch(0.3 0.02 60)',
-            boxShadow: sessionActive
-              ? '0 0 0 6px rgba(180, 140, 60, 0.15), 0 0 40px rgba(180, 140, 60, 0.1)'
-              : '0 0 20px rgba(0,0,0,0.3)',
-            animation: sessionActive ? 'pulse-ring 2s ease-in-out infinite' : undefined,
+            backgroundColor: sessionActive ? micBg : 'oklch(0.12 0.01 60)',
+            border: sessionActive ? micBorder : '2px solid oklch(0.3 0.02 60)',
+            boxShadow: sessionActive ? micShadow : '0 0 20px rgba(0,0,0,0.3)',
+            animation: isListening ? 'pulse-ring-green 2s ease-in-out infinite' : undefined,
+            opacity: isNarrating ? 0.6 : 1,
+            transition: 'all 0.4s ease',
           }}
           aria-label={sessionActive ? 'Stop session' : 'Start session'}
         >
@@ -423,43 +561,44 @@ export function LiveSession() {
             height="28"
             viewBox="0 0 24 24"
             fill="none"
-            stroke={sessionActive ? 'var(--primary)' : 'oklch(0.6 0.02 80)'}
+            stroke={sessionActive ? micStroke : 'oklch(0.6 0.02 80)'}
             strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
+            style={{ transition: 'stroke 0.3s ease' }}
           >
             <rect x="9" y="2" width="6" height="11" rx="3" />
             <path d="M5 10a7 7 0 0 0 14 0" />
             <line x1="12" y1="17" x2="12" y2="21" />
             <line x1="8" y1="21" x2="16" y2="21" />
-            {sessionActive && (
-              <>
-                {/* "Recording" stop indicator: small square in center */}
-              </>
+            {/* Mute slash when Dash is speaking */}
+            {isNarrating && (
+              <line x1="2" y1="2" x2="22" y2="22" stroke="oklch(0.5 0.02 60)" strokeWidth="2.5" />
             )}
           </svg>
 
-          {/* Pulsing ring when active */}
-          {sessionActive && (
+          {/* Pulsing ring when listening (green) */}
+          {isListening && (
             <span
               className="absolute inset-0 rounded-full"
               style={{
-                border: '2px solid var(--primary)',
-                animation: 'ping-ring 1.5s cubic-bezier(0, 0, 0.2, 1) infinite',
-                opacity: 0.4,
+                border: '2px solid #4ade80',
+                animation: 'ping-ring-green 1.5s cubic-bezier(0, 0, 0.2, 1) infinite',
+                opacity: 0.5,
               }}
             />
           )}
         </button>
 
         <span
-          className="text-xs transition-colors"
+          className="text-xs transition-all duration-300"
           style={{
-            color: sessionActive ? 'var(--primary)' : 'oklch(0.4 0.02 80)',
+            color: sessionActive ? micLabelColor : 'oklch(0.4 0.02 80)',
             fontFamily: "'Georgia', 'Times New Roman', serif",
+            fontWeight: isListening ? 600 : 400,
           }}
         >
-          {sessionActive ? 'Recording' : 'Tap to begin'}
+          {micLabel}
         </span>
       </div>
 
@@ -480,6 +619,18 @@ export function LiveSession() {
         @keyframes pulse-dot {
           0%, 100% { opacity: 1; transform: scale(1); }
           50% { opacity: 0.4; transform: scale(0.8); }
+        }
+        @keyframes pulse-dot-listening {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.6; transform: scale(1.3); }
+        }
+        @keyframes pulse-ring-green {
+          0%, 100% { box-shadow: 0 0 0 6px rgba(74, 222, 128, 0.15), 0 0 30px rgba(74, 222, 128, 0.08); }
+          50% { box-shadow: 0 0 0 10px rgba(74, 222, 128, 0.1), 0 0 50px rgba(74, 222, 128, 0.12); }
+        }
+        @keyframes ping-ring-green {
+          0% { transform: scale(1); opacity: 0.5; }
+          75%, 100% { transform: scale(1.3); opacity: 0; }
         }
         @keyframes pulse-ring {
           0%, 100% { box-shadow: 0 0 0 6px rgba(180, 140, 60, 0.15), 0 0 40px rgba(180, 140, 60, 0.1); }

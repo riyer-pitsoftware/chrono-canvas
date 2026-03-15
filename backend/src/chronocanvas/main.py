@@ -11,7 +11,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 from chronocanvas.agents.checkpointer import close_checkpointer, init_checkpointer
 from chronocanvas.agents.graph import recompile_graph
-from chronocanvas.api.middleware import AuditLoggingMiddleware
+from chronocanvas.api.middleware import AuditLoggingMiddleware, AuthGateMiddleware
 from chronocanvas.api.router import api_router
 from chronocanvas.api.websocket import generation_websocket
 from chronocanvas.config import settings
@@ -100,6 +100,7 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
     app.add_middleware(AuditLoggingMiddleware)
+    app.add_middleware(AuthGateMiddleware)
     app.add_middleware(SecurityHeadersMiddleware)
 
     # Exception handlers

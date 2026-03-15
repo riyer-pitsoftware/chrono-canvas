@@ -44,19 +44,13 @@ const hackathonPrimaryNav = [
   { label: 'Story Director', href: '/generate?mode=creative_story', icon: Image },
   { label: 'Live Story', href: '/live-story', icon: Zap },
   { label: 'Live Session', href: '/live-session', icon: Mic },
-  { label: 'Storyboard', href: '/export', icon: Download },
 ];
 
 // Everything else lives behind a collapsible "Developer Tools" section
 const hackathonDevTools = [
   { label: 'Home', href: '/', icon: Home },
-  { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { label: 'Timeline', href: '/timeline', icon: Scroll },
-  { label: 'Figures', href: '/figures', icon: Users },
-  { label: 'Validate', href: '/validate', icon: Shield },
-  { label: 'Memory', href: '/memory', icon: Database },
   { label: 'Audit', href: '/audit', icon: FileSearch },
-  { label: 'Eval', href: '/eval', icon: BarChart3 },
+  { label: 'Export', href: '/export', icon: Download },
   { label: 'Admin', href: '/admin', icon: Settings },
 ];
 

@@ -113,48 +113,43 @@ def _build_prompt(req: LiveStoryRequest) -> str:
     return "\n".join(parts)
 
 
-def _gen_config() -> types.GenerateContentConfig:
+def _gen_config(*, thinking: bool = False) -> types.GenerateContentConfig:
+    """Build generation config.
+
+    When *thinking* is True, adds ``thinking_level=MINIMAL`` for Gemini 3.x
+    models.  Thinking is only safe on fresh chats — multi-turn
+    ``thought_signature`` corruption is handled by fallback logic in the
+    scene loop.
+    """
+    cfg_kwargs: dict = dict(
+        system_instruction=DASH_SYSTEM_INSTRUCTION,
+        response_modalities=["TEXT", "IMAGE"],
+        temperature=1.0,
+        max_output_tokens=8192,
+    )
+    if thinking:
+        cfg_kwargs["thinking_config"] = types.ThinkingConfig(
+            thinking_level="MINIMAL"
+        )
+    return types.GenerateContentConfig(**cfg_kwargs)
+
+
+def _casting_config() -> types.GenerateContentConfig:
+    """Config for one-shot casting call — no thinking, no chat needed."""
     return types.GenerateContentConfig(
         system_instruction=DASH_SYSTEM_INSTRUCTION,
         response_modalities=["TEXT", "IMAGE"],
         temperature=1.0,
         max_output_tokens=8192,
-        thinking_config=types.ThinkingConfig(thinking_level="MINIMAL"),
     )
 
 
-def _scrub_thought_parts(chat) -> None:
-    """Rebuild model responses in chat history with clean Part objects.
-
-    Even with thinking_budget=0, the model can return thought parts that get
-    auto-appended to _curated_history by the SDK.  Replaying these on the next
-    turn triggers INVALID_ARGUMENT (thought_signature errors).
-
-    Rather than patching existing Part objects (which can leave orphaned
-    thought_signature fields), we rebuild each content entry with brand-new
-    Part objects containing only text and inline_data — no thought metadata.
-    """
-    for content in chat._curated_history:
-        if not content.parts:
-            continue
-        clean_parts = []
-        for p in content.parts:
-            # Skip thought parts entirely
-            if isinstance(getattr(p, "thought", None), bool) and p.thought:
-                continue
-            # Rebuild text parts as fresh objects (drops thought_signature)
-            if p.text is not None:
-                clean_parts.append(types.Part.from_text(text=p.text))
-            # Rebuild image parts as fresh objects
-            elif p.inline_data is not None:
-                clean_parts.append(types.Part.from_bytes(
-                    data=p.inline_data.data,
-                    mime_type=p.inline_data.mime_type or "image/png",
-                ))
-            # Keep other part types as-is (e.g. function calls)
-            else:
-                clean_parts.append(p)
-        content.parts = clean_parts
+def _is_thought_signature_error(exc: Exception) -> bool:
+    """Return True if the exception is a Gemini thought_signature 400 error."""
+    msg = str(exc).lower()
+    return "thought_signature" in msg or (
+        "400" in msg and ("invalid" in msg or "thought" in msg)
+    )
 
 
 _RESULT = object()  # sentinel for _call_with_keepalives
@@ -215,13 +210,17 @@ async def _stream_scene_parts(
     they arrive.  Keepalive events are emitted while waiting for the image so
     the SSE connection stays alive.
 
-    After the generator is exhausted the caller MUST run
-    ``_scrub_thought_parts(chat)`` to clean the chat history.
+    After the generator is exhausted the caller should call
+    scrubbing thought parts (no longer needed — thinking fallback handles this).
     """
     loop = asyncio.get_event_loop()
     deadline = loop.time() + timeout_s
 
-    stream = chat.send_message_stream(prompt)
+    # Wrap stream creation with a timeout — the SDK can hang here
+    # if the Gemini API is slow or returns an unhandled error.
+    stream = await asyncio.wait_for(
+        chat.send_message_stream(prompt), timeout=min(30, timeout_s)
+    )
     stream_iter = stream.__aiter__()
 
     accumulated_text: list[str] = []
@@ -521,7 +520,7 @@ async def live_story(req: LiveStoryRequest):
         yield _sse(_stage_event("init", "start"))
         init_t0 = time.perf_counter()
 
-        # Find a working model
+        # Find a working model — probe with a chat create to validate access
         chat = None
         last_error = None
         for model in _MODEL_CHAIN:
@@ -554,6 +553,7 @@ async def live_story(req: LiveStoryRequest):
         if is_continuation:
             flow = _continuation_flow(chat, req, model_used)
         else:
+            # cn-krhe: scene flow creates its own fresh chat internally
             flow = _scene_by_scene_flow(chat, req, model_used, client=client)
 
         async for part_data in flow:
@@ -585,18 +585,24 @@ async def live_story(req: LiveStoryRequest):
 async def _scene_by_scene_flow(
     chat, req: LiveStoryRequest, model: str, *, client=None
 ) -> AsyncGenerator[dict, None]:
-    """Generate story scene-by-scene via chat turns, yielding each part immediately.
+    """Generate story scene-by-scene, yielding each part immediately.
 
-    Turn 0 (hidden): Casting photo — character portraits for visual anchoring
-    Turns 1..N: Model generates scenes until it signals [END]
-
-    If the first scene's streaming doesn't separate text from image (both arrive
-    together), automatically switches to parallel text+image generation for the
-    remaining scenes when *client* is provided.
+    Architecture (cn-krhe fix):
+      1. Casting: ONE-SHOT ``generate_content`` — no chat, no thinking.
+         Portraits don't need reasoning and this avoids thought_signature
+         corruption entirely.
+      2. Scene chat: FRESH chat with ``thinking_level=MINIMAL``.  The
+         casting image is injected as user context in the first turn so
+         the model sees it without inheriting a polluted history.
+      3. Fallback: if any scene turn hits a thought_signature 400 error,
+         recreate the chat WITHOUT thinking and retry the failed turn.
     """
+    if client is None:
+        client = genai.Client(api_key=settings.google_api_key)
+
     base_prompt = _build_prompt(req)
 
-    # ── Casting (Scene 0) ───────────────────────────────────────
+    # ── Casting (Scene 0) — one-shot, no chat, no thinking ─────
     yield _stage_event("casting", "start")
 
     casting_prompt = (
@@ -608,29 +614,32 @@ async def _scene_by_scene_flow(
         f"lineup of the main characters standing side by side, well-lit, "
         f"facing the camera. This is the reference photo for the entire film."
     )
+    casting_parts = []
+    casting_image_bytes: bytes | None = None  # raw bytes for chat injection
+    casting_image_mime: str = "image/png"
     casting_t0 = time.perf_counter()
     try:
         response = None
-        async for item in _call_with_keepalives(chat.send_message(casting_prompt)):
+        # One-shot generate_content — not a chat turn
+        async for item in _call_with_keepalives(
+            client.aio.models.generate_content(
+                model=model,
+                contents=casting_prompt,
+                config=_casting_config(),
+            )
+        ):
             if isinstance(item, tuple) and item[0] is _RESULT:
                 response = item[1]
             else:
                 yield item
-        _scrub_thought_parts(chat)
         casting_parts = _extract_parts(response)
-        for cp in casting_parts:
-            if cp["type"] == "text":
-                yield {"type": "casting", "content": cp["content"]}
-            elif cp["type"] == "image":
-                yield {
-                    "type": "casting_image",
-                    "content": cp["content"],
-                    "mime_type": cp.get("mime_type", "image/png"),
-                }
-        yield _stage_event(
-            "casting", "complete",
-            elapsed_s=time.perf_counter() - casting_t0,
-        )
+        # Stash the raw casting image bytes for injection into scene chat
+        if response and response.candidates and response.candidates[0].content:
+            for part in response.candidates[0].content.parts:
+                if part.inline_data is not None:
+                    casting_image_bytes = part.inline_data.data
+                    casting_image_mime = part.inline_data.mime_type or "image/png"
+                    break  # first image is the portrait lineup
     except asyncio.TimeoutError:
         elapsed = time.perf_counter() - casting_t0
         logger.warning("Casting photo timed out after %.1fs", elapsed)
@@ -648,20 +657,96 @@ async def _scene_by_scene_flow(
             detail=str(e),
         )
 
-    # ── Scenes — model decides how many; stops on [END] marker ──
-    max_scenes = 20  # safety cap
+    # ── Check if casting accidentally generated the full story ──
+    casting_has_end = any(
+        "[END]" in cp["content"]
+        for cp in casting_parts
+        if cp["type"] == "text"
+    )
+
+    if casting_has_end:
+        logger.info(
+            "Model generated complete story during casting (%d parts, "
+            "[END] detected) — emitting as scenes, skipping scene loop",
+            len(casting_parts),
+        )
+        yield _stage_event(
+            "casting", "complete",
+            elapsed_s=time.perf_counter() - casting_t0,
+        )
+        scene_num = 0
+        for cp in casting_parts:
+            if cp["type"] == "text":
+                scene_num += 1
+                clean = cp["content"].replace("[END]", "").rstrip()
+                if clean:
+                    yield _stage_event("scene", "start", scene_idx=scene_num)
+                    yield {"type": "text", "content": clean}
+                    yield _stage_event(
+                        "scene", "complete", scene_idx=scene_num,
+                        elapsed_s=0.0,
+                    )
+            elif cp["type"] == "image":
+                yield {
+                    "type": "image",
+                    "content": cp["content"],
+                    "mime_type": cp.get("mime_type", "image/png"),
+                }
+        return
+
+    # Normal path — emit as casting data for the interstitial title card
+    for cp in casting_parts:
+        if cp["type"] == "text":
+            yield {"type": "casting", "content": cp["content"]}
+        elif cp["type"] == "image":
+            yield {
+                "type": "casting_image",
+                "content": cp["content"],
+                "mime_type": cp.get("mime_type", "image/png"),
+            }
+    yield _stage_event(
+        "casting", "complete",
+        elapsed_s=time.perf_counter() - casting_t0,
+    )
+
+    # ── Create FRESH scene chat with thinking ──────────────────
+    # The casting was one-shot — this chat starts clean, no
+    # thought_signature history to corrupt.
+    thinking_enabled = model.startswith("gemini-3")
+    chat = client.aio.chats.create(
+        model=model, config=_gen_config(thinking=thinking_enabled)
+    )
+
+    # ── Scenes — model decides how many; stops on [END] ────────
+    max_scenes = 20
     scene_idx = 0
-    use_parallel = False  # switch to parallel text+image after first scene if needed
+    use_parallel = False
     while scene_idx < max_scenes:
         yield _stage_event("scene", "start", scene_idx=scene_idx + 1)
         scene_t0 = time.perf_counter()
 
         if scene_idx == 0:
-            prompt = (
+            # First scene: inject casting image as user context
+            prompt_text = (
                 "Now begin the story. Write Scene 1 with text and one image. "
                 "The characters must look EXACTLY like the casting photo above. "
                 "Tell as many scenes as the story needs. When done, end with [END]."
             )
+            if casting_image_bytes:
+                prompt = [
+                    types.Part.from_bytes(
+                        data=casting_image_bytes, mime_type=casting_image_mime
+                    ),
+                    types.Part.from_text(
+                        text=(
+                            "Here is the casting photo — the definitive reference "
+                            "for all characters in this story. Every scene must "
+                            "depict these EXACT same people.\n\n" + prompt_text
+                        )
+                    ),
+                ]
+            else:
+                prompt = prompt_text
         else:
             prompt = (
                 f"Continue with Scene {scene_idx + 1}. "
@@ -672,7 +757,6 @@ async def _scene_by_scene_flow(
 
         try:
             is_final = False
-            # Choose streaming vs parallel generation
             if use_parallel and client is not None:
                 flow = _parallel_scene_parts(chat, prompt, client)
             else:
@@ -681,7 +765,6 @@ async def _scene_by_scene_flow(
             async for item in flow:
                 if item.get("type") == "_meta":
                     is_final = item["is_final"]
-                    # After first scene, check if text arrived early
                     if (
                         not item.get("text_early", True)
                         and scene_idx == 0
@@ -705,9 +788,6 @@ async def _scene_by_scene_flow(
                 else:
                     yield item
             else:
-                # Loop completed without break — stream finished normally
-                if not use_parallel:
-                    _scrub_thought_parts(chat)
                 yield _stage_event(
                     "scene", "complete",
                     scene_idx=scene_idx + 1,
@@ -718,9 +798,7 @@ async def _scene_by_scene_flow(
                 scene_idx += 1
                 continue
 
-            # If we broke out of the for-loop (empty response), stop
-            if not use_parallel:
-                _scrub_thought_parts(chat)
+            # Broke out of for-loop (empty response) — stop
             break
 
         except asyncio.TimeoutError:
@@ -736,6 +814,26 @@ async def _scene_by_scene_flow(
             break
 
         except Exception as e:
+            if _is_thought_signature_error(e) and thinking_enabled:
+                # ── Fallback: recreate chat WITHOUT thinking ───
+                logger.warning(
+                    "Scene %d hit thought_signature error — falling back "
+                    "to no-thinking chat: %s", scene_idx + 1, e,
+                )
+                thinking_enabled = False
+                chat = client.aio.chats.create(
+                    model=model, config=_gen_config(thinking=False)
+                )
+                # Retry this same scene_idx on next loop iteration
+                # (scene_idx not incremented, stage event already emitted)
+                yield _stage_event(
+                    "scene", "error",
+                    scene_idx=scene_idx + 1,
+                    elapsed_s=time.perf_counter() - scene_t0,
+                    detail="thought_signature error — retrying without thinking",
+                )
+                continue
+
             elapsed = time.perf_counter() - scene_t0
             logger.error("Scene %d generation failed: %s", scene_idx + 1, e)
             yield _stage_event(
@@ -774,7 +872,7 @@ async def _continuation_flow(
                 pass  # replay result discarded
             else:
                 yield item
-        _scrub_thought_parts(chat)
+
         yield _stage_event(
             "replay", "complete",
             elapsed_s=time.perf_counter() - replay_t0,
@@ -847,7 +945,7 @@ async def _continuation_flow(
                 yield item
                 continue
             yield item
-        _scrub_thought_parts(chat)
+
         yield _stage_event(
             "scene", "complete",
             scene_idx=1,
