@@ -424,27 +424,31 @@ function CastingInterstitial({
 
       {/* Casting content — image left, description right */}
       <div
-        className="flex-1 flex items-center justify-center px-8 gap-8 min-h-0 overflow-auto"
+        className="flex-1 flex flex-col items-center justify-center px-8 min-h-0"
         style={{ animation: 'dissolveIn 800ms ease-out' }}
       >
-        {casting.imageBase64 && (
-          <img
-            src={`data:${casting.mimeType || 'image/png'};base64,${casting.imageBase64}`}
-            alt="Character casting photo"
-            className="max-h-[75vh] max-w-[50vw] rounded-lg object-contain shrink-0"
-            style={{ animation: 'dissolveIn 1200ms ease-out' }}
-          />
-        )}
-        <div className="max-w-md space-y-3 shrink min-w-0">
-          <p
-            className="text-sm leading-relaxed whitespace-pre-wrap"
-            style={{ color: 'oklch(0.75 0.02 60)' }}
-          >
-            {casting.text}
-          </p>
+        <div className="flex items-start justify-center gap-8 max-h-[80vh] min-h-0">
+          {casting.imageBase64 && (
+            <img
+              src={`data:${casting.mimeType || 'image/png'};base64,${casting.imageBase64}`}
+              alt="Character casting photo"
+              className="max-h-[70vh] max-w-[45vw] rounded-lg object-contain shrink-0"
+              style={{ animation: 'dissolveIn 1200ms ease-out' }}
+            />
+          )}
+          {casting.text && (
+            <div className="max-w-sm overflow-y-auto max-h-[70vh] shrink min-w-[200px]">
+              <p
+                className="text-sm leading-relaxed whitespace-pre-wrap"
+                style={{ color: 'oklch(0.75 0.02 60)' }}
+              >
+                {casting.text}
+              </p>
+            </div>
+          )}
         </div>
         {/* Loading indicator */}
-        <div className="flex items-center gap-2 text-xs animate-pulse"
+        <div className="flex items-center gap-2 text-xs animate-pulse mt-6"
           style={{ color: 'oklch(0.5 0.02 60)' }}>
           <span
             className="inline-block w-1.5 h-1.5 rounded-full"
