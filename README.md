@@ -38,6 +38,13 @@ You can also refine after generation. Click into any scene to edit it with text 
 - **Full audit trail** — every LLM call (prompt, response, tokens, cost, latency, provider) is logged and browsable per generation
 - **Export** — download a zip with story markdown, citation JSON, all scene images, audio files, and video
 - **Historical portrait mode** — a second pipeline for researched historical figure portraits with validation scoring and retry
+- **Live Story** — full-screen flip-o-rama storyboard viewer; Gemini native image generation streams scenes via SSE with iris opening, typewriter text, film-dissolve transitions, and narration-gated auto-advance
+- **Live Noir Session** — bidirectional voice storytelling via WebSocket; speak and Dash narrates back with photorealistic images materializing mid-narration through Gemini function calling
+- **Live Video (Veo)** — transforms storyboard scenes into cinematic video clips using Google Veo with 7 camera motion directives (intimate push-in, handheld chase, establishing crane, and more)
+- **Live Voice** — streaming PCM16 narration via Gemini TTS (Charon voice); voice prompting returns transcript + creative response
+- **Hackathon mode** — `DEPLOYMENT_MODE=gcp` auto-enables strict Gemini mode, simplified UI focused on Story Director + Live features, and fail-loud error handling
+- **ConfigHUD** — pre-generation mixing board for selecting LLM provider, image provider, TTS, vision features, and post-processing per-request
+- **Auth gate** — optional password protection via `APP_PASSWORD` with HMAC-signed session cookies
 
 ---
 
@@ -49,10 +56,16 @@ You can also refine after generation. Click into any scene to edit it with text 
 | **Gemini 2.5 Flash + Google Search** | Research grounding with structured citation extraction for historical context |
 | **Gemini multimodal** (google-genai SDK) | Image-to-story concept extraction, storyboard coherence review (images + text), vision-aware narration |
 | **Gemini TTS** (google-genai SDK) | Voice synthesis for scene narration audio (model: `gemini-2.5-flash-preview-tts`, voice: Kore) |
+| **Gemini Native Audio** (google-genai SDK) | Bidirectional voice in Live Noir Session (`gemini-2.5-flash-native-audio-latest`, Charon voice) |
+| **Gemini Native Image** (google-genai SDK) | Real-time scene generation in Live Story (`gemini-3.1-flash-image-preview`) |
 | **Imagen 4** (google-genai SDK) | Image generation for every story scene and portrait (`imagen-4.0-fast-generate-001`) |
+| **Veo** (google-genai SDK) | Scene-to-video generation in Live Video (`veo-3.1-generate-preview`) |
 | **Cloud Run** | Managed deployment of API, worker, and frontend services |
 | **Cloud SQL** (PostgreSQL) | Persistent storage for generations, audit logs, validation results |
 | **Memorystore** (Redis) | Real-time streaming via pub/sub and ARQ job queue |
+| **Secret Manager** | API keys and credentials |
+| **Artifact Registry** | Docker image storage |
+| **Cloud Build** | CI/CD pipeline |
 
 All Gemini and Imagen calls use the **`google-genai` Python SDK** (`google.genai.Client`) directly — no REST wrappers.
 
@@ -96,6 +109,13 @@ Story Orchestrator → [Image-to-Story] → Character Extraction → Scene Decom
 → Video Assembly → Storyboard Export
 ```
 
+**Live API features** (real-time, streaming experiences):
+
+- **Live Story** — SSE endpoint streams scenes with Gemini native image generation (`gemini-3.1-flash-image-preview`)
+- **Live Session** — WebSocket proxy to Gemini Live API for bidirectional voice storytelling (`gemini-2.5-flash-native-audio-latest`)
+- **Live Video** — Veo scene-to-video generation with camera motion directives (`veo-3.1-generate-preview`)
+- **Live Voice** — streaming PCM16 TTS narration and voice prompting
+
 | Component | Technology |
 |---|---|
 | Frontend | React 18, TypeScript, Vite, Tailwind CSS |
@@ -111,8 +131,8 @@ Story Orchestrator → [Image-to-Story] → Character Extraction → Scene Decom
 
 ## Demo
 
-<!-- Replace with actual demo video link -->
-> **Demo video**: _Coming soon — a 3-minute walkthrough showing text-to-storyboard, voice input, image-to-story, scene editing, and video export._
+> **Demo video**: Watch the 3-minute walkthrough showing text-to-storyboard, Live Story with narration, and voice-driven Live Session.
+<!-- TODO: Replace with actual demo video link once recorded -->
 
 <details>
 <summary>Screenshots</summary>
@@ -123,6 +143,12 @@ _Story Director input with voice button and image upload_
 _Real-time pipeline visualization showing LangGraph nodes_
 
 _Generated storyboard with scene images, narration text, and audio players_
+
+_Live Story — full-screen flip-o-rama with iris opening and typewriter text_
+
+_Live Noir Session — bidirectional voice with images materializing mid-narration_
+
+_Live Video — Veo-generated cinematic clips with camera motion_
 
 _Conversational refinement panel — chat with Gemini to edit scenes_
 
