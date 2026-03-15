@@ -1,5 +1,6 @@
 """Live Voice — Gemini native audio for voice narration + voice prompt."""
 
+import asyncio
 import base64
 import io
 import logging
@@ -7,7 +8,7 @@ import struct
 import time
 
 from fastapi import APIRouter, HTTPException
-from fastapi.responses import Response
+from fastapi.responses import Response, StreamingResponse
 from google import genai
 from google.genai import types
 from pydantic import BaseModel
@@ -107,6 +108,71 @@ async def narrate(req: NarrateRequest):
     except Exception as e:
         logger.error("Voice narration failed: %s", e)
         raise HTTPException(status_code=500, detail=f"Narration failed: {e}")
+
+
+@router.post("/narrate-stream")
+async def narrate_stream(req: NarrateRequest):
+    """Stream TTS audio as raw PCM16 chunks for progressive playback."""
+    if not settings.google_api_key:
+        raise HTTPException(status_code=503, detail="GOOGLE_API_KEY not configured")
+
+    client = genai.Client(api_key=settings.google_api_key)
+    voice_name = req.voice_name or settings.tts_voice
+    model = settings.tts_model
+
+    speech_config = types.SpeechConfig(
+        voice_config=types.VoiceConfig(
+            prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=voice_name)
+        )
+    )
+
+    async def _generate_pcm():
+        start = time.monotonic()
+        logger.info("Narrate-stream: model=%s voice=%s text=%d chars", model, voice_name, len(req.text))
+        total_bytes = 0
+        try:
+            stream = await asyncio.wait_for(
+                client.aio.models.generate_content_stream(
+                    model=model,
+                    contents=req.text,
+                    config=types.GenerateContentConfig(
+                        response_modalities=["AUDIO"],
+                        speech_config=speech_config,
+                    ),
+                ),
+                timeout=30,
+            )
+            async for chunk in stream:
+                if (
+                    not chunk.candidates
+                    or not chunk.candidates[0].content
+                    or not chunk.candidates[0].content.parts
+                ):
+                    continue
+                for part in chunk.candidates[0].content.parts:
+                    if (
+                        part.inline_data
+                        and part.inline_data.mime_type
+                        and part.inline_data.mime_type.startswith("audio/")
+                    ):
+                        data = part.inline_data.data
+                        total_bytes += len(data)
+                        yield data
+        except Exception as e:
+            logger.error("Narrate-stream failed: %s", e)
+            return
+        elapsed_ms = int((time.monotonic() - start) * 1000)
+        logger.info("Narrate-stream: %d bytes in %dms", total_bytes, elapsed_ms)
+
+    return StreamingResponse(
+        _generate_pcm(),
+        media_type="application/octet-stream",
+        headers={
+            "X-Audio-Sample-Rate": str(SAMPLE_RATE),
+            "X-Audio-Channels": "1",
+            "X-Audio-Bits": "16",
+        },
+    )
 
 
 @router.post("/prompt")

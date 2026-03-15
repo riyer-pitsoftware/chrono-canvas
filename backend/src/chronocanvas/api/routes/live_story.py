@@ -644,6 +644,9 @@ async def _scene_by_scene_flow(
         deadline = loop.time() + _TURN_TIMEOUT_S
         last_keepalive = loop.time()
         got_image = False
+        image_seen_time: float | None = None
+        # After image arrives, keep reading text for up to 5s
+        _POST_IMAGE_TEXT_WINDOW_S = 5.0
 
         async for chunk in stream:
             # Keepalive while waiting
@@ -682,10 +685,11 @@ async def _scene_by_scene_flow(
                         "mime_type": mime,
                     })
                     got_image = True
+                    image_seen_time = loop.time()
 
-            # Stop consuming after first image — don't let the model
-            # keep generating story scenes in the casting call.
-            if got_image:
+            # After image, keep collecting text briefly then stop —
+            # don't let the model generate full story scenes.
+            if got_image and (loop.time() - image_seen_time) >= _POST_IMAGE_TEXT_WINDOW_S:
                 break
 
         # Assemble text part

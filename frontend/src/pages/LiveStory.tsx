@@ -591,12 +591,15 @@ function SceneViewer({
   );
 
   // Auto-advance: when typewriter finishes and next scene is ready
+  // Note: `generating` intentionally removed — pipeline.getStatus gates on
+  // scene-level readiness, so completed scenes can advance even while
+  // later scenes are still streaming (cn-p6r3).
   useEffect(() => {
-    if (!autoPlay || !textDone || isLastScene || generating || continuing) return;
+    if (!autoPlay || !textDone || isLastScene || continuing) return;
     if (pipeline.getStatus(current + 1) !== 'ready') return;
     const timer = setTimeout(() => changeTo(current + 1), 2000);
     return () => clearTimeout(timer);
-  }, [textDone, current, autoPlay, isLastScene, generating, continuing, pipeline, changeTo]);
+  }, [textDone, current, autoPlay, isLastScene, continuing, pipeline, changeTo]);
 
   // Keyboard navigation
   useEffect(() => {

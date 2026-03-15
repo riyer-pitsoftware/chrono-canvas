@@ -2,11 +2,94 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 
 type NarrationStatus = 'idle' | 'fetching' | 'ready' | 'error';
 
+/**
+ * Streaming PCM16 audio player using Web Audio API.
+ * Schedules AudioBufferSourceNodes from raw PCM16 LE chunks.
+ */
+class PCMPlayer {
+  private ctx: AudioContext;
+  private nextTime = 0;
+  private leftover: Uint8Array | null = null;
+  private sources: AudioBufferSourceNode[] = [];
+  onended: (() => void) | null = null;
+
+  constructor() {
+    this.ctx = new AudioContext({ sampleRate: 24000 });
+  }
+
+  /** Schedule a raw PCM16 LE chunk for playback. */
+  schedule(raw: Uint8Array) {
+    // Merge leftover byte from previous chunk
+    let data = raw;
+    if (this.leftover) {
+      const merged = new Uint8Array(this.leftover.length + data.length);
+      merged.set(this.leftover);
+      merged.set(data, this.leftover.length);
+      data = merged;
+      this.leftover = null;
+    }
+
+    // PCM16 = 2 bytes per sample — stash odd trailing byte
+    if (data.length % 2 !== 0) {
+      this.leftover = data.slice(-1);
+      data = data.slice(0, -1);
+    }
+
+    if (data.length < 2) return;
+
+    // Convert Int16 LE → Float32
+    const int16 = new Int16Array(
+      data.buffer, data.byteOffset, data.length / 2,
+    );
+    const float32 = new Float32Array(int16.length);
+    for (let i = 0; i < int16.length; i++) {
+      float32[i] = int16[i] / 32768;
+    }
+
+    const buffer = this.ctx.createBuffer(1, float32.length, 24000);
+    buffer.getChannelData(0).set(float32);
+
+    const source = this.ctx.createBufferSource();
+    source.buffer = buffer;
+    source.connect(this.ctx.destination);
+
+    const when = Math.max(this.ctx.currentTime + 0.005, this.nextTime);
+    source.start(when);
+    this.nextTime = when + buffer.duration;
+    this.sources.push(source);
+  }
+
+  /** Call when the stream is fully consumed — attaches onended to last node. */
+  finalize() {
+    const last = this.sources[this.sources.length - 1];
+    if (last && this.onended) {
+      last.onended = this.onended;
+    }
+  }
+
+  stop() {
+    for (const s of this.sources) {
+      try { s.stop(); } catch { /* already stopped */ }
+    }
+    this.sources = [];
+    this.ctx.close().catch(() => {});
+  }
+
+  get currentTime() {
+    return this.ctx.currentTime;
+  }
+}
+
 type CacheEntry = {
   status: NarrationStatus;
-  audio: HTMLAudioElement | null;
-  blobUrl: string | null;
   retries: number;
+  // Streaming state
+  chunks: Uint8Array[];
+  totalBytes: number;
+  streamDone: boolean;
+  // Playback — created on play()
+  player: PCMPlayer | null;
+  chunksScheduled: number;
 };
 
 type Scene = {
@@ -16,6 +99,20 @@ type Scene = {
 };
 
 const MAX_CONCURRENT = 4;
+// Mark narration as ready once we have this many PCM bytes (~0.25s at 24kHz 16-bit mono)
+const READY_THRESHOLD_BYTES = 12000;
+
+function makeEntry(retries = 0): CacheEntry {
+  return {
+    status: 'idle',
+    retries,
+    chunks: [],
+    totalBytes: 0,
+    streamDone: false,
+    player: null,
+    chunksScheduled: 0,
+  };
+}
 
 export function useNarrationPipeline(
   scenes: Scene[],
@@ -26,7 +123,6 @@ export function useNarrationPipeline(
   const abortMap = useRef<Map<number, AbortController>>(new Map());
   const inflightCount = useRef(0);
   const [currentReady, setCurrentReady] = useState(false);
-  // Track current index in a ref so async callbacks see the latest value
   const currentRef = useRef(currentIndex);
   currentRef.current = currentIndex;
 
@@ -34,7 +130,6 @@ export function useNarrationPipeline(
   const buildQueue = useCallback(
     (cur: number, total: number): number[] => {
       const order: number[] = [];
-      // Current, then +1, +2, then ascending remainder
       for (const offset of [0, 1, 2]) {
         const idx = cur + offset;
         if (idx < total) order.push(idx);
@@ -49,51 +144,84 @@ export function useNarrationPipeline(
 
   const MAX_RETRIES = 2;
 
-  // Fetch narration for a single scene
+  // Fetch narration for a single scene using streaming endpoint
   const fetchNarration = useCallback((idx: number, text: string) => {
     if (!text) {
-      // No text → mark ready immediately (image-only scene)
-      cache.current.set(idx, { status: 'ready', audio: null, blobUrl: null, retries: 0 });
+      const entry = makeEntry();
+      entry.status = 'ready';
+      entry.streamDone = true;
+      cache.current.set(idx, entry);
       if (idx === currentRef.current) setCurrentReady(true);
       return;
     }
 
     const prev = cache.current.get(idx);
     const retryCount = prev?.retries ?? 0;
-    cache.current.set(idx, { status: 'fetching', audio: null, blobUrl: null, retries: retryCount });
+    const entry = makeEntry(retryCount);
+    entry.status = 'fetching';
+    cache.current.set(idx, entry);
     inflightCount.current++;
 
     const ctrl = new AbortController();
     abortMap.current.set(idx, ctrl);
 
-    fetch('/api/live-voice/narrate', {
+    fetch('/api/live-voice/narrate-stream', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text }),
       signal: ctrl.signal,
     })
-      .then((res) => {
-        if (!res.ok) throw new Error(`Narration failed: ${res.status}`);
-        return res.blob();
-      })
-      .then((blob) => {
-        if (ctrl.signal.aborted) return;
-        const url = URL.createObjectURL(blob);
-        const audio = new Audio(url);
-        audio.onended = () => URL.revokeObjectURL(url);
-        cache.current.set(idx, { status: 'ready', audio, blobUrl: url, retries: retryCount });
-        if (idx === currentRef.current) setCurrentReady(true);
+      .then(async (res) => {
+        if (!res.ok) throw new Error(`Narration stream failed: ${res.status}`);
+        const reader = res.body?.getReader();
+        if (!reader) throw new Error('No readable stream');
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done || ctrl.signal.aborted) break;
+          if (!value || value.length === 0) continue;
+
+          entry.chunks.push(value);
+          entry.totalBytes += value.length;
+
+          // If this scene is currently playing, schedule the new chunk
+          if (entry.player && entry.chunksScheduled < entry.chunks.length) {
+            for (let i = entry.chunksScheduled; i < entry.chunks.length; i++) {
+              entry.player.schedule(entry.chunks[i]);
+            }
+            entry.chunksScheduled = entry.chunks.length;
+          }
+
+          // Mark ready after threshold
+          if (entry.status === 'fetching' && entry.totalBytes >= READY_THRESHOLD_BYTES) {
+            entry.status = 'ready';
+            if (idx === currentRef.current) setCurrentReady(true);
+          }
+        }
+
+        // Stream complete
+        if (!ctrl.signal.aborted) {
+          entry.streamDone = true;
+          if (entry.status === 'fetching') {
+            // Got some data but below threshold — still mark ready
+            entry.status = entry.totalBytes > 0 ? 'ready' : 'error';
+            if (idx === currentRef.current) setCurrentReady(true);
+          }
+          if (entry.player) {
+            entry.player.finalize();
+          }
+        }
       })
       .catch((err) => {
         if (err.name === 'AbortError') return;
-        console.warn(`Narration failed for scene ${idx} (attempt ${retryCount + 1}):`, err);
+        console.warn(`Narration stream failed for scene ${idx} (attempt ${retryCount + 1}):`, err);
 
         if (retryCount < MAX_RETRIES) {
-          // Mark idle with incremented retry count so drainQueue re-fetches it
-          cache.current.set(idx, { status: 'idle', audio: null, blobUrl: null, retries: retryCount + 1 });
+          const retry = makeEntry(retryCount + 1);
+          cache.current.set(idx, retry);
         } else {
-          // Exhausted retries — unblock cinema without audio
-          cache.current.set(idx, { status: 'error', audio: null, blobUrl: null, retries: retryCount });
+          entry.status = 'error';
+          entry.streamDone = true;
           if (idx === currentRef.current) setCurrentReady(true);
         }
       })
@@ -102,7 +230,6 @@ export function useNarrationPipeline(
           inflightCount.current--;
           abortMap.current.delete(idx);
         }
-        // Drain queue — schedule next fetch (will pick up retries)
         drainQueue();
       });
   }, []);
@@ -114,7 +241,6 @@ export function useNarrationPipeline(
     while (inflightCount.current < MAX_CONCURRENT && queueRef.current.length > 0) {
       const nextIdx = queueRef.current.shift()!;
       const entry = cache.current.get(nextIdx);
-      // Skip if already fetched/fetching
       if (entry && entry.status !== 'idle') continue;
       const scene = scenesRef.current[nextIdx];
       if (!scene) continue;
@@ -122,17 +248,15 @@ export function useNarrationPipeline(
     }
   }, [fetchNarration]);
 
-  // Keep scenes in a ref for async access
   const scenesRef = useRef(scenes);
   scenesRef.current = scenes;
 
-  // Priority bumping: abort lowest-priority inflight if current scene needs fetching
+  // Priority bumping
   const bumpPriority = useCallback(
     (cur: number) => {
       const currentEntry = cache.current.get(cur);
-      if (currentEntry && currentEntry.status !== 'idle') return; // already handled
+      if (currentEntry && currentEntry.status !== 'idle') return;
 
-      // If we're at max concurrency, abort the fetch furthest from current
       if (inflightCount.current >= MAX_CONCURRENT) {
         let worstIdx = -1;
         let worstDist = -1;
@@ -148,8 +272,7 @@ export function useNarrationPipeline(
           ctrl?.abort();
           abortMap.current.delete(worstIdx);
           inflightCount.current--;
-          // Reset the aborted entry so it can be re-queued later
-          cache.current.set(worstIdx, { status: 'idle', audio: null, blobUrl: null, retries: 0 });
+          cache.current.set(worstIdx, makeEntry());
         }
       }
     },
@@ -160,22 +283,18 @@ export function useNarrationPipeline(
   useEffect(() => {
     if (!active) return;
 
-    // Check if current scene is already ready
     const currentEntry = cache.current.get(currentIndex);
     if (currentEntry?.status === 'ready') {
       setCurrentReady(true);
     } else if (currentEntry?.status === 'error') {
-      setCurrentReady(true); // unblock cinema
+      setCurrentReady(true);
     } else {
       setCurrentReady(false);
     }
 
-    // Bump priority for current scene
     bumpPriority(currentIndex);
 
-    // Build and set queue
     const queue = buildQueue(currentIndex, scenes.length);
-    // Filter to only scenes that need fetching
     queueRef.current = queue.filter((idx) => {
       const entry = cache.current.get(idx);
       return !entry || entry.status === 'idle';
@@ -184,14 +303,15 @@ export function useNarrationPipeline(
     drainQueue();
   }, [scenes.length, currentIndex, active, buildQueue, bumpPriority, drainQueue]);
 
-  // When currentIndex changes, pause previous scene audio
+  // When currentIndex changes, stop previous scene's player
   const prevIndex = useRef(currentIndex);
   useEffect(() => {
     if (prevIndex.current !== currentIndex) {
       const prevEntry = cache.current.get(prevIndex.current);
-      if (prevEntry?.audio) {
-        prevEntry.audio.pause();
-        prevEntry.audio.currentTime = 0;
+      if (prevEntry?.player) {
+        prevEntry.player.stop();
+        prevEntry.player = null;
+        prevEntry.chunksScheduled = 0;
       }
       prevIndex.current = currentIndex;
     }
@@ -199,17 +319,34 @@ export function useNarrationPipeline(
 
   const playCurrentNarration = useCallback(() => {
     const entry = cache.current.get(currentRef.current);
-    if (entry?.audio) {
-      entry.audio.currentTime = 0;
-      entry.audio.play().catch(() => {});
+    if (!entry || entry.chunks.length === 0) return;
+
+    // Stop existing player if replaying
+    if (entry.player) {
+      entry.player.stop();
+    }
+
+    const player = new PCMPlayer();
+    entry.player = player;
+
+    // Schedule all accumulated chunks
+    for (const chunk of entry.chunks) {
+      player.schedule(chunk);
+    }
+    entry.chunksScheduled = entry.chunks.length;
+
+    // If stream is done, finalize (sets onended on last node)
+    if (entry.streamDone) {
+      player.finalize();
     }
   }, []);
 
   const stopNarration = useCallback(() => {
     const entry = cache.current.get(currentRef.current);
-    if (entry?.audio) {
-      entry.audio.pause();
-      entry.audio.currentTime = 0;
+    if (entry?.player) {
+      entry.player.stop();
+      entry.player = null;
+      entry.chunksScheduled = 0;
     }
   }, []);
 
@@ -218,20 +355,15 @@ export function useNarrationPipeline(
   }, []);
 
   const reset = useCallback(() => {
-    // Abort all in-flight fetches
     for (const ctrl of abortMap.current.values()) {
       ctrl.abort();
     }
     abortMap.current.clear();
     inflightCount.current = 0;
 
-    // Revoke all blob URLs and clear cache
     for (const entry of cache.current.values()) {
-      if (entry.blobUrl) {
-        URL.revokeObjectURL(entry.blobUrl);
-      }
-      if (entry.audio) {
-        entry.audio.pause();
+      if (entry.player) {
+        entry.player.stop();
       }
     }
     cache.current.clear();
@@ -246,8 +378,7 @@ export function useNarrationPipeline(
         ctrl.abort();
       }
       for (const entry of cache.current.values()) {
-        if (entry.blobUrl) URL.revokeObjectURL(entry.blobUrl);
-        if (entry.audio) entry.audio.pause();
+        if (entry.player) entry.player.stop();
       }
     };
   }, []);
