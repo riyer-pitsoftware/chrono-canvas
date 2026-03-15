@@ -195,31 +195,31 @@ async def _call_with_keepalives(
 
 
 async def _stream_scene_parts(
-    chat,
-    prompt,
+    client,
+    model: str,
+    config,
+    contents,
     *,
     timeout_s: float = _TURN_TIMEOUT_S,
     flush_timeout_s: float = _TEXT_FLUSH_TIMEOUT_S,
     keepalive_s: float = _KEEPALIVE_INTERVAL_S,
 ) -> AsyncGenerator[dict, None]:
-    """Stream scene text+image from ``send_message_stream()``.
+    """Stream scene text+image from one-shot ``generate_content_stream()``.
 
-    Yields text as a single ``{"type": "text", ...}`` as soon as a gap of
-    *flush_timeout_s* is detected between chunks (text finishes fast, image
-    takes much longer).  Images are yielded as ``{"type": "image", ...}`` when
-    they arrive.  Keepalive events are emitted while waiting for the image so
-    the SSE connection stays alive.
+    Uses one-shot calls instead of chat.send_message_stream() because
+    Gemini 3.x image models only reliably generate images in one-shot mode,
+    not in multi-turn chat mode.
 
-    After the generator is exhausted the caller should call
-    scrubbing thought parts (no longer needed — thinking fallback handles this).
+    *contents* is the full conversation history (list of Content objects).
     """
     loop = asyncio.get_event_loop()
     deadline = loop.time() + timeout_s
 
-    # Wrap stream creation with a timeout — the SDK can hang here
-    # if the Gemini API is slow or returns an unhandled error.
     stream = await asyncio.wait_for(
-        chat.send_message_stream(prompt), timeout=min(30, timeout_s)
+        client.aio.models.generate_content_stream(
+            model=model, contents=contents, config=config,
+        ),
+        timeout=min(30, timeout_s),
     )
     stream_iter = stream.__aiter__()
 
@@ -267,7 +267,27 @@ async def _stream_scene_parts(
         ):
             continue
 
+        # Log finish reason for diagnostics
+        if chunk.candidates and chunk.candidates[0].finish_reason:
+            logger.info(
+                "Scene chunk finish_reason=%s",
+                chunk.candidates[0].finish_reason,
+            )
+
         for part in chunk.candidates[0].content.parts:
+            part_type = (
+                "thought" if getattr(part, "thought", False)
+                else "text" if part.text is not None
+                else "image" if part.inline_data is not None
+                else "other"
+            )
+            logger.debug(
+                "Scene part: type=%s len=%s",
+                part_type,
+                len(part.text) if part.text else (
+                    len(part.inline_data.data) if part.inline_data and part.inline_data.data else "?"
+                ),
+            )
             if getattr(part, "thought", False):
                 continue
             if part.text is not None:
@@ -792,179 +812,187 @@ async def _scene_by_scene_flow(
         elapsed_s=time.perf_counter() - casting_t0,
     )
 
-    # ── Create FRESH scene chat — NO thinking ──────────────────
-    # Thinking suppresses image generation in multi-turn chat on
-    # Gemini 3.x models.  Casting (one-shot, no thinking) generates
-    # images fine; scene chat with thinking_level=MINIMAL does not.
-    thinking_enabled = False
-    chat = client.aio.chats.create(
-        model=model, config=_gen_config(thinking=False)
+    # ── Parallel scene generation — text + image in parallel ────
+    # Gemini 3.x image models intermittently skip images when asked
+    # for both text+image.  Fix: dedicated text call (fast model) +
+    # dedicated image call (image model, image-only prompt).
+    logger.info(
+        "Scene generation: text_model=%s image_model=%s mode=parallel",
+        _TEXT_ONLY_MODEL, model,
     )
 
-    # ── Scenes — model decides how many; stops on [END] ────────
-    max_scenes = 20
+    # Conversation history for text continuity (text-only model)
+    text_history: list[types.Content] = []
+    _IMAGE_TIMEOUT_S = 90  # image generation can be slow
+
+    # ── Scenes ────────────────────────────────────────────────────
+    max_scenes = 4  # cap for demo pacing
     scene_idx = 0
-    use_parallel = False
-    last_scene_image_bytes: bytes | None = None
-    last_scene_image_mime: str = "image/png"
     while scene_idx < max_scenes:
         yield _stage_event("scene", "start", scene_idx=scene_idx + 1)
         scene_t0 = time.perf_counter()
 
+        # ── Build text prompt ─────────────────────────────────────
         if scene_idx == 0:
-            # First scene: inject story context + casting image
-            prompt_text = (
-                f"{base_prompt}\n\n"
-                f"Now begin the story. Write ONLY Scene 1 — 2-4 sentences of noir "
-                f"prose and ONE image. Do NOT write multiple scenes in this turn. "
-                f"The characters must look EXACTLY like the casting photo above."
-            )
-            if casting_image_bytes:
+            casting_context = ""
+            if casting_text:
                 casting_context = (
-                    "Here is the casting photo and character sheet — the "
-                    "definitive reference for all characters in this story. "
-                    "Every scene must depict these EXACT same people with "
-                    "IDENTICAL names, faces, and features.\n\n"
+                    f"CHARACTER REFERENCE:\n{casting_text}\n\n"
                 )
-                if casting_text:
-                    casting_context += f"CHARACTER SHEET:\n{casting_text}\n\n"
-                prompt = [
-                    types.Part.from_bytes(
-                        data=casting_image_bytes, mime_type=casting_image_mime
-                    ),
-                    types.Part.from_text(
-                        text=casting_context + prompt_text
-                    ),
-                ]
-            else:
-                prompt = prompt_text
-        else:
-            # Subsequent scenes: re-inject casting image + last scene image
-            # as visual anchors so the model doesn't drift from character
-            # appearances. Chat history has text but NOT prior images.
-            ref_parts: list = []
-            if casting_image_bytes:
-                ref_parts.append(
-                    types.Part.from_bytes(
-                        data=casting_image_bytes, mime_type=casting_image_mime
-                    )
-                )
-            if last_scene_image_bytes:
-                ref_parts.append(
-                    types.Part.from_bytes(
-                        data=last_scene_image_bytes, mime_type=last_scene_image_mime
-                    )
-                )
-            scene_text = (
-                f"Reference images above: casting photo and previous scene. "
-                f"Continue with ONLY Scene {scene_idx + 1} — 2-4 sentences of noir "
-                f"prose and ONE image. Do NOT write multiple scenes. "
-                f"Same characters — same faces, same hair, same build as the casting photo. "
-                f"If this is the final scene, end with [END]."
+            text_prompt = (
+                f"{casting_context}{base_prompt}\n\n"
+                f"Write ONLY Scene 1 — 2-4 sentences of noir prose, present tense. "
+                f"Do NOT write multiple scenes."
             )
-            if ref_parts:
-                ref_parts.append(types.Part.from_text(text=scene_text))
-                prompt = ref_parts
+        else:
+            is_last = scene_idx == max_scenes - 1
+            text_prompt = (
+                f"Continue with ONLY Scene {scene_idx + 1} — 2-4 sentences of noir "
+                f"prose, present tense. Do NOT write multiple scenes."
+            )
+            if is_last:
+                text_prompt += " This is the FINAL scene — wrap up the story and end with [END]."
             else:
-                prompt = scene_text
+                text_prompt += " If the story reaches a natural conclusion, end with [END]."
+
+        logger.info(
+            "Scene %d: %d text history turns, is_last=%s",
+            scene_idx + 1, len(text_history), scene_idx == max_scenes - 1,
+        )
+
+        # ── Text generation (fast, ~2-3s) ─────────────────────────
+        text_config = types.GenerateContentConfig(
+            system_instruction=DASH_SYSTEM_INSTRUCTION,
+            response_modalities=["TEXT"],
+            temperature=1.0,
+            max_output_tokens=2048,
+        )
+        user_turn = types.Content(
+            role="user",
+            parts=[types.Part.from_text(text=text_prompt)],
+        )
+        text_contents = text_history + [user_turn]
 
         try:
-            is_final = False
-            if use_parallel and client is not None:
-                flow = _parallel_scene_parts(chat, prompt, client)
-            else:
-                flow = _stream_scene_parts(chat, prompt)
-
-            async for item in flow:
-                if item.get("type") == "_meta":
-                    is_final = item["is_final"]
-                    if (
-                        not item.get("text_early", True)
-                        and scene_idx == 0
-                        and client is not None
-                    ):
-                        use_parallel = True
-                        logger.info(
-                            "Switching to parallel text+image for remaining scenes"
-                        )
-                    if item["empty"]:
-                        yield _stage_event(
-                            "scene", "error",
-                            scene_idx=scene_idx + 1,
-                            elapsed_s=time.perf_counter() - scene_t0,
-                            detail="Empty response from model",
-                        )
-                        yield {"type": "error", "content": f"Scene {scene_idx + 1}: empty response"}
-                        break
-                elif item.get("type") == "keepalive":
-                    yield item
-                elif item.get("type") == "image":
-                    # Stash raw image for re-injection as visual anchor in next scene
-                    try:
-                        last_scene_image_bytes = base64.b64decode(item["content"])
-                        last_scene_image_mime = item.get("mime_type", "image/jpeg")
-                    except Exception:
-                        pass
-                    yield item
-                else:
-                    yield item
-            else:
-                yield _stage_event(
-                    "scene", "complete",
-                    scene_idx=scene_idx + 1,
-                    elapsed_s=time.perf_counter() - scene_t0,
-                )
-                if is_final:
-                    break
-                scene_idx += 1
-                continue
-
-            # Broke out of for-loop (empty response) — stop
-            break
-
-        except asyncio.TimeoutError:
-            elapsed = time.perf_counter() - scene_t0
-            logger.error("Scene %d timed out after %.1fs", scene_idx + 1, elapsed)
-            yield _stage_event(
-                "scene", "timeout",
-                scene_idx=scene_idx + 1,
-                elapsed_s=elapsed,
-                detail=f"Timed out after {_TURN_TIMEOUT_S}s",
+            text_response = await asyncio.wait_for(
+                client.aio.models.generate_content(
+                    model=_TEXT_ONLY_MODEL,
+                    contents=text_contents,
+                    config=text_config,
+                ),
+                timeout=30,
             )
-            yield {"type": "error", "content": f"Scene {scene_idx + 1} timed out after {_TURN_TIMEOUT_S}s"}
-            break
+            scene_text = (text_response.text or "").replace("[END]", "").rstrip()
+            is_final = "[END]" in (text_response.text or "")
+
+            if not scene_text:
+                yield _stage_event(
+                    "scene", "error", scene_idx=scene_idx + 1,
+                    elapsed_s=time.perf_counter() - scene_t0,
+                    detail="Empty text from model",
+                )
+                yield {"type": "error", "content": f"Scene {scene_idx + 1}: empty text"}
+                break
+
+            # Yield text immediately
+            yield {"type": "text", "content": scene_text}
+
+            # Update text history
+            text_history.append(user_turn)
+            text_history.append(types.Content(
+                role="model",
+                parts=[types.Part.from_text(text=scene_text)],
+            ))
 
         except Exception as e:
-            if _is_thought_signature_error(e) and thinking_enabled:
-                # ── Fallback: recreate chat WITHOUT thinking ───
-                logger.warning(
-                    "Scene %d hit thought_signature error — falling back "
-                    "to no-thinking chat: %s", scene_idx + 1, e,
-                )
-                thinking_enabled = False
-                chat = client.aio.chats.create(
-                    model=model, config=_gen_config(thinking=False)
-                )
-                # Retry this same scene_idx on next loop iteration
-                # (scene_idx not incremented, stage event already emitted)
-                yield _stage_event(
-                    "scene", "error",
-                    scene_idx=scene_idx + 1,
-                    elapsed_s=time.perf_counter() - scene_t0,
-                    detail="thought_signature error — retrying without thinking",
-                )
-                continue
-
             elapsed = time.perf_counter() - scene_t0
-            logger.error("Scene %d generation failed: %s", scene_idx + 1, e)
+            logger.error("Scene %d text failed: %s", scene_idx + 1, e)
             yield _stage_event(
-                "scene", "error",
-                scene_idx=scene_idx + 1,
-                elapsed_s=elapsed,
-                detail=str(e),
+                "scene", "error", scene_idx=scene_idx + 1,
+                elapsed_s=elapsed, detail=str(e),
             )
-            yield {"type": "error", "content": f"Scene {scene_idx + 1} failed: {e}"}
+            yield {"type": "error", "content": f"Scene {scene_idx + 1} text failed: {e}"}
             break
+
+        # ── Image generation (parallel, ~10-30s) ─────────────────
+        # Fire-and-forget style: yield keepalives while waiting.
+        image_prompt = (
+            f"Generate ONE photorealistic cinematic image for this noir scene:\n\n"
+            f"{scene_text}\n\n"
+        )
+        if casting_text:
+            image_prompt += (
+                f"Character appearances:\n{casting_text}\n\n"
+            )
+        image_prompt += (
+            "Dramatic lighting, cinematic composition, film noir aesthetic. "
+            "Photorealistic. No text overlays."
+        )
+
+        image_config = types.GenerateContentConfig(
+            response_modalities=["IMAGE"],
+            temperature=1.0,
+            max_output_tokens=8192,
+        )
+
+        loop = asyncio.get_event_loop()
+
+        async def _gen_image():
+            return await client.aio.models.generate_content(
+                model=model,
+                contents=image_prompt,
+                config=image_config,
+            )
+
+        image_task = asyncio.create_task(_gen_image())
+        img_deadline = loop.time() + _IMAGE_TIMEOUT_S
+        last_keepalive = loop.time()
+
+        while not image_task.done():
+            now = loop.time()
+            if now >= img_deadline:
+                image_task.cancel()
+                logger.warning("Scene %d image timed out", scene_idx + 1)
+                break
+            if now - last_keepalive >= _KEEPALIVE_INTERVAL_S:
+                yield _KEEPALIVE_EVENT
+                last_keepalive = now
+            try:
+                await asyncio.wait_for(
+                    asyncio.shield(image_task),
+                    timeout=min(_KEEPALIVE_INTERVAL_S, img_deadline - now),
+                )
+            except asyncio.TimeoutError:
+                pass
+
+        if image_task.done() and not image_task.cancelled():
+            try:
+                img_response = image_task.result()
+                img_parts = _extract_parts(img_response)
+                for p in img_parts:
+                    if p["type"] == "image":
+                        yield p
+                        logger.info(
+                            "Scene %d image generated in %.1fs",
+                            scene_idx + 1,
+                            time.perf_counter() - scene_t0,
+                        )
+                        break
+                else:
+                    logger.warning("Scene %d: image model returned no image", scene_idx + 1)
+            except Exception as e:
+                logger.warning("Scene %d image failed: %s", scene_idx + 1, e)
+        else:
+            logger.warning("Scene %d: image generation skipped (timeout/cancel)", scene_idx + 1)
+
+        yield _stage_event(
+            "scene", "complete",
+            scene_idx=scene_idx + 1,
+            elapsed_s=time.perf_counter() - scene_t0,
+        )
+        if is_final:
+            break
+        scene_idx += 1
 
 
 async def _continuation_flow(

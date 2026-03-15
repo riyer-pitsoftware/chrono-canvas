@@ -123,6 +123,7 @@ export function useNarrationPipeline(
   const abortMap = useRef<Map<number, AbortController>>(new Map());
   const inflightCount = useRef(0);
   const [currentReady, setCurrentReady] = useState(false);
+  const [currentDone, setCurrentDone] = useState(false);
   const currentRef = useRef(currentIndex);
   currentRef.current = currentIndex;
 
@@ -291,6 +292,7 @@ export function useNarrationPipeline(
     } else {
       setCurrentReady(false);
     }
+    setCurrentDone(false);
 
     bumpPriority(currentIndex);
 
@@ -328,6 +330,10 @@ export function useNarrationPipeline(
 
     const player = new PCMPlayer();
     entry.player = player;
+    setCurrentDone(false);
+
+    // Signal when playback finishes
+    player.onended = () => setCurrentDone(true);
 
     // Schedule all accumulated chunks
     for (const chunk of entry.chunks) {
@@ -385,6 +391,7 @@ export function useNarrationPipeline(
 
   return {
     narrationReady: currentReady,
+    narrationDone: currentDone,
     playCurrentNarration,
     stopNarration,
     getStatus,
