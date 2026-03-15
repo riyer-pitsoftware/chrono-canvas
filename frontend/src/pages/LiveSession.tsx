@@ -521,10 +521,20 @@ export function LiveSession() {
   const micLabel = !sessionActive
     ? 'Tap to begin'
     : isListening
-      ? 'Speak now'
+      ? 'Speak, then tap Send'
       : isNarrating
         ? 'Dash is speaking'
         : 'Generating\u2026';
+
+  /** Signal Gemini that the user is done speaking. */
+  const sendTurn = useCallback(() => {
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN && isListening) {
+      console.log('[LiveSession] User tapped Send — ending turn');
+      wsRef.current.send(JSON.stringify({ type: 'end_turn' }));
+      // Immediately switch to narrating so mic mutes
+      handleTurnChange('narrating');
+    }
+  }, [isListening, handleTurnChange]);
 
   const micLabelColor = isListening ? '#4ade80' : isNarrating ? 'oklch(0.4 0.02 60)' : '#f59e0b';
 
@@ -668,57 +678,92 @@ export function LiveSession() {
         )}
       </div>
 
-      {/* ── Bottom: Mic button ───────────────────────────────── */}
+      {/* ── Bottom: Mic + Send buttons ─────────────────────────── */}
       <div className="pb-12 pt-6 flex flex-col items-center gap-3">
-        <button
-          onClick={sessionActive ? stopSession : startSession}
-          className="relative flex items-center justify-center rounded-full transition-all duration-300 focus:outline-none"
-          style={{
-            width: 80,
-            height: 80,
-            backgroundColor: sessionActive ? micBg : 'oklch(0.12 0.01 60)',
-            border: sessionActive ? micBorder : '2px solid oklch(0.3 0.02 60)',
-            boxShadow: sessionActive ? micShadow : '0 0 20px rgba(0,0,0,0.3)',
-            animation: isListening ? 'pulse-ring-green 2s ease-in-out infinite' : undefined,
-            opacity: isNarrating ? 0.6 : 1,
-            transition: 'all 0.4s ease',
-          }}
-          aria-label={sessionActive ? 'Stop session' : 'Start session'}
-        >
-          {/* Mic icon */}
-          <svg
-            width="28"
-            height="28"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke={sessionActive ? micStroke : 'oklch(0.6 0.02 80)'}
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            style={{ transition: 'stroke 0.3s ease' }}
+        <div className="flex items-center gap-4">
+          {/* Mic / Start-Stop button */}
+          <button
+            onClick={sessionActive ? stopSession : startSession}
+            className="relative flex items-center justify-center rounded-full transition-all duration-300 focus:outline-none"
+            style={{
+              width: 80,
+              height: 80,
+              backgroundColor: sessionActive ? micBg : 'oklch(0.12 0.01 60)',
+              border: sessionActive ? micBorder : '2px solid oklch(0.3 0.02 60)',
+              boxShadow: sessionActive ? micShadow : '0 0 20px rgba(0,0,0,0.3)',
+              animation: isListening ? 'pulse-ring-green 2s ease-in-out infinite' : undefined,
+              opacity: isNarrating ? 0.6 : 1,
+              transition: 'all 0.4s ease',
+            }}
+            aria-label={sessionActive ? 'Stop session' : 'Start session'}
           >
-            <rect x="9" y="2" width="6" height="11" rx="3" />
-            <path d="M5 10a7 7 0 0 0 14 0" />
-            <line x1="12" y1="17" x2="12" y2="21" />
-            <line x1="8" y1="21" x2="16" y2="21" />
-            {/* Mute slash when Dash is speaking */}
-            {isNarrating && (
-              <line x1="2" y1="2" x2="22" y2="22" stroke="oklch(0.5 0.02 60)" strokeWidth="2.5" />
-            )}
-          </svg>
+            {/* Mic icon */}
+            <svg
+              width="28"
+              height="28"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke={sessionActive ? micStroke : 'oklch(0.6 0.02 80)'}
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              style={{ transition: 'stroke 0.3s ease' }}
+            >
+              <rect x="9" y="2" width="6" height="11" rx="3" />
+              <path d="M5 10a7 7 0 0 0 14 0" />
+              <line x1="12" y1="17" x2="12" y2="21" />
+              <line x1="8" y1="21" x2="16" y2="21" />
+              {/* Mute slash when Dash is speaking */}
+              {isNarrating && (
+                <line x1="2" y1="2" x2="22" y2="22" stroke="oklch(0.5 0.02 60)" strokeWidth="2.5" />
+              )}
+            </svg>
 
-          {/* Pulsing ring when listening (green) */}
-          {isListening && (
-            <span
-              className="absolute inset-0 rounded-full"
+            {/* Pulsing ring when listening (green) */}
+            {isListening && (
+              <span
+                className="absolute inset-0 rounded-full"
+                style={{
+                  border: '2px solid #4ade80',
+                  animation: 'ping-ring-green 1.5s cubic-bezier(0, 0, 0.2, 1) infinite',
+                  opacity: 0.5,
+                }}
+              />
+            )}
+          </button>
+
+          {/* Send button — visible when listening */}
+          {sessionActive && isListening && (
+            <button
+              onClick={sendTurn}
+              className="flex items-center justify-center rounded-full transition-all duration-200 focus:outline-none"
               style={{
+                width: 56,
+                height: 56,
+                backgroundColor: 'oklch(0.18 0.06 145)',
                 border: '2px solid #4ade80',
-                animation: 'ping-ring-green 1.5s cubic-bezier(0, 0, 0.2, 1) infinite',
-                opacity: 0.5,
+                boxShadow: '0 0 20px rgba(74, 222, 128, 0.15)',
+                animation: 'fadeIn 300ms ease-out',
               }}
-            />
+              aria-label="Send — tell Dash you're done speaking"
+            >
+              {/* Arrow-up / send icon */}
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#4ade80"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <line x1="12" y1="19" x2="12" y2="5" />
+                <polyline points="5 12 12 5 19 12" />
+              </svg>
+            </button>
           )}
-        </button>
+        </div>
 
         <span
           className="text-xs transition-all duration-300"

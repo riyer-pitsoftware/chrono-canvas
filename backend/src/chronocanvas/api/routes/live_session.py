@@ -356,6 +356,22 @@ async def _receive_from_browser(ws: WebSocket, session, stop_event: asyncio.Even
                         stop_event.set()
                         break
 
+            elif msg_type == "end_turn":
+                # User tapped Send — send 1s of silence so Gemini's VAD
+                # detects end-of-speech and triggers a response.
+                logger.info("User ended turn manually (Send button)")
+                try:
+                    # 1s of silence at 16kHz = 16000 samples × 2 bytes = 32000 bytes
+                    silence = b"\x00" * 32000
+                    await session.send_realtime_input(
+                        audio=types.Blob(
+                            data=silence, mime_type="audio/pcm;rate=16000",
+                        ),
+                    )
+                    logger.info("Sent 1s silence to Gemini to trigger VAD")
+                except Exception as e:
+                    logger.error("Failed to send silence to Gemini: %s", e)
+
             elif msg_type == "stop":
                 logger.info("Client requested session stop")
                 stop_event.set()
