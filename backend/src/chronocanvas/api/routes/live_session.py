@@ -38,17 +38,28 @@ Before starting, mentally cast your characters. Lock in each character's exact \
 physical appearance — face shape, skin tone, hair color/style, eye color, build, \
 age, distinguishing marks, and wardrobe. Once set, NEVER deviate.
 
-RULES:
-1. When the user gives you a story premise, narrate it scene by scene in noir prose.
-2. After narrating each scene, call generate_scene_image() with a detailed visual description. \
-   The description MUST specify: photorealistic photograph, 35mm film, Canon EOS R5, 50mm f/1.4, \
-   shallow depth of field, practical lighting. NEVER describe illustrations or drawings. \
-   ALWAYS re-state each visible character's key physical features (face, hair, skin tone, \
-   build, clothing) in EVERY image description — do NOT rely on context alone.
-3. If the user asks about history, call search_historical_context() to ground the story.
-4. If the user interrupts or redirects, adapt immediately. You are co-directing with them.
-5. Keep narration to 2-3 sentences per scene, then generate the image, then continue.
-6. Your voice: clipped, direct, noir. Every word earns its place.
+WORKFLOW (YOU MUST FOLLOW THIS EXACTLY):
+1. Narrate ONE scene in 2-3 sentences of noir prose.
+2. STOP talking.
+3. Call generate_scene_image() with a detailed visual description of that scene.
+4. WAIT for the image result before continuing.
+5. Then narrate the NEXT scene and repeat.
+
+YOU MUST call generate_scene_image() after EVERY scene. This is not optional. \
+If you narrate without calling generate_scene_image(), the audience sees nothing. \
+NEVER narrate more than one scene without calling the function.
+
+IMAGE DESCRIPTION RULES for generate_scene_image():
+- MUST specify: photorealistic photograph, 35mm film, Canon EOS R5, 50mm f/1.4, \
+  shallow depth of field, practical lighting.
+- NEVER describe illustrations or drawings.
+- ALWAYS re-state each visible character's key physical features (face, hair, skin tone, \
+  build, clothing) in EVERY image description — do NOT rely on context alone.
+
+OTHER RULES:
+- If the user asks about history, call search_historical_context() to ground the story.
+- If the user interrupts or redirects, adapt immediately. You are co-directing with them.
+- Your voice: clipped, direct, noir. Every word earns its place.
 
 You speak. You don't type. This is a conversation in a dark room."""
 
@@ -275,6 +286,7 @@ async def _keepalive_ping(ws: WebSocket, stop_event: asyncio.Event) -> None:
 
 async def _receive_from_browser(ws: WebSocket, session, stop_event: asyncio.Event) -> None:
     """Loop: read messages from browser WebSocket and forward audio to Gemini."""
+    audio_chunks_received = 0
     try:
         while not stop_event.is_set():
             raw = await ws.receive_text()
@@ -285,9 +297,26 @@ async def _receive_from_browser(ws: WebSocket, session, stop_event: asyncio.Even
                 audio_b64 = msg.get("data", "")
                 if audio_b64:
                     audio_bytes = base64.b64decode(audio_b64)
-                    await session.send_realtime_input(
-                        audio=types.Blob(data=audio_bytes, mime_type="audio/pcm;rate=16000"),
-                    )
+                    audio_chunks_received += 1
+                    if audio_chunks_received == 1:
+                        logger.info(
+                            "First audio chunk from browser: %d bytes", len(audio_bytes),
+                        )
+                    elif audio_chunks_received % 50 == 0:
+                        logger.info("Audio chunks from browser: %d", audio_chunks_received)
+                    try:
+                        await session.send_realtime_input(
+                            audio=types.Blob(
+                                data=audio_bytes, mime_type="audio/pcm;rate=16000",
+                            ),
+                        )
+                    except Exception as e:
+                        logger.error(
+                            "Failed to send audio to Gemini (chunk %d): %s",
+                            audio_chunks_received, e,
+                        )
+                        stop_event.set()
+                        break
 
             elif msg_type == "stop":
                 logger.info("Client requested session stop")
@@ -311,6 +340,7 @@ async def _receive_from_gemini(
 ) -> None:
     """Loop: read responses from Gemini session and forward to browser."""
     _RECEIVE_TIMEOUT_S = 120  # Max seconds to wait for a single Gemini response
+    gemini_response_count = 0
     try:
         while not stop_event.is_set():
             aiter = session.receive().__aiter__()
@@ -327,6 +357,27 @@ async def _receive_from_gemini(
                     )
                     stop_event.set()
                     return
+
+                gemini_response_count += 1
+                # Log what's in this response for debugging
+                has_audio = bool(
+                    response.server_content
+                    and response.server_content.model_turn
+                    and response.server_content.model_turn.parts
+                )
+                has_tool_call = bool(response.tool_call)
+                turn_complete = bool(
+                    response.server_content
+                    and response.server_content.turn_complete
+                )
+
+                if gemini_response_count == 1:
+                    logger.info(
+                        "First Gemini response: audio=%s tool_call=%s turn_complete=%s",
+                        has_audio, has_tool_call, turn_complete,
+                    )
+                elif gemini_response_count % 20 == 0:
+                    logger.info("Gemini responses received: %d", gemini_response_count)
 
                 # Handle audio from model
                 if response.server_content and response.server_content.model_turn:

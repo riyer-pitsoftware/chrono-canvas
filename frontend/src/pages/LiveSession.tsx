@@ -108,11 +108,27 @@ export function LiveSession() {
 
   /* ── Audio playback ─────────────────────────────────────────── */
 
+  const audioChunksReceivedRef = useRef(0);
+
   const playAudioChunk = useCallback((base64Data: string) => {
-    if (!playbackCtxRef.current) {
-      playbackCtxRef.current = new AudioContext({ sampleRate: 24000 });
-    }
     const ctx = playbackCtxRef.current;
+    if (!ctx) {
+      console.error('[LiveSession] No playback AudioContext — was it created during startSession?');
+      return;
+    }
+
+    // Resume if suspended (shouldn't happen since we create during click)
+    if (ctx.state === 'suspended') {
+      console.warn('[LiveSession] Playback context suspended, resuming...');
+      ctx.resume();
+    }
+
+    audioChunksReceivedRef.current += 1;
+    if (audioChunksReceivedRef.current === 1) {
+      console.log('[LiveSession] First audio chunk received for playback, ctx state:', ctx.state);
+    } else if (audioChunksReceivedRef.current % 50 === 0) {
+      console.log('[LiveSession] Audio chunks played:', audioChunksReceivedRef.current);
+    }
 
     const bytes = fromBase64(base64Data);
     const int16 = new Int16Array(bytes.buffer);
@@ -156,21 +172,59 @@ export function LiveSession() {
 
   /* ── Turn transition handler ─────────────────────────────────── */
 
+  // Ref to track pending listening-transition timer so we can cancel it
+  const listeningTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const handleTurnChange = useCallback((newTurn: TurnState) => {
     const prev = prevTurnRef.current;
-    prevTurnRef.current = newTurn;
-    setTurn(newTurn);
 
     if (newTurn === 'listening') {
-      geminiSpeakingRef.current = false;
-      // Play chime when transitioning TO listening from narrating/generating
-      if (prev === 'narrating' || prev === 'generating_image') {
-        if (playbackCtxRef.current) {
-          playTurnChime(playbackCtxRef.current);
+      // Don't switch to listening immediately — audio chunks are received faster
+      // than they play back. Wait until scheduled playback actually finishes,
+      // otherwise the mic unmutes while Gemini's voice is still playing from
+      // the queue, causing echo feedback.
+      const ctx = playbackCtxRef.current;
+      const remainingPlayback = ctx
+        ? Math.max(0, nextPlayTimeRef.current - ctx.currentTime)
+        : 0;
+
+      // Add a small buffer (300ms) after playback ends
+      const delay = Math.max(100, remainingPlayback * 1000 + 300);
+
+      // Cancel any previous pending transition
+      if (listeningTimerRef.current) clearTimeout(listeningTimerRef.current);
+
+      console.log(
+        '[LiveSession] turn_complete received, playback remaining:',
+        remainingPlayback.toFixed(2) + 's, delaying listening by',
+        Math.round(delay) + 'ms',
+      );
+
+      listeningTimerRef.current = setTimeout(() => {
+        listeningTimerRef.current = null;
+        prevTurnRef.current = 'listening';
+        setTurn('listening');
+        geminiSpeakingRef.current = false;
+
+        // Play chime when transitioning TO listening from narrating/generating
+        if (prev === 'narrating' || prev === 'generating_image') {
+          if (playbackCtxRef.current) {
+            playTurnChime(playbackCtxRef.current);
+          }
         }
-      }
+      }, delay);
     } else if (newTurn === 'narrating') {
+      // Cancel any pending listening transition — Gemini is speaking again
+      if (listeningTimerRef.current) {
+        clearTimeout(listeningTimerRef.current);
+        listeningTimerRef.current = null;
+      }
+      prevTurnRef.current = newTurn;
+      setTurn(newTurn);
       geminiSpeakingRef.current = true;
+    } else {
+      prevTurnRef.current = newTurn;
+      setTurn(newTurn);
     }
   }, []);
 
@@ -231,27 +285,52 @@ export function LiveSession() {
     let stream: MediaStream;
     try {
       stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      console.log('[LiveSession] Mic access granted, tracks:', stream.getAudioTracks().length);
     } catch {
       setError('Microphone access denied. Please allow mic access and try again.');
       return;
     }
     streamRef.current = stream;
 
+    // Create AudioContexts NOW — during the click handler — so they start "running"
+    // (creating outside user gesture risks "suspended" state due to autoplay policy)
+    const audioContext = new AudioContext({ sampleRate: 16000 });
+    captureCtxRef.current = audioContext;
+
+    const playbackContext = new AudioContext({ sampleRate: 24000 });
+    playbackCtxRef.current = playbackContext;
+    audioChunksReceivedRef.current = 0;
+
+    console.log(
+      '[LiveSession] AudioContexts created — capture:', audioContext.state,
+      'playback:', playbackContext.state,
+    );
+
+    // Ensure both are running (belt-and-suspenders for autoplay policy)
+    if (audioContext.state === 'suspended') {
+      await audioContext.resume();
+    }
+    if (playbackContext.state === 'suspended') {
+      await playbackContext.resume();
+    }
+
     // Connect WebSocket
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const ws = new WebSocket(`${protocol}//${window.location.host}/api/live-session/ws`);
     wsRef.current = ws;
 
+    // Track audio send stats for diagnostics
+    let audioChunksSent = 0;
+    let geminiMutedChunks = 0;
+
     ws.onopen = () => {
+      console.log('[LiveSession] WebSocket connected, sending start');
       ws.send(JSON.stringify({ type: 'start' }));
       setSessionActive(true);
       handleTurnChange('listening');
       setSessionStats({ scenes: 0, startTime: Date.now() });
 
-      // Set up audio capture at 16kHz
-      const audioContext = new AudioContext({ sampleRate: 16000 });
-      captureCtxRef.current = audioContext;
-
+      // Wire up audio capture to the already-running AudioContext
       const source = audioContext.createMediaStreamSource(stream);
       sourceRef.current = source;
 
@@ -261,35 +340,58 @@ export function LiveSession() {
       processor.onaudioprocess = (e) => {
         if (ws.readyState !== WebSocket.OPEN) return;
         // Don't send mic audio while Gemini is speaking
-        if (geminiSpeakingRef.current) return;
+        if (geminiSpeakingRef.current) {
+          geminiMutedChunks++;
+          return;
+        }
 
         const float32 = e.inputBuffer.getChannelData(0);
 
-        // Simple VAD: compute RMS and skip silence
+        // Very low VAD threshold — only filters dead digital silence.
+        // Gemini Live API needs continuous audio for its own VAD, so we pass
+        // through anything above near-zero (ambient room noise, quiet speech).
+        // The old threshold (0.01) was too aggressive and blocked real speech.
         let sumSq = 0;
         for (let i = 0; i < float32.length; i++) {
           sumSq += float32[i] * float32[i];
         }
         const rms = Math.sqrt(sumSq / float32.length);
-        // Threshold ~0.01 filters quiet background noise
-        if (rms < 0.01) return;
+        if (rms < 0.002) return;
 
         const int16 = float32ToInt16(float32);
         const base64 = toBase64(int16.buffer);
         ws.send(JSON.stringify({ type: 'audio', data: base64 }));
+        audioChunksSent++;
+        if (audioChunksSent === 1) {
+          console.log('[LiveSession] First audio chunk sent');
+        }
+        if (audioChunksSent % 50 === 0) {
+          console.log('[LiveSession] Audio stats — sent:', audioChunksSent, 'muted:', geminiMutedChunks);
+        }
       };
 
       source.connect(processor);
       processor.connect(audioContext.destination);
+      console.log('[LiveSession] Audio pipeline wired: mic → processor → destination');
     };
 
-    ws.onmessage = handleMessage;
+    ws.onmessage = (event) => {
+      try {
+        const msg = JSON.parse(event.data);
+        if (msg.type !== 'ping') {
+          console.log('[LiveSession] WS recv:', msg.type, msg.type === 'status' ? msg.content : '');
+        }
+      } catch { /* logged in handler */ }
+      handleMessage(event);
+    };
 
-    ws.onerror = () => {
+    ws.onerror = (event) => {
+      console.error('[LiveSession] WebSocket error:', event);
       setError('WebSocket connection error.');
     };
 
-    ws.onclose = () => {
+    ws.onclose = (event) => {
+      console.log('[LiveSession] WebSocket closed, code:', event.code, 'reason:', event.reason);
       cleanupCapture();
       setSessionActive(false);
       setTurn('idle');
@@ -304,13 +406,19 @@ export function LiveSession() {
   /* ── Stop session ───────────────────────────────────────────── */
 
   const cleanupCapture = useCallback(() => {
+    if (listeningTimerRef.current) {
+      clearTimeout(listeningTimerRef.current);
+      listeningTimerRef.current = null;
+    }
     processorRef.current?.disconnect();
     sourceRef.current?.disconnect();
     captureCtxRef.current?.close().catch(() => {});
+    playbackCtxRef.current?.close().catch(() => {});
     streamRef.current?.getTracks().forEach((t) => t.stop());
     processorRef.current = null;
     sourceRef.current = null;
     captureCtxRef.current = null;
+    playbackCtxRef.current = null;
     streamRef.current = null;
   }, []);
 

@@ -480,7 +480,7 @@ function SceneViewer({
   continuing,
   generating,
   onClose,
-  onContinue,
+  onContinue: _onContinue,
   onRashomon,
   onGenerateFilm,
   onDownloadFilm,
@@ -514,7 +514,6 @@ function SceneViewer({
   const [current, setCurrent] = useState(0);
   const [fadeKey, setFadeKey] = useState(0);
   const [transitioning, setTransitioning] = useState(false);
-  const [continueInput, setContinueInput] = useState('');
   const [showCasting, setShowCasting] = useState(false);
   const [autoPlay, setAutoPlay] = useState(true);
   const touchStart = useRef<number | null>(null);
@@ -620,12 +619,6 @@ function SceneViewer({
     const dx = e.changedTouches[0].clientX - touchStart.current;
     if (Math.abs(dx) > 60) go(dx < 0 ? 1 : -1);
     touchStart.current = null;
-  }
-
-  function handleContinue() {
-    if (!continueInput.trim() || continuing) return;
-    onContinue(continueInput.trim());
-    setContinueInput('');
   }
 
   if (!scene) return null;
