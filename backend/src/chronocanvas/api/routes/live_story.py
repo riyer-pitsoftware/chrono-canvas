@@ -275,6 +275,11 @@ async def _stream_scene_parts(
                 got_any_content = True
             elif part.inline_data is not None:
                 got_any_content = True
+                logger.info(
+                    "Scene image received: %d bytes, mime=%s",
+                    len(part.inline_data.data) if part.inline_data.data else 0,
+                    part.inline_data.mime_type,
+                )
                 # Flush any pending text before the image
                 if accumulated_text and not text_yielded:
                     full_text = "".join(accumulated_text)
@@ -299,6 +304,7 @@ async def _stream_scene_parts(
         clean = full_text.replace("[END]", "").rstrip()
         if clean:
             yield {"type": "text", "content": clean}
+            logger.warning("Scene had text but NO image (text-only fallback)")
         text_yielded = True
 
     # Determine whether the model signalled end-of-story

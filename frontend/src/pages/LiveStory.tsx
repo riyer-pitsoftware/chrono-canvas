@@ -537,12 +537,16 @@ function SceneViewer({
     !transitioning && narrationReady,
   );
 
-  // Play audio when scene is revealed and narration ready
+  // Play audio when scene is revealed and narration ready.
+  // Only trigger on transitioning/narrationReady changes — NOT on pipeline
+  // object identity (which changes every render when scenes.length updates).
+  const playRef = useRef(pipeline.playCurrentNarration);
+  playRef.current = pipeline.playCurrentNarration;
   useEffect(() => {
     if (!transitioning && narrationReady) {
-      pipeline.playCurrentNarration();
+      playRef.current();
     }
-  }, [transitioning, narrationReady, pipeline]);
+  }, [transitioning, narrationReady]);
 
   // Iris opens as text is typed; show at least 30% when image exists
   // so images are visible even if narration is slow/failing
