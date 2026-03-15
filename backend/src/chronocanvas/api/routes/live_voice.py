@@ -1,4 +1,4 @@
-"""Live Voice — Gemini Live API for voice narration + voice prompt."""
+"""Live Voice — Gemini native audio for voice narration + voice prompt."""
 
 import base64
 import io
@@ -18,9 +18,9 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/live-voice", tags=["live-voice"])
 
-LIVE_MODEL_PRIMARY = "gemini-2.5-flash-native-audio-latest"
-LIVE_MODEL_FALLBACK = "gemini-2.5-flash-native-audio-preview-12-2025"
-SAMPLE_RATE = 24000  # Live API outputs 24kHz PCM16
+AUDIO_MODEL_PRIMARY = "gemini-2.5-flash-native-audio-latest"
+AUDIO_MODEL_FALLBACK = "gemini-2.5-flash-native-audio-preview-12-2025"
+SAMPLE_RATE = 24000  # Native audio outputs 24kHz PCM16
 
 
 class NarrateRequest(BaseModel):
@@ -58,61 +58,62 @@ def _pcm_to_wav(
 
 @router.post("/narrate")
 async def narrate(req: NarrateRequest):
-    """Generate voice narration via Gemini Live API and return WAV audio."""
+    """Generate voice narration via Gemini generate_content (HTTP, no WebSocket overhead)."""
     if not settings.google_api_key:
         raise HTTPException(status_code=503, detail="GOOGLE_API_KEY not configured")
 
     client = genai.Client(api_key=settings.google_api_key)
 
-    voice_config = None
-    if req.voice_name:
-        voice_config = types.VoiceConfig(
-            prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=req.voice_name)
+    voice_name = req.voice_name or "Charon"
+    speech_config = types.SpeechConfig(
+        voice_config=types.VoiceConfig(
+            prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=voice_name)
         )
-
-    config = types.LiveConnectConfig(
-        response_modalities=["AUDIO"],
-        speech_config=types.SpeechConfig(voice_config=voice_config) if voice_config else None,
     )
 
-    audio_chunks: list[bytes] = []
+    narrator_prompt = (
+        "You are Dash, a noir narrator with a deep, gravelly voice. "
+        "Read the following story text aloud with dramatic flair:\n\n"
+        f"{req.text}"
+    )
 
     last_error = None
-    for model in (LIVE_MODEL_PRIMARY, LIVE_MODEL_FALLBACK):
+    for model in (AUDIO_MODEL_PRIMARY, AUDIO_MODEL_FALLBACK):
         try:
-            logger.info("Narrate: trying model %s", model)
-            async with client.aio.live.connect(model=model, config=config) as session:
-                narrator_prompt = (
-                    "You are Dash, a noir narrator with a deep, gravelly voice. "
-                    "Read the following story text aloud with dramatic flair:\n\n"
-                    f"{req.text}"
-                )
-                await session.send(input=narrator_prompt, end_of_turn=True)
+            start = time.monotonic()
+            logger.info("Narrate: trying model %s (generate_content)", model)
+            response = await client.aio.models.generate_content(
+                model=model,
+                contents=narrator_prompt,
+                config=types.GenerateContentConfig(
+                    response_modalities=["AUDIO"],
+                    speech_config=speech_config,
+                ),
+            )
+            elapsed_ms = int((time.monotonic() - start) * 1000)
 
-                async for response in session.receive():
-                    if response.server_content and response.server_content.model_turn:
-                        for part in response.server_content.model_turn.parts:
-                            if part.inline_data and part.inline_data.data:
-                                audio_chunks.append(part.inline_data.data)
-                    if response.server_content and response.server_content.turn_complete:
+            # Extract audio from response
+            audio_data = None
+            if response.candidates:
+                for part in response.candidates[0].content.parts:
+                    if part.inline_data and part.inline_data.mime_type and part.inline_data.mime_type.startswith("audio/"):
+                        audio_data = part.inline_data.data
                         break
-            break  # success
+
+            if audio_data is None:
+                logger.warning("No audio in response from %s", model)
+                continue
+
+            logger.info("Narrate: %s returned %d bytes in %dms", model, len(audio_data), elapsed_ms)
+            wav_data = _pcm_to_wav(audio_data)
+            return Response(content=wav_data, media_type="audio/wav")
+
         except Exception as e:
             last_error = e
             logger.warning("Narrate model %s failed: %s, trying fallback", model, e)
-            audio_chunks.clear()
 
-    if not audio_chunks and last_error:
-        logger.error("Live voice narration failed on all models: %s", last_error)
-        raise HTTPException(status_code=500, detail=f"Narration failed: {last_error}")
-
-    if not audio_chunks:
-        raise HTTPException(status_code=500, detail="No audio generated")
-
-    pcm_data = b"".join(audio_chunks)
-    wav_data = _pcm_to_wav(pcm_data)
-
-    return Response(content=wav_data, media_type="audio/wav")
+    logger.error("Voice narration failed on all models: %s", last_error)
+    raise HTTPException(status_code=500, detail=f"Narration failed: {last_error}")
 
 
 @router.post("/prompt")
@@ -129,58 +130,51 @@ async def voice_prompt(req: VoicePromptRequest):
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid base64 audio data")
 
-    config = types.LiveConnectConfig(
-        response_modalities=["TEXT"],
-    )
-
     transcript = ""
     response_text = ""
 
+    instruction = (
+        "The user has spoken a story idea. First transcribe exactly what they said "
+        "on a line starting with 'TRANSCRIPT: ', then on a new line starting with "
+        "'RESPONSE: ' give a creative noir-style expansion of their idea in 2-3 sentences."
+    )
+
+    audio_part = types.Part(
+        inline_data=types.Blob(data=audio_bytes, mime_type=req.mime_type)
+    )
+
     last_error = None
-    for model in (LIVE_MODEL_PRIMARY, LIVE_MODEL_FALLBACK):
+    for model in (AUDIO_MODEL_PRIMARY, AUDIO_MODEL_FALLBACK):
         try:
-            logger.info("Voice prompt: trying model %s", model)
-            async with client.aio.live.connect(model=model, config=config) as session:
-                instruction = (
-                    "The user has spoken a story idea. First transcribe exactly what they said "
-                    "on a line starting with 'TRANSCRIPT: ', then on a new line starting with "
-                    "'RESPONSE: ' give a creative noir-style expansion of their idea in 2-3 sentences."
-                )
-                await session.send(input=instruction, end_of_turn=False)
+            logger.info("Voice prompt: trying model %s (generate_content)", model)
+            response = await client.aio.models.generate_content(
+                model=model,
+                contents=[instruction, audio_part],
+                config=types.GenerateContentConfig(
+                    response_modalities=["TEXT"],
+                ),
+            )
 
-                # Send audio as inline data
-                audio_part = types.Part(
-                    inline_data=types.Blob(data=audio_bytes, mime_type=req.mime_type)
-                )
-                await session.send(input=audio_part, end_of_turn=True)
+            full_text = response.text or ""
 
-                full_text = ""
-                async for response in session.receive():
-                    if response.server_content and response.server_content.model_turn:
-                        for part in response.server_content.model_turn.parts:
-                            if part.text:
-                                full_text += part.text
-                    if response.server_content and response.server_content.turn_complete:
-                        break
+            # Parse TRANSCRIPT: and RESPONSE: sections
+            for line in full_text.split("\n"):
+                line = line.strip()
+                if line.startswith("TRANSCRIPT:"):
+                    transcript = line[len("TRANSCRIPT:"):].strip()
+                elif line.startswith("RESPONSE:"):
+                    response_text = line[len("RESPONSE:"):].strip()
 
-                # Parse TRANSCRIPT: and RESPONSE: sections
-                for line in full_text.split("\n"):
-                    line = line.strip()
-                    if line.startswith("TRANSCRIPT:"):
-                        transcript = line[len("TRANSCRIPT:") :].strip()
-                    elif line.startswith("RESPONSE:"):
-                        response_text = line[len("RESPONSE:") :].strip()
-
-                # Fallback: if parsing fails, use the whole text
-                if not transcript and not response_text:
-                    response_text = full_text.strip()
+            # Fallback: if parsing fails, use the whole text
+            if not transcript and not response_text:
+                response_text = full_text.strip()
             break  # success
         except Exception as e:
             last_error = e
             logger.warning("Voice prompt model %s failed: %s, trying fallback", model, e)
 
     if not transcript and not response_text and last_error:
-        logger.error("Live voice prompt failed on all models: %s", last_error)
+        logger.error("Voice prompt failed on all models: %s", last_error)
         raise HTTPException(status_code=500, detail=f"Voice prompt failed: {last_error}")
 
     duration_ms = int((time.monotonic() - start) * 1000)
