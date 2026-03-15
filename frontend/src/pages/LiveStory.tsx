@@ -784,33 +784,12 @@ function SceneViewer({
           </p>
         )}
 
-        {/* "What happens next?" + Rashomon + Generate Film on last scene */}
+        {/* Rashomon + Generate Film on last scene (continuation hidden for demo) */}
         {isLastScene && textDone && !continuing && !generating && (
           <div
             className="flex flex-col items-center gap-3 max-w-lg w-full mt-2"
             style={{ animation: 'fadeIn 600ms ease-out' }}
           >
-            <div className="flex items-center gap-2 w-full">
-              <input
-                ref={inputRef}
-                type="text"
-                value={continueInput}
-                onChange={(e) => setContinueInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleContinue();
-                }}
-                placeholder="What happens next?"
-                className="flex-1 rounded-md border border-[var(--border)] bg-[var(--background)]/50 px-3 py-2 text-sm focus:ring-1 focus:ring-[var(--primary)] focus:border-[var(--primary)] transition-colors"
-                style={{ fontFamily: "'Georgia', 'Times New Roman', serif" }}
-              />
-              <button
-                onClick={handleContinue}
-                disabled={!continueInput.trim()}
-                className="px-4 py-2 rounded-md bg-[var(--primary)] text-[var(--primary-foreground)] text-sm font-medium disabled:opacity-50 transition-opacity shrink-0"
-              >
-                Continue
-              </button>
-            </div>
             <div className="flex items-center gap-3">
               <button
                 onClick={onRashomon}
