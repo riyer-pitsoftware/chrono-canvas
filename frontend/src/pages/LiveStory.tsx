@@ -422,20 +422,20 @@ function CastingInterstitial({
         </span>
       </div>
 
-      {/* Casting content — centered */}
+      {/* Casting content — image left, description right */}
       <div
-        className="flex-1 flex flex-col items-center justify-center px-8 gap-6 min-h-0 overflow-auto"
+        className="flex-1 flex items-center justify-center px-8 gap-8 min-h-0 overflow-auto"
         style={{ animation: 'dissolveIn 800ms ease-out' }}
       >
         {casting.imageBase64 && (
           <img
             src={`data:${casting.mimeType || 'image/png'};base64,${casting.imageBase64}`}
             alt="Character casting photo"
-            className="max-h-[45vh] max-w-full rounded-lg object-contain"
+            className="max-h-[75vh] max-w-[50vw] rounded-lg object-contain shrink-0"
             style={{ animation: 'dissolveIn 1200ms ease-out' }}
           />
         )}
-        <div className="max-w-2xl text-center space-y-3">
+        <div className="max-w-md space-y-3 shrink min-w-0">
           <p
             className="text-sm leading-relaxed whitespace-pre-wrap"
             style={{ color: 'oklch(0.75 0.02 60)' }}
