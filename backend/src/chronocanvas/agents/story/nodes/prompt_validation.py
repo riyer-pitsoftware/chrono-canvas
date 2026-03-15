@@ -3,6 +3,7 @@ import json
 import logging
 import time
 
+from chronocanvas.agents.story.nodes.json_repair import extract_and_parse_json
 from chronocanvas.agents.story.state import StoryState, get_runtime_config
 from chronocanvas.llm.base import TaskType
 from chronocanvas.llm.router import get_llm_router
@@ -96,17 +97,16 @@ async def _validate_panel(panel, router, request_id, runtime_config):
             prompt=val_prompt,
             task_type=TaskType.GENERAL,
             temperature=0.2,
-            max_tokens=1000,
+            max_tokens=4096,
             json_mode=True,
-            request_id=request_id,
             agent_name="prompt_validation",
             runtime_config=runtime_config,
         )
 
         content = response.content.strip()
-        json_start = content.find("{")
-        json_end = content.rfind("}") + 1
-        scores = json.loads(content[json_start:json_end])
+        if not content:
+            raise ValueError("Empty response from LLM")
+        scores = extract_and_parse_json(content)
 
         llm_calls.append(
             {
@@ -172,17 +172,14 @@ async def _validate_panel(panel, router, request_id, runtime_config):
             prompt=repair_prompt,
             task_type=TaskType.PROMPT_GENERATION,
             temperature=0.5,
-            max_tokens=2000,
+            max_tokens=4096,
             json_mode=True,
-            request_id=request_id,
             agent_name="prompt_validation_repair",
             runtime_config=runtime_config,
         )
 
         repair_content = repair_response.content.strip()
-        rj_start = repair_content.find("{")
-        rj_end = repair_content.rfind("}") + 1
-        repaired = json.loads(repair_content[rj_start:rj_end])
+        repaired = extract_and_parse_json(repair_content)
 
         new_prompt = repaired.get("image_prompt", "")
         if new_prompt:

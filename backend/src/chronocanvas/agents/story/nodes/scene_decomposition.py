@@ -1,10 +1,10 @@
 import asyncio
 import json
 import logging
-import re
 import time
 
 from chronocanvas.agents.story.state import StoryState, get_runtime_config
+from chronocanvas.agents.story.nodes.json_repair import extract_and_parse_json as _extract_and_parse_json
 from chronocanvas.llm.base import TaskType
 from chronocanvas.llm.router import get_llm_router
 
@@ -23,7 +23,8 @@ Break the following story into 3-8 distinct visual scenes suitable for image gen
 Think in shots, not paragraphs. Every scene needs a reason to exist.
 
 For each scene, provide:
-1. A vivid visual description (2-3 sentences) — what the camera captures in this moment
+1. A vivid visual description (2-3 SHORT sentences, max 50 words) — what the camera captures. \
+Never use quotation marks or dialogue in descriptions; use indirect speech instead.
 2. Which characters appear in the scene — only those visibly present
 3. The mood/atmosphere — noir lives in tension, shadow, and the unsaid
 4. The setting/location — be specific about light, time of day, weather
@@ -32,6 +33,9 @@ appearances, wardrobe, time of day, weather, lighting. For the FIRST scene, use 
 {{"note": "establishing shot — no prior state"}}.
 6. established_state: What this scene locks in for the next scene — character positions, \
 lighting changes, mood shifts, wardrobe changes, any new props or visual elements introduced.
+
+CRITICAL: Output must be valid JSON. Never use unescaped double quotes inside string values. \
+Keep all string values concise.
 
 STORY:
 {story_text}
@@ -104,7 +108,7 @@ async def scene_decomposition_node(state: StoryState) -> StoryState:
                 prompt=prompt,
                 task_type=TaskType.EXTRACTION,
                 temperature=0.5,
-                max_tokens=4000,
+                max_tokens=8000,
                 json_mode=True,
                 agent_name="scene_decomposition",
                 runtime_config=rc,
@@ -112,15 +116,7 @@ async def scene_decomposition_node(state: StoryState) -> StoryState:
 
             # Parse JSON from response — with repair for common LLM quirks
             content = response.content
-            json_start = content.find("{")
-            json_end = content.rfind("}") + 1
-            if json_start == -1 or json_end == 0:
-                raise ValueError("No JSON found in scene decomposition response")
-
-            json_text = content[json_start:json_end]
-            # Fix trailing commas before } or ] (common LLM error)
-            json_text = re.sub(r",\s*([}\]])", r"\1", json_text)
-            parsed = json.loads(json_text)
+            parsed = _extract_and_parse_json(content)
             scenes = parsed.get("scenes", [])
 
             # Ensure scene_index is set and continuity fields have defaults

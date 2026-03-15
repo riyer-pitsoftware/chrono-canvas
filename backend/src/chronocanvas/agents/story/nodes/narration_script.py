@@ -12,6 +12,7 @@ import logging
 import time
 from pathlib import Path
 
+from chronocanvas.agents.story.nodes.json_repair import extract_and_parse_json
 from chronocanvas.agents.story.state import StoryState, get_runtime_config
 from chronocanvas.config import settings
 from chronocanvas.llm.base import TaskType
@@ -108,7 +109,7 @@ async def _vision_narration(panels: list[dict], request_id: str) -> tuple[dict[i
         config=types.GenerateContentConfig(
             system_instruction=VISION_NARRATION_SYSTEM_PROMPT,
             temperature=0.7,
-            max_output_tokens=2000,
+            max_output_tokens=4096,
             response_mime_type="application/json",
         ),
     )
@@ -120,9 +121,10 @@ async def _vision_narration(panels: list[dict], request_id: str) -> tuple[dict[i
     cost = input_tokens * pricing["input"] + output_tokens * pricing["output"]
 
     raw_text = response.text or "{}"
-    json_start = raw_text.find("{")
-    json_end = raw_text.rfind("}") + 1
-    parsed = json.loads(raw_text[json_start:json_end]) if json_start >= 0 else {}
+    try:
+        parsed = extract_and_parse_json(raw_text)
+    except ValueError:
+        parsed = {}
 
     narrations = {n["scene_index"]: n["narration_text"] for n in parsed.get("narrations", [])}
 
@@ -171,19 +173,14 @@ async def _text_only_narration(
         prompt=prompt,
         task_type=TaskType.EXTRACTION,
         temperature=0.7,
-        max_tokens=2000,
+        max_tokens=4096,
         json_mode=True,
         agent_name="narration_script",
         runtime_config=rc,
     )
 
     content = response.content
-    json_start = content.find("{")
-    json_end = content.rfind("}") + 1
-    if json_start == -1 or json_end == 0:
-        raise ValueError("No JSON found in narration script response")
-
-    parsed = json.loads(content[json_start:json_end])
+    parsed = extract_and_parse_json(content)
     narrations = {n["scene_index"]: n["narration_text"] for n in parsed.get("narrations", [])}
 
     llm_record = {

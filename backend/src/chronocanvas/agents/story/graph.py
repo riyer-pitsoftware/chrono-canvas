@@ -48,8 +48,17 @@ def _after_image_to_story(state: StoryState) -> str:
     return "continue"
 
 
+def _check_error(state: StoryState) -> str:
+    """Halt the pipeline if any upstream node set an error."""
+    if state.get("error"):
+        return "error"
+    return "continue"
+
+
 def _should_regen_after_coherence(state: StoryState) -> str:
     """Route to regen cycle if coherence flagged scenes, else narration or export."""
+    if state.get("error"):
+        return "error"
     if state.get("regen_scenes"):
         return "regen"
     rc = _rc(state)
@@ -97,12 +106,22 @@ def build_story_graph() -> StateGraph:
         },
     )
     graph.add_edge("reference_image_analysis", "character_extraction")
-    graph.add_edge("character_extraction", "scene_decomposition")
-    graph.add_edge("scene_decomposition", "historical_research")
-    graph.add_edge("historical_research", "scene_prompt_generation")
-    graph.add_edge("scene_prompt_generation", "prompt_validation")
-    graph.add_edge("prompt_validation", "scene_image_generation")
-    graph.add_edge("scene_image_generation", "storyboard_coherence")
+
+    # After each pipeline node, check for errors before continuing.
+    # If a node sets state["error"], the pipeline halts instead of
+    # blindly feeding empty/broken state into downstream nodes.
+    for src, dst in [
+        ("character_extraction", "scene_decomposition"),
+        ("scene_decomposition", "historical_research"),
+        ("historical_research", "scene_prompt_generation"),
+        ("scene_prompt_generation", "prompt_validation"),
+        ("prompt_validation", "scene_image_generation"),
+        ("scene_image_generation", "storyboard_coherence"),
+    ]:
+        graph.add_conditional_edges(
+            src, _check_error, {"continue": dst, "error": END}
+        )
+
     graph.add_conditional_edges(
         "storyboard_coherence",
         _should_regen_after_coherence,
@@ -110,10 +129,15 @@ def build_story_graph() -> StateGraph:
             "regen": "scene_prompt_generation",
             "narration": "narration_script",
             "export": "storyboard_export",
+            "error": END,
         },
     )
-    graph.add_edge("narration_script", "narration_audio")
-    graph.add_edge("narration_audio", "video_assembly")
+    graph.add_conditional_edges(
+        "narration_script", _check_error, {"continue": "narration_audio", "error": END}
+    )
+    graph.add_conditional_edges(
+        "narration_audio", _check_error, {"continue": "video_assembly", "error": END}
+    )
     graph.add_edge("video_assembly", "storyboard_export")
     graph.add_edge("storyboard_export", END)
 

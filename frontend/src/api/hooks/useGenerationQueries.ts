@@ -14,11 +14,16 @@ export function isTerminalStatus(status: string | undefined): boolean {
   return status !== undefined && TERMINAL_STATUSES.has(status);
 }
 
-export function refetchUntilTerminal<T extends { status?: string }>(intervalMs = 2000) {
+export function refetchUntilTerminal<T extends { status?: string }>(
+  initialMs = 2000,
+  maxMs = 10000,
+) {
   return (query: Query<T>) => {
     const data = query.state.data;
     if (data && isTerminalStatus(data.status)) return false;
-    return intervalMs;
+    // Progressive backoff: start at initialMs, grow by 1s per fetch, cap at maxMs
+    const fetchCount = query.state.dataUpdateCount ?? 0;
+    return Math.min(initialMs + fetchCount * 1000, maxMs);
   };
 }
 

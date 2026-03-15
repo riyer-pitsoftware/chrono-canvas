@@ -3,6 +3,7 @@ import json
 import logging
 import time
 
+from chronocanvas.agents.story.nodes.json_repair import extract_and_parse_json
 from chronocanvas.agents.story.state import StoryPanel, StoryState, get_runtime_config
 from chronocanvas.config import settings
 from chronocanvas.llm.base import TaskType
@@ -142,7 +143,7 @@ async def _build_character_anchors(
             prompt=prompt,
             task_type=TaskType.PROMPT_GENERATION,
             temperature=0.3,
-            max_tokens=4000,
+            max_tokens=8192,
             json_mode=True,
             agent_name="character_anchor_generation",
             runtime_config=runtime_config,
@@ -261,16 +262,16 @@ async def _generate_prompt_for_scene(
                 prompt=prompt,
                 task_type=TaskType.PROMPT_GENERATION,
                 temperature=0.7,
-                max_tokens=4000,
+                max_tokens=8192,
                 json_mode=True,
                 agent_name="scene_prompt_generation",
                 runtime_config=runtime_config,
             )
 
             content = response.content
-            json_start = content.find("{")
-            json_end = content.rfind("}") + 1
-            parsed = json.loads(content[json_start:json_end])
+            if not content or not content.strip():
+                raise ValueError("LLM returned empty response")
+            parsed = extract_and_parse_json(content)
 
             panel: StoryPanel = {
                 "scene_index": scene_index,

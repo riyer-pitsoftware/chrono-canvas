@@ -114,3 +114,4 @@ deploy/cloudrun/.build-manifest.json
 .deploy-status.json
 .env.remote
 .logs/
+pbcopy

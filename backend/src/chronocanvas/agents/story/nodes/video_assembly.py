@@ -20,6 +20,10 @@ logger = logging.getLogger(__name__)
 
 SECONDS_PER_PANEL = 5  # how long each panel is displayed
 CROSSFADE_DURATION = 0.5
+FFMPEG_TIMEOUT = 120  # max seconds for any ffmpeg operation
+VIDEO_WIDTH = 854  # 480p — fast encode for demo
+VIDEO_HEIGHT = 480
+VIDEO_FPS = 12
 
 
 async def _check_ffmpeg() -> bool:
@@ -40,34 +44,29 @@ async def _check_ffmpeg() -> bool:
 async def _create_slideshow(
     image_paths: list[str],
     output_path: str,
-    fps: int = 30,
 ) -> bool:
     """Create a video slideshow from images with Ken Burns effect."""
     if not image_paths:
         return False
 
-    # Build ffmpeg filter for slideshow with crossfade
     n = len(image_paths)
-    panel_frames = SECONDS_PER_PANEL * fps
+    panel_frames = SECONDS_PER_PANEL * VIDEO_FPS
 
-    # Simple approach: concat images with zoompan filter for Ken Burns
     inputs = []
     filter_parts = []
     for i, img_path in enumerate(image_paths):
         inputs.extend(["-loop", "1", "-t", str(SECONDS_PER_PANEL), "-i", img_path])
-        # Alternate zoom direction for visual interest
         if i % 2 == 0:
             zoom_expr = "min(zoom+0.0005,1.15)"
         else:
             zoom_expr = "if(eq(on,1),1.15,max(zoom-0.0005,1.0))"
         filter_parts.append(
-            f"[{i}:v]scale=1920:1080:force_original_aspect_ratio=decrease,"
-            f"pad=1920:1080:(ow-iw)/2:(oh-ih)/2,"
-            f"zoompan=z='{zoom_expr}':d={panel_frames}:s=1920x1080:fps={fps},"
+            f"[{i}:v]scale={VIDEO_WIDTH}:{VIDEO_HEIGHT}:force_original_aspect_ratio=decrease,"
+            f"pad={VIDEO_WIDTH}:{VIDEO_HEIGHT}:(ow-iw)/2:(oh-ih)/2,"
+            f"zoompan=z='{zoom_expr}':d={panel_frames}:s={VIDEO_WIDTH}x{VIDEO_HEIGHT}:fps={VIDEO_FPS},"
             f"setpts=PTS-STARTPTS[v{i}]"
         )
 
-    # Concat all video streams
     concat_inputs = "".join(f"[v{i}]" for i in range(n))
     filter_complex = ";".join(filter_parts) + f";{concat_inputs}concat=n={n}:v=1:a=0[outv]"
 
@@ -82,7 +81,7 @@ async def _create_slideshow(
             "-c:v",
             "libx264",
             "-preset",
-            "fast",
+            "ultrafast",
             "-crf",
             "23",
             "-pix_fmt",
@@ -96,7 +95,17 @@ async def _create_slideshow(
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
     )
-    _stdout, stderr = await proc.communicate()
+    try:
+        _stdout, stderr = await asyncio.wait_for(
+            proc.communicate(), timeout=FFMPEG_TIMEOUT
+        )
+    except asyncio.TimeoutError:
+        proc.kill()
+        await proc.wait()
+        logger.warning(
+            "ffmpeg slideshow timed out after %ds — killed", FFMPEG_TIMEOUT
+        )
+        return False
 
     if proc.returncode != 0:
         logger.warning("ffmpeg slideshow failed: %s", stderr.decode()[-500:])
@@ -155,7 +164,19 @@ async def _mux_audio(
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
     )
-    _, stderr = await proc.communicate()
+    try:
+        _, stderr = await asyncio.wait_for(
+            proc.communicate(), timeout=FFMPEG_TIMEOUT
+        )
+    except asyncio.TimeoutError:
+        proc.kill()
+        await proc.wait()
+        logger.warning("Audio concat timed out after %ds", FFMPEG_TIMEOUT)
+        import shutil
+
+        shutil.copy2(video_path, output_path)
+        return True
+
     if proc.returncode != 0:
         logger.warning("Audio concat failed: %s", stderr.decode()[-300:])
         import shutil
@@ -184,7 +205,17 @@ async def _mux_audio(
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
     )
-    _, stderr = await proc.communicate()
+    try:
+        _, stderr = await asyncio.wait_for(
+            proc.communicate(), timeout=FFMPEG_TIMEOUT
+        )
+    except asyncio.TimeoutError:
+        proc.kill()
+        await proc.wait()
+        logger.warning("Audio mux timed out after %ds", FFMPEG_TIMEOUT)
+        import shutil
+
+        shutil.copy2(video_path, output_path)
 
     # Clean up temp audio
     Path(audio_concat_path).unlink(missing_ok=True)

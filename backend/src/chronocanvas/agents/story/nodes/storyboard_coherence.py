@@ -11,6 +11,7 @@ import logging
 import time
 from pathlib import Path
 
+from chronocanvas.agents.story.nodes.json_repair import extract_and_parse_json
 from google import genai
 from google.genai import types
 
@@ -169,7 +170,7 @@ async def storyboard_coherence_node(state: StoryState) -> StoryState:
             config=types.GenerateContentConfig(
                 system_instruction=COHERENCE_SYSTEM_PROMPT,
                 temperature=0.3,
-                max_output_tokens=2000,
+                max_output_tokens=8192,
                 response_mime_type="application/json",
             ),
         )
@@ -181,10 +182,10 @@ async def storyboard_coherence_node(state: StoryState) -> StoryState:
         cost = input_tokens * pricing["input"] + output_tokens * pricing["output"]
 
         # Parse the coherence response
-        raw_text = response.text or "{}"
-        json_start = raw_text.find("{")
-        json_end = raw_text.rfind("}") + 1
-        coherence_data = json.loads(raw_text[json_start:json_end]) if json_start >= 0 else {}
+        raw_text = response.text or ""
+        if not raw_text.strip():
+            raise ValueError("Gemini returned empty coherence response")
+        coherence_data = extract_and_parse_json(raw_text)
 
         overall = coherence_data.get("overall", {})
         panel_assessments = {p.get("scene_index"): p for p in coherence_data.get("panels", [])}

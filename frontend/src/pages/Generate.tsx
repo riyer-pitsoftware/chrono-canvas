@@ -18,7 +18,6 @@ import { DAGVisualizer } from '@/components/generation/DAGVisualizer';
 import { StreamingText } from '@/components/generation/StreamingText';
 import { StoryboardView } from '@/components/generation/StoryboardView';
 import { TrustCard } from '@/components/generation/TrustCard';
-import { VoiceInputButton } from '@/components/generation/VoiceInputButton';
 import { LiveVoicePrompt } from '@/components/generation/LiveVoicePrompt';
 import { TemplatePresets, type PresetTemplate } from '@/components/generation/TemplatePresets';
 import { useNavigation } from '@/stores/navigation';
@@ -156,10 +155,6 @@ export function Generate({ figureId, mode }: { figureId?: string; mode?: string 
     if (refImageInputRef.current) refImageInputRef.current.value = '';
   };
 
-  const handleVoiceTranscript = (text: string) => {
-    setInputText((prev) => (prev ? `${prev} ${text}` : text));
-  };
-
   const statusColor = (status: string) => {
     switch (status) {
       case 'completed':
@@ -235,9 +230,8 @@ export function Generate({ figureId, mode }: { figureId?: string; mode?: string 
                         'repeating-linear-gradient(135deg, #000 0px, #000 4px, #fff 4px, #fff 8px) 4',
                     }}
                   />
-                  <div className="absolute top-2 right-2">
-                    <VoiceInputButton onTranscript={handleVoiceTranscript} disabled={isCreating} />
-                  </div>
+                  {/* VoiceInputButton removed from story mode — LiveVoicePrompt above
+                     provides the Dash-powered creative voice input instead */}
                 </div>
 
                 {/* Collapsible Input Options */}

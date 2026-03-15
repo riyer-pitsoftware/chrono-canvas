@@ -106,7 +106,7 @@ async def run_story_pipeline(
                             "narration_script": RequestStatus.GENERATING_IMAGE,
                             "narration_audio": RequestStatus.GENERATING_IMAGE,
                             "video_assembly": RequestStatus.GENERATING_IMAGE,
-                            "storyboard_export": RequestStatus.COMPLETED,
+                            "storyboard_export": RequestStatus.GENERATING_IMAGE,
                         }
                         agent_status = status_map.get(current_agent, RequestStatus.EXTRACTING)
 

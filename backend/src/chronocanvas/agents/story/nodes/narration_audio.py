@@ -8,6 +8,7 @@ Non-fatal: individual panel failures don't block others, and a complete node
 failure still allows the pipeline to continue without audio.
 """
 
+import asyncio
 import logging
 import struct
 import time
@@ -88,13 +89,14 @@ async def narration_audio_node(state: StoryState) -> StoryState:
     audio_dir = Path(settings.output_dir) / request_id / "audio"
     audio_dir.mkdir(parents=True, exist_ok=True)
 
-    audio_paths: list[str] = []
-    synthesized_count = 0
     channel = f"generation:{request_id}"
     progress = ProgressPublisher()
     total_audio = len(panels_with_text)
+    completed_counter = [0]  # mutable counter (safe: asyncio is single-threaded)
+    llm_calls_lock: list[dict] = []  # collect from parallel tasks
 
-    for idx, panel in panels_with_text:
+    async def _synthesize_one(idx: int, panel: dict) -> str | None:
+        """Synthesize audio for a single panel. Returns wav path or None."""
         scene_idx = panel.get("scene_index", idx)
         narration = panel["narration_text"]
 
@@ -131,7 +133,7 @@ async def narration_audio_node(state: StoryState) -> StoryState:
                     scene_idx,
                     request_id,
                 )
-                continue
+                return None
 
             wav_path = audio_dir / f"scene_{scene_idx}.wav"
 
@@ -145,15 +147,14 @@ async def narration_audio_node(state: StoryState) -> StoryState:
             )
 
             panel["narration_audio_path"] = str(wav_path)
-            audio_paths.append(str(wav_path))
-            synthesized_count += 1
+            completed_counter[0] += 1
 
             await progress.publish_artifact(
                 channel,
                 artifact_type="audio",
                 scene_index=scene_idx,
                 total=total_audio,
-                completed=synthesized_count,
+                completed=completed_counter[0],
                 url=f"/output/{request_id}/audio/scene_{scene_idx}.wav",
                 mime_type="audio/wav",
             )
@@ -165,7 +166,7 @@ async def narration_audio_node(state: StoryState) -> StoryState:
                 input_tokens = response.usage_metadata.prompt_token_count or 0
                 output_tokens = response.usage_metadata.candidates_token_count or 0
 
-            llm_calls.append(
+            llm_calls_lock.append(
                 {
                     "agent": "narration_audio",
                     "timestamp": time.time(),
@@ -186,6 +187,7 @@ async def narration_audio_node(state: StoryState) -> StoryState:
                 elapsed_ms,
                 request_id,
             )
+            return str(wav_path)
 
         except Exception as e:
             elapsed_ms = (time.perf_counter() - start) * 1000
@@ -195,7 +197,15 @@ async def narration_audio_node(state: StoryState) -> StoryState:
                 request_id,
                 e,
             )
-            # Non-fatal: skip this panel's audio
+            return None  # Non-fatal: skip this panel's audio
+
+    # Synthesize all panels concurrently
+    results = await asyncio.gather(
+        *(_synthesize_one(idx, panel) for idx, panel in panels_with_text)
+    )
+    audio_paths = [p for p in results if p is not None]
+    synthesized_count = len(audio_paths)
+    llm_calls.extend(llm_calls_lock)
 
     trace.append(
         {
