@@ -15,7 +15,7 @@ type Scene = {
   mimeType?: string;
 };
 
-const MAX_CONCURRENT = 2;
+const MAX_CONCURRENT = 4;
 
 export function useNarrationPipeline(
   scenes: Scene[],
