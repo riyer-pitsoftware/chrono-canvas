@@ -801,6 +801,8 @@ async def _scene_by_scene_flow(
     max_scenes = 20
     scene_idx = 0
     use_parallel = False
+    last_scene_image_bytes: bytes | None = None
+    last_scene_image_mime: str = "image/png"
     while scene_idx < max_scenes:
         yield _stage_event("scene", "start", scene_idx=scene_idx + 1)
         scene_t0 = time.perf_counter()
@@ -833,12 +835,34 @@ async def _scene_by_scene_flow(
             else:
                 prompt = prompt_text
         else:
-            prompt = (
+            # Subsequent scenes: re-inject casting image + last scene image
+            # as visual anchors so the model doesn't drift from character
+            # appearances. Chat history has text but NOT prior images.
+            ref_parts: list = []
+            if casting_image_bytes:
+                ref_parts.append(
+                    types.Part.from_bytes(
+                        data=casting_image_bytes, mime_type=casting_image_mime
+                    )
+                )
+            if last_scene_image_bytes:
+                ref_parts.append(
+                    types.Part.from_bytes(
+                        data=last_scene_image_bytes, mime_type=last_scene_image_mime
+                    )
+                )
+            scene_text = (
+                f"Reference images above: casting photo and previous scene. "
                 f"Continue with ONLY Scene {scene_idx + 1} — 2-4 sentences of noir "
                 f"prose and ONE image. Do NOT write multiple scenes. "
                 f"Same characters — same faces, same hair, same build as the casting photo. "
                 f"If this is the final scene, end with [END]."
             )
+            if ref_parts:
+                ref_parts.append(types.Part.from_text(text=scene_text))
+                prompt = ref_parts
+            else:
+                prompt = scene_text
 
         try:
             is_final = False
@@ -869,6 +893,14 @@ async def _scene_by_scene_flow(
                         yield {"type": "error", "content": f"Scene {scene_idx + 1}: empty response"}
                         break
                 elif item.get("type") == "keepalive":
+                    yield item
+                elif item.get("type") == "image":
+                    # Stash raw image for re-injection as visual anchor in next scene
+                    try:
+                        last_scene_image_bytes = base64.b64decode(item["content"])
+                        last_scene_image_mime = item.get("mime_type", "image/jpeg")
+                    except Exception:
+                        pass
                     yield item
                 else:
                     yield item
