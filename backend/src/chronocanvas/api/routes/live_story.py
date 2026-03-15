@@ -398,7 +398,6 @@ async def _parallel_scene_parts(
                 yield _KEEPALIVE_EVENT
 
     image_response = image_task.result()
-    _scrub_thought_parts(chat)
 
     parts = _extract_parts(image_response)
 
@@ -607,39 +606,89 @@ async def _scene_by_scene_flow(
 
     casting_prompt = (
         f"{base_prompt}\n\n"
-        f"CASTING CALL: Before we begin filming, generate a casting photo. "
+        f"CASTING CALL ONLY — DO NOT START THE STORY.\n"
         f"Describe each main character's exact appearance in detail "
         f"(face shape, skin tone, hair color/style, eye color, build, age, "
         f"distinguishing marks, wardrobe). Then generate ONE image: a portrait "
         f"lineup of the main characters standing side by side, well-lit, "
-        f"facing the camera. This is the reference photo for the entire film."
+        f"facing the camera. This is the reference photo for the entire film.\n\n"
+        f"STOP after the casting photo. Do NOT write any story scenes or narration. "
+        f"Do NOT include [END]. Just the character descriptions and one portrait image."
     )
     casting_parts = []
     casting_image_bytes: bytes | None = None  # raw bytes for chat injection
     casting_image_mime: str = "image/png"
+    casting_text: str = ""  # character descriptions for scene chat context
     casting_t0 = time.perf_counter()
     try:
-        response = None
-        # One-shot generate_content — not a chat turn
-        async for item in _call_with_keepalives(
-            client.aio.models.generate_content(
+        # Stream casting — stop after first image to prevent the model
+        # from generating the entire story during what should be a
+        # portrait-only call.  Text chunks are accumulated; the first
+        # image terminates consumption.
+        accumulated_text: list[str] = []
+        stream = await asyncio.wait_for(
+            client.aio.models.generate_content_stream(
                 model=model,
                 contents=casting_prompt,
                 config=_casting_config(),
-            )
-        ):
-            if isinstance(item, tuple) and item[0] is _RESULT:
-                response = item[1]
-            else:
-                yield item
-        casting_parts = _extract_parts(response)
-        # Stash the raw casting image bytes for injection into scene chat
-        if response and response.candidates and response.candidates[0].content:
-            for part in response.candidates[0].content.parts:
-                if part.inline_data is not None:
+            ),
+            timeout=30,
+        )
+        loop = asyncio.get_event_loop()
+        deadline = loop.time() + _TURN_TIMEOUT_S
+        last_keepalive = loop.time()
+        got_image = False
+
+        async for chunk in stream:
+            # Keepalive while waiting
+            now = loop.time()
+            if now >= deadline:
+                raise asyncio.TimeoutError()
+            if now - last_keepalive >= _KEEPALIVE_INTERVAL_S:
+                yield _KEEPALIVE_EVENT
+                last_keepalive = now
+
+            if (
+                not chunk.candidates
+                or not chunk.candidates[0].content
+                or not chunk.candidates[0].content.parts
+            ):
+                continue
+
+            for part in chunk.candidates[0].content.parts:
+                if getattr(part, "thought", False):
+                    continue
+                if part.text is not None:
+                    accumulated_text.append(part.text)
+                elif part.inline_data is not None and not got_image:
+                    # First image = casting portrait — stash raw bytes
                     casting_image_bytes = part.inline_data.data
-                    casting_image_mime = part.inline_data.mime_type or "image/png"
-                    break  # first image is the portrait lineup
+                    casting_image_mime = (
+                        part.inline_data.mime_type or "image/png"
+                    )
+                    compressed, mime = _compress_image(
+                        casting_image_bytes, casting_image_mime,
+                    )
+                    b64 = base64.b64encode(compressed).decode("ascii")
+                    casting_parts.append({
+                        "type": "image",
+                        "content": b64,
+                        "mime_type": mime,
+                    })
+                    got_image = True
+
+            # Stop consuming after first image — don't let the model
+            # keep generating story scenes in the casting call.
+            if got_image:
+                break
+
+        # Assemble text part
+        if accumulated_text:
+            full_text = "".join(accumulated_text)
+            clean = full_text.replace("[END]", "").rstrip()
+            if clean:
+                casting_parts.insert(0, {"type": "text", "content": clean})
+                casting_text = clean  # stash for scene chat context
     except asyncio.TimeoutError:
         elapsed = time.perf_counter() - casting_t0
         logger.warning("Casting photo timed out after %.1fs", elapsed)
@@ -667,15 +716,39 @@ async def _scene_by_scene_flow(
     if casting_has_end:
         logger.info(
             "Model generated complete story during casting (%d parts, "
-            "[END] detected) — emitting as scenes, skipping scene loop",
+            "[END] detected) — emitting first part as casting, rest as scenes",
             len(casting_parts),
         )
+        # Emit first text + first image as casting data so the
+        # CastingInterstitial has something to display.
+        first_text_emitted = False
+        first_image_emitted = False
+        scene_parts = []
+        for cp in casting_parts:
+            if cp["type"] == "text" and not first_text_emitted:
+                # First text block = character descriptions (casting)
+                clean = cp["content"].replace("[END]", "").rstrip()
+                if clean:
+                    yield {"type": "casting", "content": clean}
+                first_text_emitted = True
+            elif cp["type"] == "image" and not first_image_emitted:
+                yield {
+                    "type": "casting_image",
+                    "content": cp["content"],
+                    "mime_type": cp.get("mime_type", "image/png"),
+                }
+                first_image_emitted = True
+            else:
+                scene_parts.append(cp)
+
         yield _stage_event(
             "casting", "complete",
             elapsed_s=time.perf_counter() - casting_t0,
         )
+
+        # Remaining parts are story scenes
         scene_num = 0
-        for cp in casting_parts:
+        for cp in scene_parts:
             if cp["type"] == "text":
                 scene_num += 1
                 clean = cp["content"].replace("[END]", "").rstrip()
@@ -726,33 +799,38 @@ async def _scene_by_scene_flow(
         scene_t0 = time.perf_counter()
 
         if scene_idx == 0:
-            # First scene: inject casting image as user context
+            # First scene: inject story context + casting image
             prompt_text = (
-                "Now begin the story. Write Scene 1 with text and one image. "
-                "The characters must look EXACTLY like the casting photo above. "
-                "Tell as many scenes as the story needs. When done, end with [END]."
+                f"{base_prompt}\n\n"
+                f"Now begin the story. Write ONLY Scene 1 — 2-4 sentences of noir "
+                f"prose and ONE image. Do NOT write multiple scenes in this turn. "
+                f"The characters must look EXACTLY like the casting photo above."
             )
             if casting_image_bytes:
+                casting_context = (
+                    "Here is the casting photo and character sheet — the "
+                    "definitive reference for all characters in this story. "
+                    "Every scene must depict these EXACT same people with "
+                    "IDENTICAL names, faces, and features.\n\n"
+                )
+                if casting_text:
+                    casting_context += f"CHARACTER SHEET:\n{casting_text}\n\n"
                 prompt = [
                     types.Part.from_bytes(
                         data=casting_image_bytes, mime_type=casting_image_mime
                     ),
                     types.Part.from_text(
-                        text=(
-                            "Here is the casting photo — the definitive reference "
-                            "for all characters in this story. Every scene must "
-                            "depict these EXACT same people.\n\n" + prompt_text
-                        )
+                        text=casting_context + prompt_text
                     ),
                 ]
             else:
                 prompt = prompt_text
         else:
             prompt = (
-                f"Continue with Scene {scene_idx + 1}. "
-                f"Write the next scene with text and one image. "
+                f"Continue with ONLY Scene {scene_idx + 1} — 2-4 sentences of noir "
+                f"prose and ONE image. Do NOT write multiple scenes. "
                 f"Same characters — same faces, same hair, same build as the casting photo. "
-                f"If this is the final scene, end with a line that lingers and [END]."
+                f"If this is the final scene, end with [END]."
             )
 
         try:

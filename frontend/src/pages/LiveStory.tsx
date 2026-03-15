@@ -522,6 +522,7 @@ function SceneViewer({
   // Narration pipeline is owned by parent — use it via props
   const narrationReady = pipeline.narrationReady;
 
+
   // Report scene changes to parent so pipeline tracks the right index
   useEffect(() => {
     onSceneChange(current);
@@ -543,18 +544,22 @@ function SceneViewer({
     }
   }, [transitioning, narrationReady, pipeline]);
 
-  // Iris opens from 0% to 75% as text is typed
-  const irisRadius = scene?.text ? Math.round(progress * 75) : 75;
+  // Iris opens as text is typed; show at least 30% when image exists
+  // so images are visible even if narration is slow/failing
+  const baseIris = scene?.imageBase64 ? 30 : 0;
+  const irisRadius = scene?.text ? Math.max(baseIris, Math.round(progress * 75)) : 75;
 
-  // Jump to last scene when new scenes arrive (continuation)
+
+  // Jump to first new scene only during continuation (not initial generation).
+  // `continuing` is true only when "What happens next?" appends new scenes.
   const prevSceneCount = useRef(scenes.length);
   useEffect(() => {
-    if (scenes.length > prevSceneCount.current) {
-      setCurrent(scenes.length - (scenes.length - prevSceneCount.current));
+    if (continuing && scenes.length > prevSceneCount.current) {
+      setCurrent(prevSceneCount.current); // first newly appended scene
       setFadeKey((k) => k + 1);
     }
     prevSceneCount.current = scenes.length;
-  }, [scenes.length]);
+  }, [scenes.length, continuing]);
 
   // Film dissolve: fade to black → switch scene → fade in
   const changeTo = useCallback(
@@ -1045,7 +1050,17 @@ export function LiveStory() {
 
   // Gate: scene 0 narration ready → safe to transition from casting to SceneViewer.
   // pipeline.narrationReady is reactive state tracking currentSceneIdx (starts at 0).
-  const firstSceneNarrationReady = scenes.length > 0 && pipeline.narrationReady;
+  // Fallback: after 30s, show SceneViewer even without narration so images appear.
+  // Narration typically takes 22-46s; this catches cases where it fully fails.
+  const [narrationTimeout, setNarrationTimeout] = useState(false);
+  useEffect(() => {
+    if (scenes.length > 0 && !pipeline.narrationReady && loading) {
+      const timer = setTimeout(() => setNarrationTimeout(true), 30_000);
+      return () => clearTimeout(timer);
+    }
+    if (!loading) setNarrationTimeout(false);
+  }, [scenes.length, pipeline.narrationReady, loading]);
+  const firstSceneNarrationReady = scenes.length > 0 && (pipeline.narrationReady || narrationTimeout);
 
   // Auto-open viewer as soon as casting or first scene arrives (streaming)
   useEffect(() => {
