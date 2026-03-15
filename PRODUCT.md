@@ -148,12 +148,52 @@ Available via `GET /api/export/{id}/bundle`.
 
 Additional export endpoints: individual image download, per-scene audio download, video download, and export metadata.
 
+### Live Story
+
+A full-screen flip-o-rama storyboard viewer powered by Gemini's native image generation (`gemini-3.1-flash-image-preview`). Users enter a prompt and watch scenes materialize in real-time via SSE streaming.
+
+- **Casting photo** — ONE-SHOT call establishes character visual identity (hidden from viewer)
+- **Parallel scene generation** — fast text from `gemini-2.5-flash` (~3s) + dedicated image call (~2min) per scene, up to 4 scenes
+- **Cinematic presentation** — iris opening, typewriter text (25ms/char), film dissolve transitions between scenes
+- **Narration** — streaming PCM16 audio via Gemini TTS (Charon voice); auto-advance gates on narration completion
+- **Continuation** — "What happens next?" for multi-turn storytelling
+- **Rashomon mode** — "Tell it from the other side" perspective flip
+
+### Live Noir Session
+
+Bidirectional voice storytelling via WebSocket. Users speak and Dash narrates back with photorealistic images materializing mid-narration through function calling.
+
+- **Voice interface** — 16kHz PCM capture, 24kHz PCM playback, VAD silence detection
+- **Turn states** — listening (green pulsing ring), narrating (dimmed mic), generating (amber)
+- **Function calling** — `generate_scene_image()` triggers image generation mid-narration; `search_historical_context()` grounds stories in real history
+- **Models** — `gemini-2.5-flash-native-audio-latest` (Charon voice) for audio, `gemini-3.1-flash-image-preview` for images
+
+### Live Video (Veo)
+
+Transforms static storyboard scenes into cinematic video clips using Google Veo.
+
+- **Model** — `veo-3.1-generate-preview` (fallback: `veo-3.0-fast-generate-001`)
+- **Camera motion** — 7 keyword-matched directives: intimate push-in, handheld chase, establishing crane, revelation dolly, dialogue OTS, tracking steadicam, contemplative static
+- **Film assembly** — ffmpeg concatenates clips with optional narration overlay
+- **Demo fallback** — pre-baked assets from `demo/fallback/` for reliable presentations
+- **Cost** — $0.90/scene (6s clips); 5-scene story ~ $4.50
+
+### Live Voice
+
+- **Narration** — `POST /api/live-voice/narrate` converts text to WAV audio via Gemini TTS with Charon voice
+- **Streaming narration** — `POST /api/live-voice/narrate-stream` streams PCM16 chunks for lower latency
+- **Voice prompt** — `POST /api/live-voice/prompt` accepts audio and returns transcript + creative response
+
 ### Two-Mode Operation
 
-- **Normal mode** (`HACKATHON_MODE=false`): Both Historical Lens and Story Director available, ConfigHUD visible, full sidebar navigation
-- **Hackathon mode** (`HACKATHON_MODE=true`): Story Director is the default, sidebar reorders story-first, ConfigHUD hidden, root URL auto-redirects to story generation
+- **Normal mode** (`DEPLOYMENT_MODE=hybrid` or `local`): Both Historical Lens and Story Director available, ConfigHUD visible, full sidebar navigation
+- **Hackathon mode** (`DEPLOYMENT_MODE=gcp`): Auto-enables `hackathon_mode=True` and `hackathon_strict_gemini=True`. Story Director + Live Story + Live Session are primary navigation. ConfigHUD hidden. Root auto-redirects to Story Director. LLM router fails fast (503) instead of falling back away from Gemini.
 
-Both modes use identical backend code — switching is purely a UI routing and feature visibility change controlled by a single environment variable. Nothing is deleted.
+Both modes use identical backend code — switching is purely a UI routing and feature visibility change. Nothing is deleted.
+
+### Auth Gate
+
+Optional password protection via `APP_PASSWORD` env var. When set, `AuthGateMiddleware` requires HMAC-signed session cookie (7-day TTL) on all API routes. Login page shown before any content loads. WebSocket upgrades bypass middleware.
 
 ### Content Moderation
 
@@ -399,6 +439,28 @@ The `LLMRouter` manages 4 pluggable providers (Gemini, Claude, OpenAI, Ollama) w
 | `GET` | `/api/admin/validation/queue` | Review queue for generations needing attention |
 | `POST` | `/api/admin/validation/queue/{id}/review` | Submit human review decision |
 
+### Live Features
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/live-story/generate` | SSE — generate Live Story (text + images per scene) |
+| `GET` | `/api/live-session/ws` | WebSocket — bidirectional voice storytelling |
+| `POST` | `/api/live-video/generate` | SSE — generate Veo video clips per scene |
+| `POST` | `/api/live-video/assemble` | Assemble scene videos into single MP4 |
+| `GET` | `/api/live-video/demo-fallback` | Pre-baked demo assets |
+| `POST` | `/api/live-voice/narrate` | Text-to-speech narration (WAV) |
+| `POST` | `/api/live-voice/narrate-stream` | Streaming PCM16 narration |
+| `POST` | `/api/live-voice/prompt` | Audio prompt transcription + response |
+
+### Auth
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/auth/login` | Authenticate with APP_PASSWORD |
+| `GET` | `/api/auth/check` | Check session validity |
+| `POST` | `/api/auth/logout` | Clear session cookie |
+| `GET` | `/api/config/` | Get deployment configuration |
+
 ### Other
 
 | Method | Endpoint | Description |
@@ -521,4 +583,4 @@ Portrait pipeline nodes are wrapped with `checked()` decorators that validate pr
 - **Path confinement** — all file access uses `confine_path()` to prevent directory traversal
 - **Deployment mode enforcement** — GCP deployments reject local-only providers; config validation prevents misconfiguration
 
-No authentication layer is implemented. Designed for trusted deployment environments.
+**Authentication**: Optional password gate via `APP_PASSWORD` env var with HMAC-signed session cookies (7-day TTL). Designed for demo/hackathon deployment protection.

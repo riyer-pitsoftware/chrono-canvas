@@ -107,14 +107,20 @@ story_orchestrator → [image_to_story] → [reference_image_analysis] → chara
 | 3 | **reference_image_analysis** | Gemini Vision | *Optional.* Analyzes style/location/character reference images for visual consistency guidance |
 | 4 | **character_extraction** | Gemini | Extracts character descriptions, names, physical attributes from the story text |
 | 5 | **scene_decomposition** | Gemini | Breaks story into 3-8 visual scenes with descriptions, mood, setting, and **continuity state** (expected_state / established_state per scene for cross-scene consistency) |
-| 6 | **scene_prompt_generation** | Gemini | Generates image prompts for each scene panel |
-| 7 | **prompt_validation** | Gemini | Reviews prompts for visual clarity and noir aesthetic quality before generation |
-| 8 | **scene_image_generation** | Imagen 4 | Generates images for each scene panel |
-| 9 | **storyboard_coherence** | Gemini Vision (multimodal) | Reviews ALL scene images together — character consistency, art style, color palette, narrative flow, **continuity tracking**. Flags low-scoring scenes for regeneration (max 1 regen cycle). |
-| 10 | **narration_script** | Gemini | Writes noir-style narration text for each panel |
-| 11 | **narration_audio** | Gemini TTS | Synthesizes WAV audio per panel using `gemini-2.5-flash-preview-tts` with configurable voice |
-| 12 | **video_assembly** | ffmpeg | Stitches scene images + audio into MP4 with Ken Burns effect and crossfade transitions |
-| 13 | **storyboard_export** | — | Packages storyboard (images, audio, video, metadata JSON) for download |
+| 6 | **historical_research** | Gemini + Google Search | Researches historical context via `generate_with_search()` for grounded citations |
+| 7 | **scene_prompt_generation** | Gemini | Generates image prompts per scene with character visual anchors and noir visual grammar; max_tokens=8192 |
+| 8 | **prompt_validation** | Gemini | Scores prompts on 4 axes (identity clarity, era plausibility, composition completeness, contradiction-free); auto-repairs prompts scoring < 0.7; max_tokens=4096 |
+| 9 | **scene_image_generation** | Imagen 4 | Parallel image generation via `asyncio.gather` with retry on 503/UNAVAILABLE |
+| 10 | **storyboard_coherence** | Gemini Vision (multimodal) | Reviews ALL scene images together — character consistency, art style, color palette, narrative flow, **continuity tracking**. Flags low-scoring scenes for regeneration (max 1 regen cycle); max_output_tokens=8192. |
+| 11 | **narration_script** | Gemini (dual mode) | Vision-enhanced (sends images to Gemini multimodal) or text-only fallback; max_output_tokens=4096 |
+| 12 | **narration_audio** | Gemini TTS | Parallel TTS via `asyncio.gather` using `gemini-2.5-flash-preview-tts`; per-panel non-fatal |
+| 13 | **video_assembly** | ffmpeg | Stitches scene images + audio into MP4 (854x480 @12fps, ultrafast preset, 120s timeout) |
+| 14 | **storyboard_export** | — | Packages storyboard (images, audio, video, metadata JSON); GCS upload on Cloud Run |
+
+**Key behaviors:**
+- **Error-halting edges**: Every inter-node edge checks `state["error"]` — if any node fails, pipeline halts at END instead of feeding broken state downstream
+- **Shared JSON repair**: All story nodes parse LLM JSON via `json_repair.extract_and_parse_json()` (8 recovery strategies + truncation repair). Root cause: Gemini 2.5 Flash thinking tokens consume `max_output_tokens` budget, truncating JSON.
+- **Coherence-driven regen**: If `character_consistency_score < 0.6` or `continuity_score < 0.5`, worst-scoring scenes loop back through prompt gen + image gen (max 1 cycle)
 
 **State type**: `StoryState` (TypedDict with panels as `list[StoryPanel]`, each containing description, image_prompt, image_path, coherence_score, narration_text, narration_audio_path, continuity state)
 
@@ -127,6 +133,59 @@ Research results are cached using **pgvector** semantic similarity search (cosin
 ### Runtime Invariant Checks
 
 Every portrait pipeline node is wrapped with `checked()` decorators that run pre/postcondition validation on the state before and after each node executes. Violations can be strict (raise) or soft (log warning), controlled by `INVARIANT_CHECKS_ENABLED` and `INVARIANT_STRICT`.
+
+---
+
+## Live API Features
+
+Real-time, streaming experiences built on Gemini's native multimodal capabilities.
+
+### Live Story (`POST /api/live-story/generate` — SSE)
+
+Full-screen flip-o-rama storyboard generator using Gemini's native image generation.
+
+| Component | Detail |
+|---|---|
+| **Image model** | `gemini-3.1-flash-image-preview` (fallback: `gemini-2.5-flash-image`) |
+| **Text model** | `gemini-2.5-flash` (parallel fallback for fast text) |
+| **Architecture** | ONE-SHOT casting photo → PARALLEL per-scene (fast text + dedicated image call) |
+| **Streaming** | SSE with `: keepalive` every 15s; stage events for progress tracking |
+| **Image compression** | JPEG q85, max 1280px (~60-70% payload reduction) |
+| **Thinking** | `thinking_level="MINIMAL"` for gemini-3.1+ only |
+| **SDK pin** | `google-genai<1.67` (1.67 drops `thought_signature` from chat history) |
+
+### Live Session (`GET /api/live-session/ws` — WebSocket)
+
+Bidirectional voice storytelling via Gemini Live API.
+
+| Component | Detail |
+|---|---|
+| **Audio model** | `gemini-2.5-flash-native-audio-latest` (Charon voice) |
+| **Image model** | `gemini-3.1-flash-image-preview` (via function calling) |
+| **Protocol** | Browser ↔ WebSocket ↔ Backend ↔ Gemini Live API (bidirectional) |
+| **Function calling** | `generate_scene_image()`, `search_historical_context()` mid-narration |
+| **Turn states** | listening (green), narrating (dimmed), generating (amber) |
+| **VAD** | RMS threshold (~0.01) skips silence; mute during playback |
+
+### Live Video (`POST /api/live-video/generate` — SSE)
+
+Veo scene-to-video generation with camera motion directives.
+
+| Component | Detail |
+|---|---|
+| **Model** | `veo-3.1-generate-preview` (fallback: `veo-3.0-fast-generate-001`) |
+| **Cost** | $0.15/sec (fast) x 6s = $0.90/scene |
+| **Camera directives** | 7 categories: intimate, chase, establishing, revelation, dialogue, tracking, contemplative |
+| **Assembly** | `POST /api/live-video/assemble` — ffmpeg concat with optional narration |
+| **Demo fallback** | `GET /api/live-video/demo-fallback` — pre-baked assets |
+
+### Live Voice
+
+| Endpoint | Description |
+|---|---|
+| `POST /api/live-voice/narrate` | Text → WAV via Gemini TTS (Charon voice) |
+| `POST /api/live-voice/narrate-stream` | Streaming PCM16 narration via `generate_content_stream` |
+| `POST /api/live-voice/prompt` | Audio → transcript + creative response |
 
 ---
 
@@ -256,14 +315,22 @@ All configuration is via environment variables. Copy `.env.example` to `.env` to
 | `INVARIANT_CHECKS_ENABLED` | Run pre/postcondition checks on pipeline nodes | `true` |
 | `INVARIANT_STRICT` | Raise on violation (`true`) vs log warning (`false`) | `false` |
 
-### Hackathon flags
+### Hackathon mode
 
 | Variable | Description | Default |
 |---|---|---|
-| `HACKATHON_MODE` | UI defaults to Story Director, sidebar reorders story-first, root auto-redirects | `false` |
-| `HACKATHON_STRICT_GEMINI` | LLM router fails fast (503) instead of falling back away from Gemini | `false` |
+| `DEPLOYMENT_MODE` | `gcp` auto-enables hackathon mode + strict Gemini via validator in config.py | `hybrid` |
+| `HACKATHON_STRICT_GEMINI` | LLM router fails fast (503) instead of falling back away from Gemini | `false` (auto-set by `gcp` mode) |
 
-These flags are independent. The `/api/health` endpoint exposes `hackathon_mode`, `deployment_mode`, and a `services` availability map so the frontend can read configuration at startup.
+Setting `DEPLOYMENT_MODE=gcp` automatically sets `hackathon_mode=True` and `hackathon_strict_gemini=True` via the `_unify_gcp_and_hackathon()` validator. No separate `HACKATHON_MODE` env var is needed. The `/api/health` endpoint exposes `hackathon_mode`, `deployment_mode`, and a `services` availability map.
+
+### Auth gate
+
+| Variable | Description | Default |
+|---|---|---|
+| `APP_PASSWORD` | When set, requires HMAC-signed session cookie (7-day TTL) on all API/WS routes | — (open access) |
+
+WebSocket upgrade requests bypass the auth middleware (BaseHTTPMiddleware + WS incompatible). Login/check/logout via `/api/auth/*`.
 
 ### Database and cache
 
@@ -364,6 +431,28 @@ In hackathon mode, the health endpoint also runs `validate_hackathon_requirement
 | `POST` | `/api/conversation/{id}/chat` | Conversational storyboard refinement |
 | `POST` | `/api/faces/upload` | Upload face image for compositing |
 
+### Live features
+
+| Method | Path | Description |
+|---|---|---|
+| `POST` | `/api/live-story/generate` | SSE — generate Live Story (text + images streamed per scene) |
+| `GET` | `/api/live-session/ws` | WebSocket — bidirectional voice storytelling session |
+| `POST` | `/api/live-video/generate` | SSE — generate Veo video clips per scene |
+| `POST` | `/api/live-video/assemble` | Assemble scene videos into single MP4 |
+| `GET` | `/api/live-video/demo-fallback` | Pre-baked demo assets |
+| `POST` | `/api/live-voice/narrate` | Text-to-speech narration (WAV) |
+| `POST` | `/api/live-voice/narrate-stream` | Streaming PCM16 narration |
+| `POST` | `/api/live-voice/prompt` | Audio prompt → transcript + creative response |
+
+### Auth
+
+| Method | Path | Description |
+|---|---|---|
+| `POST` | `/api/auth/login` | Authenticate with APP_PASSWORD |
+| `GET` | `/api/auth/check` | Check session validity |
+| `POST` | `/api/auth/logout` | Clear session cookie |
+| `GET` | `/api/config/` | Get deployment config (hackathon_mode, features) |
+
 ### Configuration and management
 
 | Method | Path | Description |
@@ -401,6 +490,9 @@ React 18 SPA with client-side routing (no React Router — uses a Zustand `navig
 | **EvalViewer** | `/eval` | Evaluation results viewer |
 | **Admin** | `/admin` | Admin panel |
 | **Export** | `/export` | Export management |
+| **LiveStory** | `/live-story` | Full-screen flip-o-rama storyboard with narration |
+| **LiveSession** | `/live-session` | Bidirectional voice storytelling with Dash |
+| **Login** | `/login` | Password gate (when APP_PASSWORD set) |
 | **Guide** | `/guide` | User guide |
 
 ### Key components
@@ -426,15 +518,14 @@ React 18 SPA with client-side routing (no React Router — uses a Zustand `navig
 
 ## Two-Mode Operation
 
-| Setting | Normal mode | Hackathon mode |
+| Setting | Normal mode (`hybrid`/`local`) | Hackathon mode (`DEPLOYMENT_MODE=gcp`) |
 |---|---|---|
-| `HACKATHON_MODE` | `false` | `true` |
 | Landing page | Mode selector (portrait or story) | Auto-redirect to Story Director |
-| Sidebar | All nav items | Story-first ordering |
+| Sidebar | All nav items | Story Director + Live Story + Live Session (dev tools collapsed) |
 | ConfigHUD | Visible | Hidden |
-| Degradation | Graceful (fallback to other providers) | Fail-loud (strict Gemini) |
+| Degradation | Graceful (fallback to other providers) | Fail-loud (strict Gemini, 503 on fallback) |
 | Providers | Multi-provider (Gemini, Claude, OpenAI, Ollama) | Gemini-only |
-| `HACKATHON_STRICT_GEMINI` | `false` | `true` |
+| Live features | Available | Primary navigation items |
 
 Nothing is deleted between modes — all features exist behind flags, fully reversible.
 
@@ -506,7 +597,7 @@ Full manifests in `deploy/gke/`: namespace, service account, PostgreSQL Stateful
 - **Secret key validation** — app refuses to start with the insecure default `SECRET_KEY` when using PostgreSQL
 - **Deployment mode enforcement** — GCP deployments (`DEPLOYMENT_MODE=gcp`) reject local-only providers (Ollama, ComfyUI, FaceFusion) at config validation time
 
-Authentication and authorisation are not currently implemented. ChronoCanvas is designed for trusted or private deployment.
+**Authentication**: Optional password gate via `APP_PASSWORD` env var. When set, `AuthGateMiddleware` requires HMAC-signed session cookie on all API routes. WebSocket upgrades bypass middleware. See Auth gate section above.
 
 ---
 

@@ -258,6 +258,181 @@ Deletes the generation record and cleans up output files on disk. Returns `204`.
 
 ---
 
+## Live Story
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/live-story/generate` | Generate a live story via SSE (Server-Sent Events) |
+
+### POST `/api/live-story/generate`
+
+Streams a multi-scene visual story in real-time using Gemini native image generation.
+
+```json
+{
+  "prompt": "A detective follows a cold trail through rain-soaked streets",
+  "num_scenes": 4,
+  "style": "noir"
+}
+```
+
+SSE event types:
+
+| `type` | Fields | Description |
+|---|---|---|
+| `stage` | `stage`, `status`, `elapsed_s`, `scene_idx` | Pipeline stage progress (init/casting/scene/replay) |
+| `scene` | `scene_idx`, `text`, `image` | Scene content (text and/or base64 JPEG image) |
+| `error` | `message`, `scene_idx` | Error for a specific scene or overall |
+| `done` | — | Stream complete |
+
+Architecture: ONE-SHOT casting photo (scene 0, hidden) → PARALLEL per-scene text (gemini-2.5-flash, ~3s) + image (gemini-3.1-flash-image-preview, ~2min). SSE keepalives every 15s.
+
+---
+
+## Live Session
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/live-session/ws` | WebSocket — bidirectional voice storytelling |
+
+### WS `/api/live-session/ws`
+
+Persistent bidirectional WebSocket proxying to Gemini Live API. User speaks, Dash narrates back, images materialize via function calls.
+
+Client → Server messages:
+
+| `type` | Fields | Description |
+|---|---|---|
+| `start` | — | Begin session |
+| `audio` | `data` (base64 PCM16) | Audio chunk from microphone |
+| `stop` | — | End session |
+
+Server → Client messages:
+
+| `type` | Fields | Description |
+|---|---|---|
+| `audio` | `data` (base64 PCM16) | Narration audio chunk |
+| `image` | `data` (base64 JPEG), `prompt` | Generated scene image |
+| `status` | `status` | Turn state: `listening`, `narrating`, `generating` |
+| `transcript` | `text` | Speech-to-text transcript |
+| `ping` | — | Keepalive (every 20s) |
+| `error` | `message` | Error message |
+
+Models: `gemini-2.5-flash-native-audio-latest` (audio, Charon voice), `gemini-3.1-flash-image-preview` (images via function calling).
+
+---
+
+## Live Video
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/live-video/generate` | Generate Veo video clips per scene (SSE) |
+| `POST` | `/api/live-video/assemble` | Assemble scene videos into single MP4 |
+| `GET` | `/api/live-video/demo-fallback` | Pre-baked demo video assets |
+
+### POST `/api/live-video/generate`
+
+Generates Veo video clips from scene images. Streams progress via SSE.
+
+```json
+{
+  "scenes": [
+    { "image": "base64...", "text": "Scene description", "index": 0 }
+  ]
+}
+```
+
+SSE event types: `scene_video` (with base64 MP4), `scene_video_error`, `film_complete`, `stage`.
+
+Models: `veo-3.1-generate-preview` (fallback: `veo-3.0-fast-generate-001`). Cost: $0.90/scene (6s clips).
+
+### POST `/api/live-video/assemble`
+
+Concatenates individual Veo clips into single MP4 via ffmpeg.
+
+```json
+{
+  "videos": ["base64-mp4-1", "base64-mp4-2"],
+  "narration_audio": "optional-base64-wav"
+}
+```
+
+Returns assembled video as base64.
+
+### GET `/api/live-video/demo-fallback`
+
+Returns pre-baked demo assets from `demo/fallback/` directory (manifest.json + scene files).
+
+---
+
+## Live Voice
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/live-voice/narrate` | Text → WAV narration (Charon voice) |
+| `POST` | `/api/live-voice/narrate-stream` | Text → streaming PCM16 narration |
+| `POST` | `/api/live-voice/prompt` | Audio → transcript + creative response |
+
+### POST `/api/live-voice/narrate`
+
+```json
+{ "text": "The rain fell like a confession nobody asked for." }
+```
+
+Returns WAV audio (24kHz PCM16 mono) via Gemini TTS with Charon voice.
+
+### POST `/api/live-voice/narrate-stream`
+
+Same input as `/narrate` but streams PCM16 audio chunks via SSE for lower latency.
+
+### POST `/api/live-voice/prompt`
+
+Upload audio file (multipart). Returns:
+
+```json
+{
+  "transcript": "transcribed text",
+  "response": "Dash's creative response"
+}
+```
+
+---
+
+## Auth
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/auth/login` | Authenticate with APP_PASSWORD |
+| `GET` | `/api/auth/check` | Check session validity |
+| `POST` | `/api/auth/logout` | Clear session cookie |
+| `GET` | `/api/config/` | Get deployment configuration |
+
+### POST `/api/auth/login`
+
+```json
+{ "password": "your-password" }
+```
+
+Returns `200` with Set-Cookie (HMAC-signed, 7-day TTL) on success, `401` on failure.
+
+### GET `/api/auth/check`
+
+Returns `200` if session is valid, `401` otherwise.
+
+### GET `/api/config/`
+
+Returns deployment configuration flags consumed by the frontend:
+
+```json
+{
+  "hackathon_mode": true,
+  "deployment_mode": "gcp",
+  "features": { ... }
+}
+```
+
+---
+
 ## Figures
 
 | Method | Endpoint | Description |
