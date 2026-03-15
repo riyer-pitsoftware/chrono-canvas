@@ -118,9 +118,7 @@ def build_story_graph() -> StateGraph:
         ("prompt_validation", "scene_image_generation"),
         ("scene_image_generation", "storyboard_coherence"),
     ]:
-        graph.add_conditional_edges(
-            src, _check_error, {"continue": dst, "error": END}
-        )
+        graph.add_conditional_edges(src, _check_error, {"continue": dst, "error": END})
 
     graph.add_conditional_edges(
         "storyboard_coherence",

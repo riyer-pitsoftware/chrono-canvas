@@ -7,7 +7,6 @@ from chronocanvas.agents.state import AgentState, FaceState, ValidationState
 from chronocanvas.db.engine import async_session as _default_session_factory
 from chronocanvas.db.models.request import RequestStatus
 from chronocanvas.db.repositories.images import ImageRepository
-from chronocanvas.services.status_map import AGENT_STATUS_MAP
 from chronocanvas.db.repositories.requests import RequestRepository
 from chronocanvas.db.repositories.validation_rules import (
     AdminSettingRepository,
@@ -19,6 +18,7 @@ from chronocanvas.services.progress import ProgressPublisher
 from chronocanvas.services.retry import RetryCoordinator
 from chronocanvas.services.runner import GenerationRunner
 from chronocanvas.services.state_projector import RequestStateProjector
+from chronocanvas.services.status_map import AGENT_STATUS_MAP
 
 logger = logging.getLogger(__name__)
 
@@ -59,7 +59,6 @@ _STEPS_CLEAR_IMAGES = frozenset(
         "image_generation",
     ]
 )
-
 
 
 def _make_runner(repo: RequestRepository, session: object, graph: object) -> GenerationRunner:

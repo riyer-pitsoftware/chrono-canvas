@@ -51,6 +51,7 @@ class AuthGateMiddleware(BaseHTTPMiddleware):
 
         return await call_next(request)
 
+
 # Context var for request correlation across async tasks
 current_request_id: contextvars.ContextVar[str | None] = contextvars.ContextVar(
     "current_request_id", default=None

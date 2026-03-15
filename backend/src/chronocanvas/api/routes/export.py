@@ -60,9 +60,7 @@ async def resolve_asset_source(
     if backend.is_cloud():
         data = await backend.download(relative_key)
         if data is None:
-            logger.warning(
-                "Asset not found in cloud storage: %s", relative_key
-            )
+            logger.warning("Asset not found in cloud storage: %s", relative_key)
             raise HTTPException(status_code=404, detail=not_found_detail)
         return _CloudAsset(data=data)
 
@@ -128,11 +126,15 @@ async def download_image(request_id: uuid.UUID, session: AsyncSession = Depends(
         return RedirectResponse(url=url)
 
     source = await resolve_asset_source(
-        relative_key, file_path, backend,
+        relative_key,
+        file_path,
+        backend,
         not_found_detail="Image file not found on disk",
     )
     return serve_asset_response(
-        source, media_type="image/png", filename=file_path.name,
+        source,
+        media_type="image/png",
+        filename=file_path.name,
     )
 
 
@@ -143,11 +145,15 @@ async def download_audio(request_id: uuid.UUID, scene_index: int):
     backend = get_storage_backend()
 
     source = await resolve_asset_source(
-        relative_key, local_path, backend,
+        relative_key,
+        local_path,
+        backend,
         not_found_detail="Audio file not found",
     )
     return serve_asset_response(
-        source, media_type="audio/wav", filename=f"scene_{scene_index}.wav",
+        source,
+        media_type="audio/wav",
+        filename=f"scene_{scene_index}.wav",
     )
 
 
@@ -158,11 +164,15 @@ async def download_video(request_id: uuid.UUID):
     backend = get_storage_backend()
 
     source = await resolve_asset_source(
-        relative_key, local_path, backend,
+        relative_key,
+        local_path,
+        backend,
         not_found_detail="Video not yet available",
     )
     return serve_asset_response(
-        source, media_type="video/mp4", filename=f"storyboard_{request_id}.mp4",
+        source,
+        media_type="video/mp4",
+        filename=f"storyboard_{request_id}.mp4",
     )
 
 

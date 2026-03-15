@@ -67,3 +67,7 @@ select = ["E", "F", "I", "N", "W"]
 "src/chronocanvas/agents/story/nodes/scene_decomposition.py" = ["E501"]
 "src/chronocanvas/agents/story/nodes/scene_prompt_generation.py" = ["E501"]
 "src/chronocanvas/agents/story/nodes/storyboard_coherence.py" = ["E501"]
+# Live routes: camera directives, keyword lists, chained attribute access
+"src/chronocanvas/api/routes/live_video.py" = ["E501"]
+"src/chronocanvas/api/routes/live_voice.py" = ["E501"]
+"src/chronocanvas/api/routes/live_session.py" = ["E501"]

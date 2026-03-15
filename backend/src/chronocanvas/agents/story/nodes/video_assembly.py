@@ -96,15 +96,11 @@ async def _create_slideshow(
         stderr=asyncio.subprocess.PIPE,
     )
     try:
-        _stdout, stderr = await asyncio.wait_for(
-            proc.communicate(), timeout=FFMPEG_TIMEOUT
-        )
+        _stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=FFMPEG_TIMEOUT)
     except asyncio.TimeoutError:
         proc.kill()
         await proc.wait()
-        logger.warning(
-            "ffmpeg slideshow timed out after %ds — killed", FFMPEG_TIMEOUT
-        )
+        logger.warning("ffmpeg slideshow timed out after %ds — killed", FFMPEG_TIMEOUT)
         return False
 
     if proc.returncode != 0:
@@ -165,9 +161,7 @@ async def _mux_audio(
         stderr=asyncio.subprocess.PIPE,
     )
     try:
-        _, stderr = await asyncio.wait_for(
-            proc.communicate(), timeout=FFMPEG_TIMEOUT
-        )
+        _, stderr = await asyncio.wait_for(proc.communicate(), timeout=FFMPEG_TIMEOUT)
     except asyncio.TimeoutError:
         proc.kill()
         await proc.wait()
@@ -206,9 +200,7 @@ async def _mux_audio(
         stderr=asyncio.subprocess.PIPE,
     )
     try:
-        _, stderr = await asyncio.wait_for(
-            proc.communicate(), timeout=FFMPEG_TIMEOUT
-        )
+        _, stderr = await asyncio.wait_for(proc.communicate(), timeout=FFMPEG_TIMEOUT)
     except asyncio.TimeoutError:
         proc.kill()
         await proc.wait()

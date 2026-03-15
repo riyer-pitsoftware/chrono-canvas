@@ -11,9 +11,7 @@ os.environ.setdefault("SECRET_KEY", "test-secret-key-for-testing")
 os.environ.setdefault("DATABASE_URL", "postgresql+asyncpg://x:x@localhost/x")
 os.environ.setdefault("REDIS_URL", "redis://localhost/0")
 
-import asyncio  # noqa: E402
 import struct  # noqa: E402
-from pathlib import Path  # noqa: E402
 from types import SimpleNamespace  # noqa: E402
 from unittest.mock import AsyncMock, MagicMock, patch  # noqa: E402
 
@@ -23,7 +21,6 @@ from chronocanvas.agents.story.nodes.narration_audio import (
     _write_wav,
     narration_audio_node,
 )
-
 
 # ── _write_wav ───────────────────────────────────────────────────────────
 
@@ -95,9 +92,7 @@ def _mock_gemini():
 
 @pytest.fixture
 def _mock_progress():
-    with patch(
-        "chronocanvas.agents.story.nodes.narration_audio.ProgressPublisher"
-    ) as cls:
+    with patch("chronocanvas.agents.story.nodes.narration_audio.ProgressPublisher") as cls:
         cls.return_value.publish_artifact = AsyncMock()
         yield cls
 
@@ -203,9 +198,7 @@ async def test_handles_no_audio_in_response(
 
 
 @pytest.mark.asyncio
-async def test_records_llm_calls(
-    _mock_settings, _mock_gemini, _mock_progress, _mock_tts
-):
+async def test_records_llm_calls(_mock_settings, _mock_gemini, _mock_progress, _mock_tts):
     state = {
         "request_id": "test-costs",
         "panels": [_make_panel(0, "Track this")],

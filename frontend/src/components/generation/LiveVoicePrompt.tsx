@@ -15,6 +15,17 @@ export function LiveVoicePrompt({ onUse, disabled }: LiveVoicePromptProps) {
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const stopRecording = useCallback(() => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    if (mediaRecorderRef.current?.state === 'recording') {
+      mediaRecorderRef.current.stop();
+    }
+    setRecording(false);
+  }, []);
+
   const startRecording = useCallback(async () => {
     setError(null);
     setResult(null);
@@ -43,18 +54,7 @@ export function LiveVoicePrompt({ onUse, disabled }: LiveVoicePromptProps) {
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Microphone access denied');
     }
-  }, []);
-
-  const stopRecording = useCallback(() => {
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
-      timerRef.current = null;
-    }
-    if (mediaRecorderRef.current?.state === 'recording') {
-      mediaRecorderRef.current.stop();
-    }
-    setRecording(false);
-  }, []);
+  }, [stopRecording]);
 
   async function sendAudio(blob: Blob) {
     setProcessing(true);

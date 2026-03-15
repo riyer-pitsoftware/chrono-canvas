@@ -18,7 +18,10 @@ export function useEvalRuns(condition?: string, caseId?: string, includeRejected
 export const useEvalRun = createDetailQueryHook<EvalRunDetail>('eval', 'run', '/eval/runs');
 export const useEvalCases = createGetQueryHook<EvalCase[]>(['eval', 'cases'], '/eval/cases');
 export const useEvalCase = createDetailQueryHook<EvalCase>('eval', 'case', '/eval/cases');
-export const useEvalDashboard = createGetQueryHook<DashboardData>(['eval', 'dashboard'], '/eval/dashboard');
+export const useEvalDashboard = createGetQueryHook<DashboardData>(
+  ['eval', 'dashboard'],
+  '/eval/dashboard',
+);
 
 export const useRejectEvalRun = createMutationHook(
   ({ runId, reason }: { runId: string; reason?: string }) =>

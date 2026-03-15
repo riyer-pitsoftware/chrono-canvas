@@ -32,8 +32,8 @@ router = APIRouter(prefix="/live-video", tags=["live-video"])
 
 # Veo models — fast (cheaper) first, then standard quality
 _VEO_MODEL_CHAIN = [
-    "veo-3.1-generate-preview",      # $0.15/sec fast
-    "veo-3.0-fast-generate-001",      # fallback
+    "veo-3.1-generate-preview",  # $0.15/sec fast
+    "veo-3.0-fast-generate-001",  # fallback
 ]
 
 # Max concurrent Veo operations (avoid quota exhaustion)
@@ -67,17 +67,45 @@ _CAMERA_DIRECTIVES = [
     },
     # Establishing/arrival scenes
     {
-        "keywords": ["arrive", "enter", "door", "building", "city", "street", "skyline", "morning", "night"],
+        "keywords": [
+            "arrive",
+            "enter",
+            "door",
+            "building",
+            "city",
+            "street",
+            "skyline",
+            "morning",
+            "night",
+        ],
         "directive": "Slow crane shot or dolly establishing the scene. Wide to medium framing. Measured pace.",
     },
     # Revelation/discovery scenes
     {
-        "keywords": ["discover", "reveal", "found", "realize", "truth", "letter", "evidence", "photograph"],
+        "keywords": [
+            "discover",
+            "reveal",
+            "found",
+            "realize",
+            "truth",
+            "letter",
+            "evidence",
+            "photograph",
+        ],
         "directive": "Slow dolly-in revealing the subject. Dramatic rack focus. Hold on the reveal.",
     },
     # Dialogue/confrontation scenes
     {
-        "keywords": ["said", "told", "asked", "demanded", "argue", "confront", "accuse", "question"],
+        "keywords": [
+            "said",
+            "told",
+            "asked",
+            "demanded",
+            "argue",
+            "confront",
+            "accuse",
+            "question",
+        ],
         "directive": "Over-the-shoulder framing. Slow pan between speakers. Steady medium shots.",
     },
     # Walking/journey scenes
@@ -87,13 +115,25 @@ _CAMERA_DIRECTIVES = [
     },
     # Contemplation/stillness scenes
     {
-        "keywords": ["wait", "think", "stare", "silence", "alone", "shadow", "smoke", "rain", "window"],
+        "keywords": [
+            "wait",
+            "think",
+            "stare",
+            "silence",
+            "alone",
+            "shadow",
+            "smoke",
+            "rain",
+            "window",
+        ],
         "directive": "Static locked-off shot. Minimal camera movement. Let the scene breathe.",
     },
 ]
 
 # Default when no keywords match
-_DEFAULT_CAMERA_DIRECTIVE = "Slow dolly shot with subtle parallax. Classical noir framing. Measured, deliberate movement."
+_DEFAULT_CAMERA_DIRECTIVE = (
+    "Slow dolly shot with subtle parallax. Classical noir framing. Measured, deliberate movement."
+)
 
 
 def _select_camera_directive(scene_text: str) -> str:
@@ -112,7 +152,10 @@ def _select_camera_directive(scene_text: str) -> str:
 
 
 def _build_veo_prompt(
-    scene_text: str, scene_idx: int, total_scenes: int, style: str | None,
+    scene_text: str,
+    scene_idx: int,
+    total_scenes: int,
+    style: str | None,
 ) -> str:
     """Build enriched Veo prompt with camera directives and scene context."""
     parts = [_VEO_STYLE_PREFIX]
@@ -210,7 +253,8 @@ async def _generate_scene_video(
     except Exception as upload_err:
         logger.warning(
             "Veo scene %d: file upload failed (%s), falling back to inline image",
-            scene_idx, upload_err,
+            scene_idx,
+            upload_err,
         )
         reference_image = types.Image(
             image_bytes=raw_image_bytes,
@@ -274,6 +318,7 @@ async def _generate_scene_video(
                 video_bytes = video_data.video_bytes
             elif getattr(video_data, "uri", None):
                 import httpx
+
                 async with httpx.AsyncClient() as http:
                     resp = await http.get(video_data.uri, timeout=60)
                     resp.raise_for_status()
@@ -290,7 +335,9 @@ async def _generate_scene_video(
             elapsed_s = time.perf_counter() - t0
             logger.info(
                 "Veo scene %d complete: model=%s, %.1fs",
-                scene_idx, model, elapsed_s,
+                scene_idx,
+                model,
+                elapsed_s,
             )
             return {
                 "type": "scene_video",
@@ -305,7 +352,9 @@ async def _generate_scene_video(
             last_error = e
             logger.warning(
                 "Veo scene %d failed with model %s: %s",
-                scene_idx, model, e,
+                scene_idx,
+                model,
+                e,
             )
             continue
 
@@ -353,14 +402,16 @@ async def generate_videos(req: SceneVideoRequest):
         async def process_scene(idx: int, scene: SceneInput):
             async with semaphore:
                 return await _generate_scene_video(
-                    client, scene, idx, total, req.style, req.aspect_ratio,
+                    client,
+                    scene,
+                    idx,
+                    total,
+                    req.style,
+                    req.aspect_ratio,
                 )
 
         # Launch all tasks
-        tasks = [
-            asyncio.create_task(process_scene(i, scene))
-            for i, scene in enumerate(req.scenes)
-        ]
+        tasks = [asyncio.create_task(process_scene(i, scene)) for i, scene in enumerate(req.scenes)]
 
         # Yield results as they complete
         for coro in asyncio.as_completed(tasks):
@@ -369,31 +420,39 @@ async def generate_videos(req: SceneVideoRequest):
 
             if result["type"] == "scene_video":
                 completed += 1
-                yield _sse(_stage_event(
-                    "scene", "complete",
-                    scene_idx=scene_idx + 1,
-                    elapsed_s=result.get("elapsed_s"),
-                    detail=result.get("model"),
-                ))
+                yield _sse(
+                    _stage_event(
+                        "scene",
+                        "complete",
+                        scene_idx=scene_idx + 1,
+                        elapsed_s=result.get("elapsed_s"),
+                        detail=result.get("model"),
+                    )
+                )
             else:
                 errors += 1
-                yield _sse(_stage_event(
-                    "scene", "error",
-                    scene_idx=scene_idx + 1,
-                    elapsed_s=result.get("elapsed_s"),
-                    detail=result.get("error"),
-                ))
+                yield _sse(
+                    _stage_event(
+                        "scene",
+                        "error",
+                        scene_idx=scene_idx + 1,
+                        elapsed_s=result.get("elapsed_s"),
+                        detail=result.get("error"),
+                    )
+                )
 
             yield _sse(result)
 
         elapsed = time.perf_counter() - start_time
-        yield _sse({
-            "type": "film_complete",
-            "total_scenes": total,
-            "completed": completed,
-            "errors": errors,
-            "elapsed_s": round(elapsed, 1),
-        })
+        yield _sse(
+            {
+                "type": "film_complete",
+                "total_scenes": total,
+                "completed": completed,
+                "errors": errors,
+                "elapsed_s": round(elapsed, 1),
+            }
+        )
 
     return StreamingResponse(
         event_stream(),
@@ -480,7 +539,8 @@ async def demo_fallback():
 async def _check_ffmpeg() -> bool:
     try:
         proc = await asyncio.create_subprocess_exec(
-            "ffmpeg", "-version",
+            "ffmpeg",
+            "-version",
             stdout=asyncio.subprocess.DEVNULL,
             stderr=asyncio.subprocess.DEVNULL,
         )
@@ -515,18 +575,22 @@ async def assemble_film(req: AssembleRequest):
 
         # Build ffmpeg concat demuxer file
         concat_file = Path(tmpdir) / "concat.txt"
-        concat_file.write_text(
-            "\n".join(f"file '{p}'" for p in clip_paths)
-        )
+        concat_file.write_text("\n".join(f"file '{p}'" for p in clip_paths))
 
         output_path = Path(tmpdir) / "film.mp4"
 
         # Concat clips
         cmd = [
-            "ffmpeg", "-y",
-            "-f", "concat", "-safe", "0",
-            "-i", str(concat_file),
-            "-c", "copy",
+            "ffmpeg",
+            "-y",
+            "-f",
+            "concat",
+            "-safe",
+            "0",
+            "-i",
+            str(concat_file),
+            "-c",
+            "copy",
             str(output_path),
         ]
 
@@ -560,14 +624,18 @@ async def assemble_film(req: AssembleRequest):
                 # Concat audio
                 audio_concat = Path(tmpdir) / "narration.wav"
                 audio_list = Path(tmpdir) / "audio_list.txt"
-                audio_list.write_text(
-                    "\n".join(f"file '{p}'" for p in audio_paths)
-                )
+                audio_list.write_text("\n".join(f"file '{p}'" for p in audio_paths))
                 audio_cmd = [
-                    "ffmpeg", "-y",
-                    "-f", "concat", "-safe", "0",
-                    "-i", str(audio_list),
-                    "-c", "copy",
+                    "ffmpeg",
+                    "-y",
+                    "-f",
+                    "concat",
+                    "-safe",
+                    "0",
+                    "-i",
+                    str(audio_list),
+                    "-c",
+                    "copy",
                     str(audio_concat),
                 ]
                 proc = await asyncio.create_subprocess_exec(
@@ -579,11 +647,16 @@ async def assemble_film(req: AssembleRequest):
 
                 # Mux video + audio
                 mux_cmd = [
-                    "ffmpeg", "-y",
-                    "-i", str(output_path),
-                    "-i", str(audio_concat),
-                    "-c:v", "copy",
-                    "-c:a", "aac",
+                    "ffmpeg",
+                    "-y",
+                    "-i",
+                    str(output_path),
+                    "-i",
+                    str(audio_concat),
+                    "-c:v",
+                    "copy",
+                    "-c:a",
+                    "aac",
                     "-shortest",
                     str(final_path),
                 ]

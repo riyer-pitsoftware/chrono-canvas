@@ -26,7 +26,7 @@ LIVE_MODEL_FALLBACK = "gemini-2.5-flash-native-audio-preview-12-2025"
 # Image generation models — try best consistency first
 _IMAGE_MODEL_CHAIN = [
     "gemini-3.1-flash-image-preview",  # Nano Banana 2: best character consistency
-    "gemini-2.5-flash-image",          # fallback
+    "gemini-2.5-flash-image",  # fallback
 ]
 
 SYSTEM_INSTRUCTION = """\
@@ -64,40 +64,42 @@ OTHER RULES:
 You speak. You don't type. This is a conversation in a dark room."""
 
 LIVE_TOOLS = [
-    types.Tool(function_declarations=[
-        types.FunctionDeclaration(
-            name="generate_scene_image",
-            description="Generate a photorealistic noir scene image based on the current narration",
-            parameters=types.Schema(
-                type="OBJECT",
-                properties={
-                    "description": types.Schema(
-                        type="STRING",
-                        description="Detailed visual description of the scene to photograph",
-                    ),
-                    "mood": types.Schema(
-                        type="STRING",
-                        description="Emotional mood: tense, melancholy, mysterious, dangerous",
-                    ),
-                },
-                required=["description"],
+    types.Tool(
+        function_declarations=[
+            types.FunctionDeclaration(
+                name="generate_scene_image",
+                description="Generate a photorealistic noir scene image based on the current narration",
+                parameters=types.Schema(
+                    type="OBJECT",
+                    properties={
+                        "description": types.Schema(
+                            type="STRING",
+                            description="Detailed visual description of the scene to photograph",
+                        ),
+                        "mood": types.Schema(
+                            type="STRING",
+                            description="Emotional mood: tense, melancholy, mysterious, dangerous",
+                        ),
+                    },
+                    required=["description"],
+                ),
             ),
-        ),
-        types.FunctionDeclaration(
-            name="search_historical_context",
-            description="Search for historical facts to ground the story in reality",
-            parameters=types.Schema(
-                type="OBJECT",
-                properties={
-                    "query": types.Schema(
-                        type="STRING",
-                        description="Historical search query",
-                    ),
-                },
-                required=["query"],
+            types.FunctionDeclaration(
+                name="search_historical_context",
+                description="Search for historical facts to ground the story in reality",
+                parameters=types.Schema(
+                    type="OBJECT",
+                    properties={
+                        "query": types.Schema(
+                            type="STRING",
+                            description="Historical search query",
+                        ),
+                    },
+                    required=["query"],
+                ),
             ),
-        ),
-    ]),
+        ]
+    ),
     types.Tool(google_search=types.GoogleSearch()),
 ]
 
@@ -147,13 +149,13 @@ async def _generate_image(
         contents: list = []
         if last_image_b64:
             image_bytes = base64.b64decode(last_image_b64)
+            contents.append(types.Part.from_bytes(data=image_bytes, mime_type="image/png"))
             contents.append(
-                types.Part.from_bytes(data=image_bytes, mime_type="image/png")
+                types.Part.from_text(
+                    text=f"Maintain the same characters with identical faces and features "
+                    f"as shown in the reference image above. {styled_description}"
+                )
             )
-            contents.append(types.Part.from_text(
-                text=f"Maintain the same characters with identical faces and features "
-                f"as shown in the reference image above. {styled_description}"
-            ))
         else:
             contents.append(types.Part.from_text(text=styled_description))
 
@@ -171,10 +173,7 @@ async def _generate_image(
                     contents=contents,
                     config=gen_config,
                 )
-                if (
-                    response.candidates
-                    and response.candidates[0].content.parts
-                ):
+                if response.candidates and response.candidates[0].content.parts:
                     for part in response.candidates[0].content.parts:
                         if part.inline_data and part.inline_data.data:
                             return base64.b64encode(part.inline_data.data).decode("ascii")
@@ -186,6 +185,38 @@ async def _generate_image(
     return None
 
 
+async def _generate_image_background(
+    client: genai.Client,
+    ws: WebSocket,
+    description: str,
+    session_state: dict,
+) -> None:
+    """Generate image in background and send to browser when ready.
+
+    Runs as a fire-and-forget task so the receive loop stays unblocked,
+    keeping the Gemini WebSocket alive (pings/pongs flow).
+    """
+    try:
+        last_img = session_state.get("last_image_b64")
+        b64_img = await _generate_image(client, description, last_image_b64=last_img)
+
+        if b64_img:
+            session_state["last_image_b64"] = b64_img
+            await _send_json(
+                ws,
+                {
+                    "type": "image",
+                    "data": b64_img,
+                    "description": description,
+                },
+            )
+            logger.info("Background image delivered to browser")
+        else:
+            logger.warning("Background image generation failed")
+    except Exception as e:
+        logger.error("Background image generation error: %s", e)
+
+
 async def _handle_function_call(
     client: genai.Client,
     session,
@@ -193,7 +224,12 @@ async def _handle_function_call(
     tool_call: types.FunctionCall,
     session_state: dict,
 ) -> None:
-    """Process a Gemini function call, send results to browser and back to Gemini."""
+    """Process a Gemini function call, send results to browser and back to Gemini.
+
+    Image generation is fire-and-forget in the background so we don't block
+    the receive loop (which would starve WebSocket pings and kill the session).
+    We send an immediate FunctionResponse to Gemini so it continues narrating.
+    """
     fn_name = tool_call.name
     fn_args = dict(tool_call.args) if tool_call.args else {}
 
@@ -204,30 +240,22 @@ async def _handle_function_call(
 
         await _send_json(ws, {"type": "status", "content": "generating_image"})
 
-        # Pass last image as reference for character consistency
-        last_img = session_state.get("last_image_b64")
-        b64_img = await _generate_image(client, description, last_image_b64=last_img)
+        # Fire off image generation in background — don't block receive loop
+        asyncio.create_task(_generate_image_background(client, ws, description, session_state))
 
-        if b64_img:
-            # Track last image for consistency in subsequent scenes
-            session_state["last_image_b64"] = b64_img
-            await _send_json(ws, {
-                "type": "image",
-                "data": b64_img,
-                "description": description,
-            })
-            result = {"success": True, "message": "Image generated and displayed to user."}
-        else:
-            result = {"success": False, "message": "Image generation failed."}
-
-        # Send function response back to Gemini so it can continue
+        # Send immediate response — tell Gemini to PAUSE and wait for user
         await session.send(
             input=types.LiveClientToolResponse(
                 function_responses=[
                     types.FunctionResponse(
                         id=tool_call.id,
                         name=fn_name,
-                        response=result,
+                        response={
+                            "success": True,
+                            "message": "Image is being generated and will appear for the audience. "
+                            "STOP talking now. Wait silently for the audience to respond "
+                            "before narrating the next scene.",
+                        },
                     )
                 ]
             ),
@@ -300,20 +328,30 @@ async def _receive_from_browser(ws: WebSocket, session, stop_event: asyncio.Even
                     audio_chunks_received += 1
                     if audio_chunks_received == 1:
                         logger.info(
-                            "First audio chunk from browser: %d bytes", len(audio_bytes),
+                            "First audio chunk from browser: %d bytes",
+                            len(audio_bytes),
                         )
                     elif audio_chunks_received % 50 == 0:
                         logger.info("Audio chunks from browser: %d", audio_chunks_received)
                     try:
                         await session.send_realtime_input(
                             audio=types.Blob(
-                                data=audio_bytes, mime_type="audio/pcm;rate=16000",
+                                data=audio_bytes,
+                                mime_type="audio/pcm;rate=16000",
                             ),
                         )
                     except Exception as e:
                         logger.error(
                             "Failed to send audio to Gemini (chunk %d): %s",
-                            audio_chunks_received, e,
+                            audio_chunks_received,
+                            e,
+                        )
+                        await _send_json(
+                            ws,
+                            {
+                                "type": "error",
+                                "content": "Lost connection to Gemini. Please restart the session.",
+                            },
                         )
                         stop_event.set()
                         break
@@ -339,7 +377,7 @@ async def _receive_from_gemini(
     session_state: dict | None = None,
 ) -> None:
     """Loop: read responses from Gemini session and forward to browser."""
-    _RECEIVE_TIMEOUT_S = 120  # Max seconds to wait for a single Gemini response
+    _receive_timeout_s = 120  # Max seconds to wait for a single Gemini response
     gemini_response_count = 0
     try:
         while not stop_event.is_set():
@@ -347,13 +385,15 @@ async def _receive_from_gemini(
             while not stop_event.is_set():
                 try:
                     response = await asyncio.wait_for(
-                        aiter.__anext__(), timeout=_RECEIVE_TIMEOUT_S,
+                        aiter.__anext__(),
+                        timeout=_receive_timeout_s,
                     )
                 except StopAsyncIteration:
                     break
                 except asyncio.TimeoutError:
                     logger.warning(
-                        "Gemini receive timed out after %ds", _RECEIVE_TIMEOUT_S,
+                        "Gemini receive timed out after %ds",
+                        _receive_timeout_s,
                     )
                     stop_event.set()
                     return
@@ -367,14 +407,15 @@ async def _receive_from_gemini(
                 )
                 has_tool_call = bool(response.tool_call)
                 turn_complete = bool(
-                    response.server_content
-                    and response.server_content.turn_complete
+                    response.server_content and response.server_content.turn_complete
                 )
 
                 if gemini_response_count == 1:
                     logger.info(
                         "First Gemini response: audio=%s tool_call=%s turn_complete=%s",
-                        has_audio, has_tool_call, turn_complete,
+                        has_audio,
+                        has_tool_call,
+                        turn_complete,
                     )
                 elif gemini_response_count % 20 == 0:
                     logger.info("Gemini responses received: %d", gemini_response_count)
@@ -383,21 +424,25 @@ async def _receive_from_gemini(
                 if response.server_content and response.server_content.model_turn:
                     for part in response.server_content.model_turn.parts:
                         if part.inline_data and part.inline_data.data:
-                            audio_b64 = base64.b64encode(
-                                part.inline_data.data
-                            ).decode("ascii")
-                            ok = await _send_json(ws, {
-                                "type": "audio",
-                                "data": audio_b64,
-                            })
+                            audio_b64 = base64.b64encode(part.inline_data.data).decode("ascii")
+                            ok = await _send_json(
+                                ws,
+                                {
+                                    "type": "audio",
+                                    "data": audio_b64,
+                                },
+                            )
                             if not ok:
                                 stop_event.set()
                                 return
                         if part.text:
-                            await _send_json(ws, {
-                                "type": "transcript",
-                                "content": part.text,
-                            })
+                            await _send_json(
+                                ws,
+                                {
+                                    "type": "transcript",
+                                    "content": part.text,
+                                },
+                            )
 
                 # Handle turn complete
                 if response.server_content and response.server_content.turn_complete:
@@ -459,10 +504,13 @@ async def live_session_ws(ws: WebSocket):
             continue
 
     if session is None:
-        await _send_json(ws, {
-            "type": "error",
-            "content": "Failed to connect to Gemini Live API",
-        })
+        await _send_json(
+            ws,
+            {
+                "type": "error",
+                "content": "Failed to connect to Gemini Live API",
+            },
+        )
         await ws.close()
         return
 
@@ -474,19 +522,18 @@ async def live_session_ws(ws: WebSocket):
     session_state: dict = {}
 
     # Run browser→Gemini, Gemini→browser, and keepalive loops concurrently
-    browser_task = asyncio.create_task(
-        _receive_from_browser(ws, session, stop_event)
-    )
+    browser_task = asyncio.create_task(_receive_from_browser(ws, session, stop_event))
     gemini_task = asyncio.create_task(
         _receive_from_gemini(client, session, ws, stop_event, session_state)
     )
-    ping_task = asyncio.create_task(
-        _keepalive_ping(ws, stop_event)
-    )
+    ping_task = asyncio.create_task(_keepalive_ping(ws, stop_event))
 
     try:
         await asyncio.gather(
-            browser_task, gemini_task, ping_task, return_exceptions=True,
+            browser_task,
+            gemini_task,
+            ping_task,
+            return_exceptions=True,
         )
     finally:
         # Clean up

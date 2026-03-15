@@ -19,9 +19,7 @@ _COOKIE_MAX_AGE = 60 * 60 * 24 * 7  # 7 days
 
 def _sign(payload: str) -> str:
     """Create an HMAC signature for the payload."""
-    return hmac.new(
-        settings.secret_key.encode(), payload.encode(), hashlib.sha256
-    ).hexdigest()
+    return hmac.new(settings.secret_key.encode(), payload.encode(), hashlib.sha256).hexdigest()
 
 
 def _make_token() -> str:

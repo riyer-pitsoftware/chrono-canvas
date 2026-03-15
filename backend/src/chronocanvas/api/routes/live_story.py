@@ -31,7 +31,7 @@ router = APIRouter(prefix="/live-story", tags=["live-story"])
 # Models to try in order — best consistency first
 _MODEL_CHAIN = [
     "gemini-3.1-flash-image-preview",  # Nano Banana 2: up to 5 character refs
-    "gemini-2.5-flash-image",          # fallback
+    "gemini-2.5-flash-image",  # fallback
 ]
 
 # Fast text-only model for parallel fallback (no image capability needed)
@@ -128,9 +128,7 @@ def _gen_config(*, thinking: bool = False) -> types.GenerateContentConfig:
         max_output_tokens=8192,
     )
     if thinking:
-        cfg_kwargs["thinking_config"] = types.ThinkingConfig(
-            thinking_level="MINIMAL"
-        )
+        cfg_kwargs["thinking_config"] = types.ThinkingConfig(thinking_level="MINIMAL")
     return types.GenerateContentConfig(**cfg_kwargs)
 
 
@@ -147,9 +145,7 @@ def _casting_config() -> types.GenerateContentConfig:
 def _is_thought_signature_error(exc: Exception) -> bool:
     """Return True if the exception is a Gemini thought_signature 400 error."""
     msg = str(exc).lower()
-    return "thought_signature" in msg or (
-        "400" in msg and ("invalid" in msg or "thought" in msg)
-    )
+    return "thought_signature" in msg or ("400" in msg and ("invalid" in msg or "thought" in msg))
 
 
 _RESULT = object()  # sentinel for _call_with_keepalives
@@ -217,7 +213,9 @@ async def _stream_scene_parts(
 
     stream = await asyncio.wait_for(
         client.aio.models.generate_content_stream(
-            model=model, contents=contents, config=config,
+            model=model,
+            contents=contents,
+            config=config,
         ),
         timeout=min(30, timeout_s),
     )
@@ -276,16 +274,23 @@ async def _stream_scene_parts(
 
         for part in chunk.candidates[0].content.parts:
             part_type = (
-                "thought" if getattr(part, "thought", False)
-                else "text" if part.text is not None
-                else "image" if part.inline_data is not None
+                "thought"
+                if getattr(part, "thought", False)
+                else "text"
+                if part.text is not None
+                else "image"
+                if part.inline_data is not None
                 else "other"
             )
             logger.debug(
                 "Scene part: type=%s len=%s",
                 part_type,
-                len(part.text) if part.text else (
-                    len(part.inline_data.data) if part.inline_data and part.inline_data.data else "?"
+                len(part.text)
+                if part.text
+                else (
+                    len(part.inline_data.data)
+                    if part.inline_data and part.inline_data.data
+                    else "?"
                 ),
             )
             if getattr(part, "thought", False):
@@ -372,9 +377,7 @@ async def _parallel_scene_parts(
     )
 
     async def _get_text():
-        text_chat = client.aio.chats.create(
-            model=_TEXT_ONLY_MODEL, config=text_config
-        )
+        text_chat = client.aio.chats.create(model=_TEXT_ONLY_MODEL, config=text_config)
         return await asyncio.wait_for(
             text_chat.send_message(text_prompt),
             timeout=30,  # text should be fast
@@ -394,9 +397,7 @@ async def _parallel_scene_parts(
     try:
         text_response = await text_task
         text_parts = _extract_parts(text_response)
-        text_content = " ".join(
-            p["content"] for p in text_parts if p["type"] == "text"
-        )
+        text_content = " ".join(p["content"] for p in text_parts if p["type"] == "text")
         if text_content:
             clean = text_content.replace("[END]", "").rstrip()
             if clean:
@@ -502,7 +503,11 @@ def _compress_image(
 def _extract_parts(response) -> list[dict]:
     """Extract text and image parts from a Gemini response."""
     results = []
-    if not response.candidates or not response.candidates[0].content or not response.candidates[0].content.parts:
+    if (
+        not response.candidates
+        or not response.candidates[0].content
+        or not response.candidates[0].content.parts
+    ):
         return results
     for part in response.candidates[0].content.parts:
         if getattr(part, "thought", False):
@@ -514,11 +519,13 @@ def _extract_parts(response) -> list[dict]:
                 part.inline_data.data, part.inline_data.mime_type or "image/png"
             )
             b64 = base64.b64encode(compressed).decode("ascii")
-            results.append({
-                "type": "image",
-                "content": b64,
-                "mime_type": mime,
-            })
+            results.append(
+                {
+                    "type": "image",
+                    "content": b64,
+                    "mime_type": mime,
+                }
+            )
     return results
 
 
@@ -550,9 +557,7 @@ async def live_story(req: LiveStoryRequest):
         last_error = None
         for model in _MODEL_CHAIN:
             try:
-                chat = client.aio.chats.create(
-                    model=model, config=_gen_config()
-                )
+                chat = client.aio.chats.create(model=model, config=_gen_config())
                 model_used = model
                 break
             except Exception as e:
@@ -561,19 +566,25 @@ async def live_story(req: LiveStoryRequest):
                 continue
 
         if chat is None:
-            yield _sse(_stage_event(
-                "init", "error",
-                elapsed_s=time.perf_counter() - init_t0,
-                detail=f"All models failed: {last_error}",
-            ))
+            yield _sse(
+                _stage_event(
+                    "init",
+                    "error",
+                    elapsed_s=time.perf_counter() - init_t0,
+                    detail=f"All models failed: {last_error}",
+                )
+            )
             yield _sse({"type": "error", "content": f"All models failed: {last_error}"})
             return
 
-        yield _sse(_stage_event(
-            "init", "complete",
-            elapsed_s=time.perf_counter() - init_t0,
-            detail=model_used,
-        ))
+        yield _sse(
+            _stage_event(
+                "init",
+                "complete",
+                elapsed_s=time.perf_counter() - init_t0,
+                detail=model_used,
+            )
+        )
 
         if is_continuation:
             flow = _continuation_flow(chat, req, model_used)
@@ -592,13 +603,15 @@ async def live_story(req: LiveStoryRequest):
             yield _sse(part_data)
 
         elapsed = time.perf_counter() - start_time
-        yield _sse({
-            "type": "done",
-            "model": model_used,
-            "elapsed_s": round(elapsed, 1),
-            "text_parts": text_count,
-            "image_parts": image_count,
-        })
+        yield _sse(
+            {
+                "type": "done",
+                "model": model_used,
+                "elapsed_s": round(elapsed, 1),
+                "text_parts": text_count,
+                "image_parts": image_count,
+            }
+        )
 
     return StreamingResponse(
         event_stream(),
@@ -666,7 +679,7 @@ async def _scene_by_scene_flow(
         got_image = False
         image_seen_time: float | None = None
         # After image arrives, keep reading text for up to 5s
-        _POST_IMAGE_TEXT_WINDOW_S = 5.0
+        _post_image_text_window_s = 5.0
 
         async for chunk in stream:
             # Keepalive while waiting
@@ -692,24 +705,25 @@ async def _scene_by_scene_flow(
                 elif part.inline_data is not None and not got_image:
                     # First image = casting portrait — stash raw bytes
                     casting_image_bytes = part.inline_data.data
-                    casting_image_mime = (
-                        part.inline_data.mime_type or "image/png"
-                    )
+                    casting_image_mime = part.inline_data.mime_type or "image/png"
                     compressed, mime = _compress_image(
-                        casting_image_bytes, casting_image_mime,
+                        casting_image_bytes,
+                        casting_image_mime,
                     )
                     b64 = base64.b64encode(compressed).decode("ascii")
-                    casting_parts.append({
-                        "type": "image",
-                        "content": b64,
-                        "mime_type": mime,
-                    })
+                    casting_parts.append(
+                        {
+                            "type": "image",
+                            "content": b64,
+                            "mime_type": mime,
+                        }
+                    )
                     got_image = True
                     image_seen_time = loop.time()
 
             # After image, keep collecting text briefly then stop —
             # don't let the model generate full story scenes.
-            if got_image and (loop.time() - image_seen_time) >= _POST_IMAGE_TEXT_WINDOW_S:
+            if got_image and (loop.time() - image_seen_time) >= _post_image_text_window_s:
                 break
 
         # Assemble text part
@@ -723,7 +737,8 @@ async def _scene_by_scene_flow(
         elapsed = time.perf_counter() - casting_t0
         logger.warning("Casting photo timed out after %.1fs", elapsed)
         yield _stage_event(
-            "casting", "timeout",
+            "casting",
+            "timeout",
             elapsed_s=elapsed,
             detail=f"Timed out after {_TURN_TIMEOUT_S}s",
         )
@@ -731,17 +746,14 @@ async def _scene_by_scene_flow(
         elapsed = time.perf_counter() - casting_t0
         logger.warning("Casting photo failed (continuing without): %s", e)
         yield _stage_event(
-            "casting", "error",
+            "casting",
+            "error",
             elapsed_s=elapsed,
             detail=str(e),
         )
 
     # ── Check if casting accidentally generated the full story ──
-    casting_has_end = any(
-        "[END]" in cp["content"]
-        for cp in casting_parts
-        if cp["type"] == "text"
-    )
+    casting_has_end = any("[END]" in cp["content"] for cp in casting_parts if cp["type"] == "text")
 
     if casting_has_end:
         logger.info(
@@ -772,7 +784,8 @@ async def _scene_by_scene_flow(
                 scene_parts.append(cp)
 
         yield _stage_event(
-            "casting", "complete",
+            "casting",
+            "complete",
             elapsed_s=time.perf_counter() - casting_t0,
         )
 
@@ -786,7 +799,9 @@ async def _scene_by_scene_flow(
                     yield _stage_event("scene", "start", scene_idx=scene_num)
                     yield {"type": "text", "content": clean}
                     yield _stage_event(
-                        "scene", "complete", scene_idx=scene_num,
+                        "scene",
+                        "complete",
+                        scene_idx=scene_num,
                         elapsed_s=0.0,
                     )
             elif cp["type"] == "image":
@@ -808,7 +823,8 @@ async def _scene_by_scene_flow(
                 "mime_type": cp.get("mime_type", "image/png"),
             }
     yield _stage_event(
-        "casting", "complete",
+        "casting",
+        "complete",
         elapsed_s=time.perf_counter() - casting_t0,
     )
 
@@ -818,12 +834,13 @@ async def _scene_by_scene_flow(
     # dedicated image call (image model, image-only prompt).
     logger.info(
         "Scene generation: text_model=%s image_model=%s mode=parallel",
-        _TEXT_ONLY_MODEL, model,
+        _TEXT_ONLY_MODEL,
+        model,
     )
 
     # Conversation history for text continuity (text-only model)
     text_history: list[types.Content] = []
-    _IMAGE_TIMEOUT_S = 90  # image generation can be slow
+    _image_timeout_s = 90  # image generation can be slow
 
     # ── Scenes ────────────────────────────────────────────────────
     max_scenes = 4  # cap for demo pacing
@@ -836,9 +853,7 @@ async def _scene_by_scene_flow(
         if scene_idx == 0:
             casting_context = ""
             if casting_text:
-                casting_context = (
-                    f"CHARACTER REFERENCE:\n{casting_text}\n\n"
-                )
+                casting_context = f"CHARACTER REFERENCE:\n{casting_text}\n\n"
             text_prompt = (
                 f"{casting_context}{base_prompt}\n\n"
                 f"Write ONLY Scene 1 — 2-4 sentences of noir prose, present tense. "
@@ -857,7 +872,9 @@ async def _scene_by_scene_flow(
 
         logger.info(
             "Scene %d: %d text history turns, is_last=%s",
-            scene_idx + 1, len(text_history), scene_idx == max_scenes - 1,
+            scene_idx + 1,
+            len(text_history),
+            scene_idx == max_scenes - 1,
         )
 
         # ── Text generation (fast, ~2-3s) ─────────────────────────
@@ -887,7 +904,9 @@ async def _scene_by_scene_flow(
 
             if not scene_text:
                 yield _stage_event(
-                    "scene", "error", scene_idx=scene_idx + 1,
+                    "scene",
+                    "error",
+                    scene_idx=scene_idx + 1,
                     elapsed_s=time.perf_counter() - scene_t0,
                     detail="Empty text from model",
                 )
@@ -899,17 +918,22 @@ async def _scene_by_scene_flow(
 
             # Update text history
             text_history.append(user_turn)
-            text_history.append(types.Content(
-                role="model",
-                parts=[types.Part.from_text(text=scene_text)],
-            ))
+            text_history.append(
+                types.Content(
+                    role="model",
+                    parts=[types.Part.from_text(text=scene_text)],
+                )
+            )
 
         except Exception as e:
             elapsed = time.perf_counter() - scene_t0
             logger.error("Scene %d text failed: %s", scene_idx + 1, e)
             yield _stage_event(
-                "scene", "error", scene_idx=scene_idx + 1,
-                elapsed_s=elapsed, detail=str(e),
+                "scene",
+                "error",
+                scene_idx=scene_idx + 1,
+                elapsed_s=elapsed,
+                detail=str(e),
             )
             yield {"type": "error", "content": f"Scene {scene_idx + 1} text failed: {e}"}
             break
@@ -917,13 +941,10 @@ async def _scene_by_scene_flow(
         # ── Image generation (parallel, ~10-30s) ─────────────────
         # Fire-and-forget style: yield keepalives while waiting.
         image_prompt = (
-            f"Generate ONE photorealistic cinematic image for this noir scene:\n\n"
-            f"{scene_text}\n\n"
+            f"Generate ONE photorealistic cinematic image for this noir scene:\n\n{scene_text}\n\n"
         )
         if casting_text:
-            image_prompt += (
-                f"Character appearances:\n{casting_text}\n\n"
-            )
+            image_prompt += f"Character appearances:\n{casting_text}\n\n"
         image_prompt += (
             "Dramatic lighting, cinematic composition, film noir aesthetic. "
             "Photorealistic. No text overlays."
@@ -945,7 +966,7 @@ async def _scene_by_scene_flow(
             )
 
         image_task = asyncio.create_task(_gen_image())
-        img_deadline = loop.time() + _IMAGE_TIMEOUT_S
+        img_deadline = loop.time() + _image_timeout_s
         last_keepalive = loop.time()
 
         while not image_task.done():
@@ -986,7 +1007,8 @@ async def _scene_by_scene_flow(
             logger.warning("Scene %d: image generation skipped (timeout/cancel)", scene_idx + 1)
 
         yield _stage_event(
-            "scene", "complete",
+            "scene",
+            "complete",
             scene_idx=scene_idx + 1,
             elapsed_s=time.perf_counter() - scene_t0,
         )
@@ -995,9 +1017,7 @@ async def _scene_by_scene_flow(
         scene_idx += 1
 
 
-async def _continuation_flow(
-    chat, req: LiveStoryRequest, model: str
-) -> AsyncGenerator[dict, None]:
+async def _continuation_flow(chat, req: LiveStoryRequest, model: str) -> AsyncGenerator[dict, None]:
     """Continue an existing story by replaying history through chat, yielding parts immediately.
 
     Reconstructs the conversation: original prompt → history → continuation.
@@ -1023,14 +1043,16 @@ async def _continuation_flow(
                 yield item
 
         yield _stage_event(
-            "replay", "complete",
+            "replay",
+            "complete",
             elapsed_s=time.perf_counter() - replay_t0,
         )
     except asyncio.TimeoutError:
         elapsed = time.perf_counter() - replay_t0
         logger.error("Replay timed out after %.1fs", elapsed)
         yield _stage_event(
-            "replay", "timeout",
+            "replay",
+            "timeout",
             elapsed_s=elapsed,
             detail=f"Timed out after {_TURN_TIMEOUT_S}s",
         )
@@ -1040,7 +1062,8 @@ async def _continuation_flow(
         elapsed = time.perf_counter() - replay_t0
         logger.error("Failed to replay original prompt: %s", e)
         yield _stage_event(
-            "replay", "error",
+            "replay",
+            "error",
             elapsed_s=elapsed,
             detail=str(e),
         )
@@ -1063,9 +1086,7 @@ async def _continuation_flow(
     for img_hp in history_image_parts[-2:]:
         image_bytes = base64.b64decode(img_hp.content)
         continuation_parts.append(
-            types.Part.from_bytes(
-                data=image_bytes, mime_type=img_hp.mime_type or "image/png"
-            )
+            types.Part.from_bytes(data=image_bytes, mime_type=img_hp.mime_type or "image/png")
         )
 
     continuation_text = (
@@ -1082,7 +1103,8 @@ async def _continuation_flow(
             if item.get("type") == "_meta":
                 if item["empty"]:
                     yield _stage_event(
-                        "scene", "error",
+                        "scene",
+                        "error",
                         scene_idx=1,
                         elapsed_s=time.perf_counter() - cont_t0,
                         detail="Empty response from model",
@@ -1096,7 +1118,8 @@ async def _continuation_flow(
             yield item
 
         yield _stage_event(
-            "scene", "complete",
+            "scene",
+            "complete",
             scene_idx=1,
             elapsed_s=time.perf_counter() - cont_t0,
         )
@@ -1104,7 +1127,8 @@ async def _continuation_flow(
         elapsed = time.perf_counter() - cont_t0
         logger.error("Continuation timed out after %.1fs", elapsed)
         yield _stage_event(
-            "scene", "timeout",
+            "scene",
+            "timeout",
             scene_idx=1,
             elapsed_s=elapsed,
             detail=f"Timed out after {_TURN_TIMEOUT_S}s",
@@ -1114,7 +1138,8 @@ async def _continuation_flow(
         elapsed = time.perf_counter() - cont_t0
         logger.error("Continuation generation failed: %s", e)
         yield _stage_event(
-            "scene", "error",
+            "scene",
+            "error",
             scene_idx=1,
             elapsed_s=elapsed,
             detail=str(e),

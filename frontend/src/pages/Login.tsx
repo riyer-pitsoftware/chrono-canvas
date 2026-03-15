@@ -38,9 +38,7 @@ export function Login({ onSuccess }: LoginProps) {
         onSubmit={handleSubmit}
         className="bg-zinc-900 border border-zinc-800 rounded-lg p-8 w-full max-w-sm shadow-xl"
       >
-        <h1 className="text-2xl font-bold text-zinc-100 mb-1 text-center">
-          ChronoCanvas
-        </h1>
+        <h1 className="text-2xl font-bold text-zinc-100 mb-1 text-center">ChronoCanvas</h1>
         <p className="text-zinc-500 text-sm text-center mb-6">Enter password to continue</p>
 
         <input
@@ -52,9 +50,7 @@ export function Login({ onSuccess }: LoginProps) {
           className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent mb-4"
         />
 
-        {error && (
-          <p className="text-red-400 text-sm mb-4">{error}</p>
-        )}
+        {error && <p className="text-red-400 text-sm mb-4">{error}</p>}
 
         <button
           type="submit"

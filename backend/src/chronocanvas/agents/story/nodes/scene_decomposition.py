@@ -1,10 +1,11 @@
 import asyncio
-import json
 import logging
 import time
 
+from chronocanvas.agents.story.nodes.json_repair import (
+    extract_and_parse_json as _extract_and_parse_json,
+)
 from chronocanvas.agents.story.state import StoryState, get_runtime_config
-from chronocanvas.agents.story.nodes.json_repair import extract_and_parse_json as _extract_and_parse_json
 from chronocanvas.llm.base import TaskType
 from chronocanvas.llm.router import get_llm_router
 

@@ -19,8 +19,8 @@ type DoneEvent = {
 
 type StageEvent = {
   type: 'stage';
-  stage: string;       // "init", "casting", "scene", "replay"
-  status: string;       // "start", "complete", "error", "timeout"
+  stage: string; // "init", "casting", "scene", "replay"
+  status: string; // "start", "complete", "error", "timeout"
   elapsed_s?: number;
   scene_idx?: number;
   detail?: string;
@@ -56,9 +56,7 @@ const SUGGESTED_PROMPTS = [
 
 function pairParts(parts: StoryPart[]): Scene[] {
   // Filter out casting parts — they're for visual anchoring, not story display
-  const storyParts = parts.filter(
-    (p) => p.type === 'text' || p.type === 'image',
-  );
+  const storyParts = parts.filter((p) => p.type === 'text' || p.type === 'image');
   const scenes: Scene[] = [];
   let i = 0;
   while (i < storyParts.length) {
@@ -84,7 +82,9 @@ function pairParts(parts: StoryPart[]): Scene[] {
 }
 
 /** Extract casting data (character descriptions + reference photo) from parts */
-function extractCasting(parts: StoryPart[]): { text: string; imageBase64?: string; mimeType?: string } | null {
+function extractCasting(
+  parts: StoryPart[],
+): { text: string; imageBase64?: string; mimeType?: string } | null {
   const castingTexts = parts.filter((p) => p.type === 'casting').map((p) => p.content);
   const castingImg = parts.find((p) => p.type === 'casting_image') as
     | { type: 'casting_image'; content: string; mime_type: string }
@@ -158,7 +158,8 @@ function buildStageStates(events: StageEvent[]): StageState[] {
       // complete, error, timeout
       const idx = seen.get(key);
       if (idx !== undefined) {
-        stages[idx].status = evt.status === 'complete' ? 'complete' : evt.status === 'timeout' ? 'timeout' : 'error';
+        stages[idx].status =
+          evt.status === 'complete' ? 'complete' : evt.status === 'timeout' ? 'timeout' : 'error';
         stages[idx].elapsed_s = evt.elapsed_s;
         stages[idx].detail = evt.detail;
       } else {
@@ -166,7 +167,8 @@ function buildStageStates(events: StageEvent[]): StageState[] {
         stages.push({
           stage: key,
           label,
-          status: evt.status === 'complete' ? 'complete' : evt.status === 'timeout' ? 'timeout' : 'error',
+          status:
+            evt.status === 'complete' ? 'complete' : evt.status === 'timeout' ? 'timeout' : 'error',
           elapsed_s: evt.elapsed_s,
           detail: evt.detail,
         });
@@ -201,17 +203,28 @@ function PipelineProgress({
         className="w-full flex items-center justify-between px-4 py-2.5 text-left group"
       >
         <div className="flex items-center gap-3 min-w-0">
-          <span className="text-[10px] font-mono uppercase tracking-[0.15em] font-semibold shrink-0"
-            style={{ color: 'oklch(0.65 0.12 60)' }}>Pipeline</span>
+          <span
+            className="text-[10px] font-mono uppercase tracking-[0.15em] font-semibold shrink-0"
+            style={{ color: 'oklch(0.65 0.12 60)' }}
+          >
+            Pipeline
+          </span>
           {isGenerating && (
-            <span className="text-[10px] tracking-wide truncate"
-              style={{ color: 'oklch(0.5 0.02 60)' }}>
+            <span
+              className="text-[10px] tracking-wide truncate"
+              style={{ color: 'oklch(0.5 0.02 60)' }}
+            >
               {stages.filter((s) => s.status === 'complete').length} / {stages.length} stages
             </span>
           )}
         </div>
-        <span className="text-xs transition-transform duration-200 shrink-0 ml-2"
-          style={{ color: 'oklch(0.5 0.02 60)', transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)' }}>
+        <span
+          className="text-xs transition-transform duration-200 shrink-0 ml-2"
+          style={{
+            color: 'oklch(0.5 0.02 60)',
+            transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)',
+          }}
+        >
           &#x25BC;
         </span>
       </button>
@@ -225,13 +238,31 @@ function PipelineProgress({
             const isFailed = stage.status === 'error' || stage.status === 'timeout';
             return (
               <div key={stage.stage} className="flex items-center">
-                <div className="px-2 py-0.5 rounded text-[10px] font-medium transition-all duration-300 flex items-center gap-1"
+                <div
+                  className="px-2 py-0.5 rounded text-[10px] font-medium transition-all duration-300 flex items-center gap-1"
                   style={{
-                    backgroundColor: isFailed ? 'oklch(0.2 0.06 25)' : isRunning ? 'oklch(0.25 0.06 60)' : isDone ? 'oklch(0.18 0.03 60)' : 'oklch(0.15 0.01 60)',
-                    color: isFailed ? 'oklch(0.7 0.15 25)' : isRunning ? 'oklch(0.85 0.12 60)' : isDone ? 'oklch(0.6 0.06 60)' : 'oklch(0.38 0.02 60)',
-                    border: isFailed ? '1px solid oklch(0.4 0.12 25)' : isRunning ? '1px solid oklch(0.4 0.1 60)' : '1px solid oklch(0.22 0.015 60)',
+                    backgroundColor: isFailed
+                      ? 'oklch(0.2 0.06 25)'
+                      : isRunning
+                        ? 'oklch(0.25 0.06 60)'
+                        : isDone
+                          ? 'oklch(0.18 0.03 60)'
+                          : 'oklch(0.15 0.01 60)',
+                    color: isFailed
+                      ? 'oklch(0.7 0.15 25)'
+                      : isRunning
+                        ? 'oklch(0.85 0.12 60)'
+                        : isDone
+                          ? 'oklch(0.6 0.06 60)'
+                          : 'oklch(0.38 0.02 60)',
+                    border: isFailed
+                      ? '1px solid oklch(0.4 0.12 25)'
+                      : isRunning
+                        ? '1px solid oklch(0.4 0.1 60)'
+                        : '1px solid oklch(0.22 0.015 60)',
                     animation: isRunning ? 'pipelinePulse 2s ease-in-out infinite' : 'none',
-                  }}>
+                  }}
+                >
                   {isDone && <span>&#x2713;</span>}
                   {isFailed && <span>&#x2717;</span>}
                   {stage.label}
@@ -240,8 +271,10 @@ function PipelineProgress({
                   )}
                 </div>
                 {i < stages.length - 1 && (
-                  <span className="mx-0.5 text-[8px]"
-                    style={{ color: isDone ? 'oklch(0.5 0.08 60)' : 'oklch(0.25 0.02 60)' }}>
+                  <span
+                    className="mx-0.5 text-[8px]"
+                    style={{ color: isDone ? 'oklch(0.5 0.08 60)' : 'oklch(0.25 0.02 60)' }}
+                  >
                     &#x25B8;
                   </span>
                 )}
@@ -249,8 +282,10 @@ function PipelineProgress({
             );
           })}
           {isGenerating && (
-            <span className="inline-block w-1.5 h-1.5 rounded-full animate-ping ml-1"
-              style={{ backgroundColor: 'oklch(0.7 0.12 60)' }} />
+            <span
+              className="inline-block w-1.5 h-1.5 rounded-full animate-ping ml-1"
+              style={{ backgroundColor: 'oklch(0.7 0.12 60)' }}
+            />
           )}
         </div>
       )}
@@ -268,20 +303,44 @@ function PipelineProgress({
             const isDone = stage.status === 'complete';
             const isFailed = stage.status === 'error' || stage.status === 'timeout';
             return (
-              <div key={stage.stage}
+              <div
+                key={stage.stage}
                 className="flex items-center gap-3 rounded px-3 py-1.5 transition-all duration-300"
-                style={{ backgroundColor: isRunning ? 'oklch(0.18 0.035 60)' : isFailed ? 'oklch(0.15 0.03 25)' : 'transparent' }}>
-                <span className="text-[10px] font-mono w-4 text-right shrink-0"
+                style={{
+                  backgroundColor: isRunning
+                    ? 'oklch(0.18 0.035 60)'
+                    : isFailed
+                      ? 'oklch(0.15 0.03 25)'
+                      : 'transparent',
+                }}
+              >
+                <span
+                  className="text-[10px] font-mono w-4 text-right shrink-0"
                   style={{
-                    color: isFailed ? 'oklch(0.6 0.15 25)' : isRunning ? 'oklch(0.7 0.12 60)' : isDone ? 'oklch(0.5 0.06 60)' : 'oklch(0.3 0.02 60)',
-                  }}>
+                    color: isFailed
+                      ? 'oklch(0.6 0.15 25)'
+                      : isRunning
+                        ? 'oklch(0.7 0.12 60)'
+                        : isDone
+                          ? 'oklch(0.5 0.06 60)'
+                          : 'oklch(0.3 0.02 60)',
+                  }}
+                >
                   {isDone ? '\u2713' : isFailed ? '\u2717' : isRunning ? '\u25CF' : '\u25CB'}
                 </span>
                 <div className="flex-1 min-w-0">
-                  <span className="text-xs font-medium"
+                  <span
+                    className="text-xs font-medium"
                     style={{
-                      color: isFailed ? 'oklch(0.7 0.12 25)' : isRunning ? 'oklch(0.85 0.1 60)' : isDone ? 'oklch(0.6 0.06 60)' : 'oklch(0.45 0.02 60)',
-                    }}>
+                      color: isFailed
+                        ? 'oklch(0.7 0.12 25)'
+                        : isRunning
+                          ? 'oklch(0.85 0.1 60)'
+                          : isDone
+                            ? 'oklch(0.6 0.06 60)'
+                            : 'oklch(0.45 0.02 60)',
+                    }}
+                  >
                     {stage.label}
                   </span>
                   {stage.elapsed_s != null && (
@@ -296,8 +355,10 @@ function PipelineProgress({
                   )}
                 </div>
                 {isRunning && (
-                  <span className="inline-block w-1.5 h-1.5 rounded-full animate-ping shrink-0"
-                    style={{ backgroundColor: 'oklch(0.7 0.12 60)' }} />
+                  <span
+                    className="inline-block w-1.5 h-1.5 rounded-full animate-ping shrink-0"
+                    style={{ backgroundColor: 'oklch(0.7 0.12 60)' }}
+                  />
                 )}
               </div>
             );
@@ -397,13 +458,7 @@ function useWaitSFX(active: boolean) {
 
 type CastingData = { text: string; imageBase64?: string; mimeType?: string };
 
-function CastingInterstitial({
-  casting,
-  onClose,
-}: {
-  casting: CastingData;
-  onClose: () => void;
-}) {
+function CastingInterstitial({ casting, onClose }: { casting: CastingData; onClose: () => void }) {
   return (
     <div
       className="fixed inset-0 z-50 flex flex-col"
@@ -448,8 +503,10 @@ function CastingInterstitial({
           )}
         </div>
         {/* Loading indicator */}
-        <div className="flex items-center gap-2 text-xs animate-pulse mt-6"
-          style={{ color: 'oklch(0.5 0.02 60)' }}>
+        <div
+          className="flex items-center gap-2 text-xs animate-pulse mt-6"
+          style={{ color: 'oklch(0.5 0.02 60)' }}
+        >
           <span
             className="inline-block w-1.5 h-1.5 rounded-full"
             style={{ backgroundColor: 'var(--primary)', animation: 'blink 1.2s infinite' }}
@@ -525,7 +582,6 @@ function SceneViewer({
   // Narration pipeline is owned by parent — use it via props
   const narrationReady = pipeline.narrationReady;
 
-
   // Report scene changes to parent so pipeline tracks the right index
   useEffect(() => {
     onSceneChange(current);
@@ -535,10 +591,11 @@ function SceneViewer({
   const waitingForNarration = !narrationReady && !transitioning && !!scene?.text;
   useWaitSFX(waitingForNarration);
 
-  const { displayed, done: textDone, progress } = useTypewriter(
-    transitioning ? '' : scene?.text || '',
-    !transitioning && narrationReady,
-  );
+  const {
+    displayed,
+    done: textDone,
+    progress,
+  } = useTypewriter(transitioning ? '' : scene?.text || '', !transitioning && narrationReady);
 
   // Play audio when scene is revealed and narration ready.
   // Only trigger on transitioning/narrationReady changes — NOT on pipeline
@@ -555,7 +612,6 @@ function SceneViewer({
   // so images are visible even if narration is slow/failing
   const baseIris = scene?.imageBase64 ? 30 : 0;
   const irisRadius = scene?.text ? Math.max(baseIris, Math.round(progress * 75)) : 75;
-
 
   // Jump to first new scene only during continuation (not initial generation).
   // `continuing` is true only when "What happens next?" appends new scenes.
@@ -584,10 +640,7 @@ function SceneViewer({
     [scenes.length, transitioning],
   );
 
-  const go = useCallback(
-    (dir: 1 | -1) => changeTo(current + dir),
-    [current, changeTo],
-  );
+  const go = useCallback((dir: 1 | -1) => changeTo(current + dir), [current, changeTo]);
 
   // Auto-advance: when narration finishes playing and next scene is ready
   const narrationDone = pipeline.narrationDone;
@@ -665,8 +718,10 @@ function SceneViewer({
 
       {/* Casting card — collapsible character reference */}
       {showCasting && casting && (
-        <div className="mx-6 mb-4 p-4 rounded-lg shrink-0 overflow-auto max-h-[30vh]"
-          style={{ backgroundColor: 'oklch(0.12 0.01 60)', border: '1px solid oklch(0.2 0.01 60)' }}>
+        <div
+          className="mx-6 mb-4 p-4 rounded-lg shrink-0 overflow-auto max-h-[30vh]"
+          style={{ backgroundColor: 'oklch(0.12 0.01 60)', border: '1px solid oklch(0.2 0.01 60)' }}
+        >
           <p className="text-xs font-semibold text-[var(--muted-foreground)] mb-2 uppercase tracking-wider">
             Casting Reference
           </p>
@@ -835,7 +890,10 @@ function SceneViewer({
 
         {/* Film generation progress grid */}
         {filmGenerating && (
-          <div className="flex flex-col items-center gap-3 mt-2" style={{ animation: 'fadeIn 400ms ease-out' }}>
+          <div
+            className="flex flex-col items-center gap-3 mt-2"
+            style={{ animation: 'fadeIn 400ms ease-out' }}
+          >
             <div className="flex items-center gap-1.5 flex-wrap justify-center max-w-md">
               {scenes.map((s, i) => (
                 <div
@@ -927,8 +985,7 @@ function SceneViewer({
               onClick={() => changeTo(i)}
               className="w-2 h-2 rounded-full transition-colors"
               style={{
-                backgroundColor:
-                  i === current ? 'var(--primary)' : 'var(--muted-foreground)',
+                backgroundColor: i === current ? 'var(--primary)' : 'var(--muted-foreground)',
                 opacity: i === current ? 1 : 0.4,
               }}
               aria-label={`Go to scene ${i + 1}`}
@@ -946,9 +1003,7 @@ function SceneViewer({
           </div>
         )}
 
-        <span className="text-xs text-amber-200/60">
-          AI-generated &middot; Powered by Gemini
-        </span>
+        <span className="text-xs text-amber-200/60">AI-generated &middot; Powered by Gemini</span>
       </div>
 
       <style>{`
@@ -994,7 +1049,9 @@ export function LiveStory() {
   const [filmGenerating, setFilmGenerating] = useState(false);
   const [filmProgress, setFilmProgress] = useState<string | null>(null);
   const [filmComplete, setFilmComplete] = useState(false);
-  const [videoClips, setVideoClips] = useState<Map<number, { base64: string; mimeType: string }>>(new Map());
+  const [videoClips, setVideoClips] = useState<Map<number, { base64: string; mimeType: string }>>(
+    new Map(),
+  );
   const [failedScenes, setFailedScenes] = useState<Set<number>>(new Set());
   const [veoEnabled, setVeoEnabled] = useState(true);
   const [isDemoReel, setIsDemoReel] = useState(false);
@@ -1041,7 +1098,8 @@ export function LiveStory() {
     }
     if (!loading) setNarrationTimeout(false);
   }, [scenes.length, pipeline.narrationReady, loading]);
-  const firstSceneNarrationReady = scenes.length > 0 && (pipeline.narrationReady || narrationTimeout);
+  const firstSceneNarrationReady =
+    scenes.length > 0 && (pipeline.narrationReady || narrationTimeout);
 
   // Auto-open viewer as soon as casting or first scene arrives (streaming)
   useEffect(() => {
@@ -1054,10 +1112,7 @@ export function LiveStory() {
   }, [scenes.length, !!casting]);
 
   /** Shared SSE fetch logic */
-  async function fetchSSE(
-    body: Record<string, unknown>,
-    opts: { append?: boolean } = {},
-  ) {
+  async function fetchSSE(body: Record<string, unknown>, opts: { append?: boolean } = {}) {
     setError(null);
     setStats(null);
     setStatus(null);
@@ -1126,7 +1181,7 @@ export function LiveStory() {
     setOriginalPrompt(prompt.trim());
     setLoading(true);
     try {
-      await fetchSSE({ prompt: prompt.trim(),  });
+      await fetchSSE({ prompt: prompt.trim() });
     } finally {
       setLoading(false);
     }
@@ -1144,7 +1199,11 @@ export function LiveStory() {
         if (p.type === 'text' || p.type === 'casting') {
           return { type: 'text', content: p.content };
         }
-        return { type: 'image', content: p.content, mime_type: (p as { mime_type: string }).mime_type };
+        return {
+          type: 'image',
+          content: p.content,
+          mime_type: (p as { mime_type: string }).mime_type,
+        };
       });
 
     try {
@@ -1178,7 +1237,7 @@ export function LiveStory() {
       `Original story:\n${storyTexts}`;
 
     try {
-      await fetchSSE({ prompt: rashomonPrompt,  });
+      await fetchSSE({ prompt: rashomonPrompt });
     } finally {
       setLoading(false);
     }
@@ -1367,10 +1426,7 @@ export function LiveStory() {
   // Stays visible until scene 0 narration is ready, then dissolves to SceneViewer.
   if (viewerOpen && loading && (casting || scenes.length > 0)) {
     return (
-      <CastingInterstitial
-        casting={casting ?? { text: '' }}
-        onClose={() => setViewerOpen(false)}
-      />
+      <CastingInterstitial casting={casting ?? { text: '' }} onClose={() => setViewerOpen(false)} />
     );
   }
 
@@ -1387,10 +1443,7 @@ export function LiveStory() {
       </div>
 
       {/* Pipeline progress — real stage tracking from backend */}
-      <PipelineProgress
-        stages={stageStates}
-        isGenerating={loading || continuing}
-      />
+      <PipelineProgress stages={stageStates} isGenerating={loading || continuing} />
 
       {/* Prompt input */}
       <div className="space-y-3">

@@ -38,9 +38,7 @@ class PCMPlayer {
     if (data.length < 2) return;
 
     // Convert Int16 LE → Float32
-    const int16 = new Int16Array(
-      data.buffer, data.byteOffset, data.length / 2,
-    );
+    const int16 = new Int16Array(data.buffer, data.byteOffset, data.length / 2);
     const float32 = new Float32Array(int16.length);
     for (let i = 0; i < int16.length; i++) {
       float32[i] = int16[i] / 32768;
@@ -69,7 +67,11 @@ class PCMPlayer {
 
   stop() {
     for (const s of this.sources) {
-      try { s.stop(); } catch { /* already stopped */ }
+      try {
+        s.stop();
+      } catch {
+        /* already stopped */
+      }
     }
     this.sources = [];
     this.ctx.close().catch(() => {});
@@ -114,11 +116,7 @@ function makeEntry(retries = 0): CacheEntry {
   };
 }
 
-export function useNarrationPipeline(
-  scenes: Scene[],
-  currentIndex: number,
-  active: boolean,
-) {
+export function useNarrationPipeline(scenes: Scene[], currentIndex: number, active: boolean) {
   const cache = useRef<Map<number, CacheEntry>>(new Map());
   const abortMap = useRef<Map<number, AbortController>>(new Map());
   const inflightCount = useRef(0);
@@ -128,20 +126,17 @@ export function useNarrationPipeline(
   currentRef.current = currentIndex;
 
   // Build priority-ordered queue of scene indices to fetch
-  const buildQueue = useCallback(
-    (cur: number, total: number): number[] => {
-      const order: number[] = [];
-      for (const offset of [0, 1, 2]) {
-        const idx = cur + offset;
-        if (idx < total) order.push(idx);
-      }
-      for (let i = 0; i < total; i++) {
-        if (!order.includes(i)) order.push(i);
-      }
-      return order;
-    },
-    [],
-  );
+  const buildQueue = useCallback((cur: number, total: number): number[] => {
+    const order: number[] = [];
+    for (const offset of [0, 1, 2]) {
+      const idx = cur + offset;
+      if (idx < total) order.push(idx);
+    }
+    for (let i = 0; i < total; i++) {
+      if (!order.includes(i)) order.push(i);
+    }
+    return order;
+  }, []);
 
   const MAX_RETRIES = 2;
 
@@ -233,7 +228,8 @@ export function useNarrationPipeline(
         }
         drainQueue();
       });
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Mutual recursion: fetchNarration → drainQueue → fetchNarration
 
   // Queue ref to coordinate between schedule and drain
   const queueRef = useRef<number[]>([]);
@@ -253,32 +249,29 @@ export function useNarrationPipeline(
   scenesRef.current = scenes;
 
   // Priority bumping
-  const bumpPriority = useCallback(
-    (cur: number) => {
-      const currentEntry = cache.current.get(cur);
-      if (currentEntry && currentEntry.status !== 'idle') return;
+  const bumpPriority = useCallback((cur: number) => {
+    const currentEntry = cache.current.get(cur);
+    if (currentEntry && currentEntry.status !== 'idle') return;
 
-      if (inflightCount.current >= MAX_CONCURRENT) {
-        let worstIdx = -1;
-        let worstDist = -1;
-        for (const [idx] of abortMap.current) {
-          const dist = Math.abs(idx - cur);
-          if (dist > worstDist && idx !== cur) {
-            worstDist = dist;
-            worstIdx = idx;
-          }
-        }
-        if (worstIdx >= 0 && worstDist > 1) {
-          const ctrl = abortMap.current.get(worstIdx);
-          ctrl?.abort();
-          abortMap.current.delete(worstIdx);
-          inflightCount.current--;
-          cache.current.set(worstIdx, makeEntry());
+    if (inflightCount.current >= MAX_CONCURRENT) {
+      let worstIdx = -1;
+      let worstDist = -1;
+      for (const [idx] of abortMap.current) {
+        const dist = Math.abs(idx - cur);
+        if (dist > worstDist && idx !== cur) {
+          worstDist = dist;
+          worstIdx = idx;
         }
       }
-    },
-    [],
-  );
+      if (worstIdx >= 0 && worstDist > 1) {
+        const ctrl = abortMap.current.get(worstIdx);
+        ctrl?.abort();
+        abortMap.current.delete(worstIdx);
+        inflightCount.current--;
+        cache.current.set(worstIdx, makeEntry());
+      }
+    }
+  }, []);
 
   // Schedule fetches when scenes or currentIndex changes
   useEffect(() => {

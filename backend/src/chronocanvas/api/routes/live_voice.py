@@ -91,7 +91,11 @@ async def narrate(req: NarrateRequest):
         audio_data = None
         if response.candidates:
             for part in response.candidates[0].content.parts:
-                if part.inline_data and part.inline_data.mime_type and part.inline_data.mime_type.startswith("audio/"):
+                if (
+                    part.inline_data
+                    and part.inline_data.mime_type
+                    and part.inline_data.mime_type.startswith("audio/")
+                ):
                     audio_data = part.inline_data.data
                     break
 
@@ -128,7 +132,9 @@ async def narrate_stream(req: NarrateRequest):
 
     async def _generate_pcm():
         start = time.monotonic()
-        logger.info("Narrate-stream: model=%s voice=%s text=%d chars", model, voice_name, len(req.text))
+        logger.info(
+            "Narrate-stream: model=%s voice=%s text=%d chars", model, voice_name, len(req.text)
+        )
         total_bytes = 0
         try:
             stream = await asyncio.wait_for(
@@ -198,9 +204,7 @@ async def voice_prompt(req: VoicePromptRequest):
         "'RESPONSE: ' give a creative noir-style expansion of their idea in 2-3 sentences."
     )
 
-    audio_part = types.Part(
-        inline_data=types.Blob(data=audio_bytes, mime_type=req.mime_type)
-    )
+    audio_part = types.Part(inline_data=types.Blob(data=audio_bytes, mime_type=req.mime_type))
 
     model = settings.gemini_model
     try:
@@ -220,9 +224,9 @@ async def voice_prompt(req: VoicePromptRequest):
         for line in full_text.split("\n"):
             line = line.strip()
             if line.startswith("TRANSCRIPT:"):
-                transcript = line[len("TRANSCRIPT:"):].strip()
+                transcript = line[len("TRANSCRIPT:") :].strip()
             elif line.startswith("RESPONSE:"):
-                response_text = line[len("RESPONSE:"):].strip()
+                response_text = line[len("RESPONSE:") :].strip()
 
         # Fallback: if parsing fails, use the whole text
         if not transcript and not response_text:

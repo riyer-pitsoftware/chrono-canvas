@@ -24,13 +24,6 @@ export {
   useRetryGeneration,
 } from './useGenerationMutations';
 
-export {
-  useUploadReferenceImage,
-  useUploadFace,
-} from './useGenerationUploads';
+export { useUploadReferenceImage, useUploadFace } from './useGenerationUploads';
 
-export {
-  useAuditDetail,
-  useAuditFeedback,
-  useCreateFeedback,
-} from './useAuditHooks';
+export { useAuditDetail, useAuditFeedback, useCreateFeedback } from './useAuditHooks';

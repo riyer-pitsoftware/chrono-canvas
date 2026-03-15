@@ -37,7 +37,7 @@ export function ModeSelector() {
     if (modes.length === 1) {
       navigate(`/generate?mode=${modes[0].id}`);
     }
-  }, [modes.length, navigate]);
+  }, [modes, navigate]);
 
   if (modes.length === 1) return null;
 

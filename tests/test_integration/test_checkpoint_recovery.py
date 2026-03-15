@@ -162,11 +162,14 @@ async def test_retry_falls_back_to_db_when_checkpoint_missing():
 
     with (
         patch("chronocanvas.services.generation._default_session_factory") as mock_ctx,
-        patch("chronocanvas.services.generation._default_graph") as mock_graph,
+        patch("chronocanvas.services.generation._graph_module") as mock_graph_module,
         patch("chronocanvas.services.generation.ProgressPublisher", return_value=AsyncMock()),
         patch("chronocanvas.services.generation.RequestRepository") as mock_repo_cls,
         patch("chronocanvas.services.generation.ImageRepository", return_value=mock_image_repo),
     ):
+        mock_graph = MagicMock()
+        mock_graph_module.agent_graph = mock_graph
+
         mock_session = AsyncMock()
         mock_ctx.return_value.__aenter__.return_value = mock_session
         mock_ctx.return_value.__aexit__.return_value = None
@@ -211,11 +214,14 @@ async def test_retry_uses_minimal_reset_when_checkpoint_alive():
 
     with (
         patch("chronocanvas.services.generation._default_session_factory") as mock_ctx,
-        patch("chronocanvas.services.generation._default_graph") as mock_graph,
+        patch("chronocanvas.services.generation._graph_module") as mock_graph_module,
         patch("chronocanvas.services.generation.ProgressPublisher", return_value=AsyncMock()),
         patch("chronocanvas.services.generation.RequestRepository") as mock_repo_cls,
         patch("chronocanvas.services.generation.ImageRepository", return_value=mock_image_repo),
     ):
+        mock_graph = MagicMock()
+        mock_graph_module.agent_graph = mock_graph
+
         mock_session = AsyncMock()
         mock_ctx.return_value.__aenter__.return_value = mock_session
         mock_ctx.return_value.__aexit__.return_value = None

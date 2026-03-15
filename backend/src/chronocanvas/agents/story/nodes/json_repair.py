@@ -89,9 +89,7 @@ def extract_and_parse_json(text: str) -> dict:
         pass
 
     # 4. Quote bare keys: {key: "value"} → {"key": "value"}
-    bare_key_fixed = re.sub(
-        r'(?<=[{,])\s*([a-zA-Z_]\w*)\s*:', r' "\1":', repaired
-    )
+    bare_key_fixed = re.sub(r"(?<=[{,])\s*([a-zA-Z_]\w*)\s*:", r' "\1":', repaired)
     try:
         return json.loads(bare_key_fixed)
     except json.JSONDecodeError:
@@ -124,22 +122,22 @@ def extract_and_parse_json(text: str) -> dict:
                     continue
                 num_backslashes = 0
                 j = i - 1
-                while j >= 0 and quote_fixed[j] == '\\':
+                while j >= 0 and quote_fixed[j] == "\\":
                     num_backslashes += 1
                     j -= 1
                 if num_backslashes % 2 == 1:
                     continue
-                after_quote = quote_fixed[i + 1:].lstrip()
-                if after_quote and after_quote[0] in ':,]}':
+                after_quote = quote_fixed[i + 1 :].lstrip()
+                if after_quote and after_quote[0] in ":,]}":
                     continue
-                quote_fixed = quote_fixed[:i] + '\\"' + quote_fixed[i + 1:]
+                quote_fixed = quote_fixed[:i] + '\\"' + quote_fixed[i + 1 :]
                 found = True
                 break
             if not found:
                 break
 
     # 7. Last resort: strip all control chars inside strings and retry
-    last_resort = re.sub(r'[\x00-\x1f]', ' ', json_text)
+    last_resort = re.sub(r"[\x00-\x1f]", " ", json_text)
     last_resort = re.sub(r",\s*([}\]])", r"\1", last_resort)
     try:
         return json.loads(last_resort)
@@ -159,7 +157,7 @@ def _truncation_repair(text: str) -> dict:
         if esc:
             esc = False
             continue
-        if ch == '\\':
+        if ch == "\\":
             esc = True
             continue
         if ch == '"':
@@ -167,21 +165,18 @@ def _truncation_repair(text: str) -> dict:
             continue
         if in_s:
             continue
-        if ch in '{[':
-            open_stack.append('}' if ch == '{' else ']')
-        elif ch in '}]' and open_stack:
+        if ch in "{[":
+            open_stack.append("}" if ch == "{" else "]")
+        elif ch in "}]" and open_stack:
             open_stack.pop()
     if open_stack:
         repaired = text
         if in_s:
             repaired += '"'
-        repaired += ''.join(reversed(open_stack))
+        repaired += "".join(reversed(open_stack))
         try:
             return json.loads(repaired)
         except json.JSONDecodeError:
             pass
 
-    raise ValueError(
-        f"JSON repair failed after all strategies. "
-        f"First 300 chars: {text[:300]}"
-    )
+    raise ValueError(f"JSON repair failed after all strategies. First 300 chars: {text[:300]}")

@@ -1,10 +1,6 @@
 import { useQuery, type Query } from '@tanstack/react-query';
 import { api } from '../client';
-import type {
-  GenerationRequest,
-  GenerationListResponse,
-  GeneratedImage,
-} from '../types';
+import type { GenerationRequest, GenerationListResponse, GeneratedImage } from '../types';
 
 // ── Status helpers ───────────────────────────────────────────────────────
 

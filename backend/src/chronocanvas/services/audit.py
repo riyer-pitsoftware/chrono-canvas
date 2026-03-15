@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from chronocanvas.services.path_utils import file_path_to_url
 from chronocanvas.api.schemas.generation import (
     AuditDetailResponse,
     ImageResponse,
@@ -15,6 +14,7 @@ from chronocanvas.api.schemas.generation import (
 from chronocanvas.config import settings
 from chronocanvas.db.models.image import GeneratedImage
 from chronocanvas.db.models.request import GenerationRequest
+from chronocanvas.services.path_utils import file_path_to_url
 
 
 class AuditProjector:
@@ -137,7 +137,8 @@ class AuditProjector:
             state_snapshots=state_snapshots,
             agent_trace=[
                 {**entry, "local_path": file_path_to_url(entry["local_path"])}
-                if "local_path" in entry else entry
+                if "local_path" in entry
+                else entry
                 for entry in (request.agent_trace or [])
             ],
             storyboard_data=request.storyboard_data,

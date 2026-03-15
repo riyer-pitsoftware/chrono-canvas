@@ -8,10 +8,10 @@ from chronocanvas.api.schemas.admin import (
     ValidationQueueResponse,
 )
 from chronocanvas.db.models.image import GeneratedImage
-from chronocanvas.services.path_utils import file_path_to_url
-from chronocanvas.services.validation import compute_validation_overall
 from chronocanvas.db.models.request import GenerationRequest
 from chronocanvas.db.models.validation import ValidationResult
+from chronocanvas.services.path_utils import file_path_to_url
+from chronocanvas.services.validation import compute_validation_overall
 
 
 class ValidationQueueProjector:

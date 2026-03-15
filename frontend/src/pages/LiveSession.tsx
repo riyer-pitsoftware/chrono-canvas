@@ -85,12 +85,18 @@ function playTurnChime(ctx: AudioContext) {
 export function LiveSession() {
   const [sessionActive, setSessionActive] = useState(false);
   const [turn, setTurn] = useState<TurnState>('idle');
-  const [currentImage, setCurrentImage] = useState<{ data: string; description: string } | null>(null);
+  const [currentImage, setCurrentImage] = useState<{ data: string; description: string } | null>(
+    null,
+  );
   const [prevImage, setPrevImage] = useState<{ data: string; description: string } | null>(null);
   const [transcript, setTranscript] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [imageTransition, setImageTransition] = useState<'idle' | 'dissolve-out' | 'iris-in'>('idle');
-  const [sessionStats, setSessionStats] = useState<{ scenes: number; startTime: number } | null>(null);
+  const [imageTransition, setImageTransition] = useState<'idle' | 'dissolve-out' | 'iris-in'>(
+    'idle',
+  );
+  const [sessionStats, setSessionStats] = useState<{ scenes: number; startTime: number } | null>(
+    null,
+  );
   const [summary, setSummary] = useState<{ scenes: number; minutes: number } | null>(null);
 
   const wsRef = useRef<WebSocket | null>(null);
@@ -150,25 +156,28 @@ export function LiveSession() {
 
   /* ── Image arrival with iris animation ──────────────────────── */
 
-  const handleImageArrival = useCallback((data: string, description: string) => {
-    sceneCountRef.current += 1;
+  const handleImageArrival = useCallback(
+    (data: string, description: string) => {
+      sceneCountRef.current += 1;
 
-    if (currentImage) {
-      // Dissolve out old image, then iris in new
-      setPrevImage(currentImage);
-      setImageTransition('dissolve-out');
-      setTimeout(() => {
-        setPrevImage(null);
+      if (currentImage) {
+        // Dissolve out old image, then iris in new
+        setPrevImage(currentImage);
+        setImageTransition('dissolve-out');
+        setTimeout(() => {
+          setPrevImage(null);
+          setCurrentImage({ data, description });
+          setImageTransition('iris-in');
+          setTimeout(() => setImageTransition('idle'), 1200);
+        }, 600);
+      } else {
         setCurrentImage({ data, description });
         setImageTransition('iris-in');
         setTimeout(() => setImageTransition('idle'), 1200);
-      }, 600);
-    } else {
-      setCurrentImage({ data, description });
-      setImageTransition('iris-in');
-      setTimeout(() => setImageTransition('idle'), 1200);
-    }
-  }, [currentImage]);
+      }
+    },
+    [currentImage],
+  );
 
   /* ── Turn transition handler ─────────────────────────────────── */
 
@@ -184,9 +193,7 @@ export function LiveSession() {
       // otherwise the mic unmutes while Gemini's voice is still playing from
       // the queue, causing echo feedback.
       const ctx = playbackCtxRef.current;
-      const remainingPlayback = ctx
-        ? Math.max(0, nextPlayTimeRef.current - ctx.currentTime)
-        : 0;
+      const remainingPlayback = ctx ? Math.max(0, nextPlayTimeRef.current - ctx.currentTime) : 0;
 
       // Add a small buffer (300ms) after playback ends
       const delay = Math.max(100, remainingPlayback * 1000 + 300);
@@ -230,41 +237,63 @@ export function LiveSession() {
 
   /* ── WebSocket message handler ──────────────────────────────── */
 
-  const handleMessage = useCallback((event: MessageEvent) => {
-    try {
-      const msg = JSON.parse(event.data);
-      switch (msg.type) {
-        case 'audio':
-          if (prevTurnRef.current !== 'narrating') {
-            handleTurnChange('narrating');
-          }
-          playAudioChunk(msg.data);
-          break;
-        case 'image':
-          handleImageArrival(msg.data, msg.description || '');
-          break;
-        case 'status':
-          if (msg.content === 'listening') {
-            handleTurnChange('listening');
-          } else if (msg.content === 'generating_image') {
-            handleTurnChange('generating_image');
-          } else if (msg.content === 'narrating') {
-            handleTurnChange('narrating');
-          }
-          break;
-        case 'transcript':
-          setTranscript(msg.content || '');
-          break;
-        case 'error':
-          setError(msg.content || 'Unknown error');
-          break;
-        default:
-          break;
+  const handleMessage = useCallback(
+    (event: MessageEvent) => {
+      try {
+        const msg = JSON.parse(event.data);
+        switch (msg.type) {
+          case 'audio':
+            if (prevTurnRef.current !== 'narrating') {
+              handleTurnChange('narrating');
+            }
+            playAudioChunk(msg.data);
+            break;
+          case 'image':
+            handleImageArrival(msg.data, msg.description || '');
+            break;
+          case 'status':
+            if (msg.content === 'listening') {
+              handleTurnChange('listening');
+            } else if (msg.content === 'generating_image') {
+              handleTurnChange('generating_image');
+            } else if (msg.content === 'narrating') {
+              handleTurnChange('narrating');
+            }
+            break;
+          case 'transcript':
+            setTranscript(msg.content || '');
+            break;
+          case 'error':
+            setError(msg.content || 'Unknown error');
+            break;
+          default:
+            break;
+        }
+      } catch {
+        console.warn('LiveSession: failed to parse WS message');
       }
-    } catch {
-      console.warn('LiveSession: failed to parse WS message');
+    },
+    [playAudioChunk, handleImageArrival, handleTurnChange],
+  );
+
+  /* ── Cleanup capture resources ─────────────────────────────── */
+
+  const cleanupCapture = useCallback(() => {
+    if (listeningTimerRef.current) {
+      clearTimeout(listeningTimerRef.current);
+      listeningTimerRef.current = null;
     }
-  }, [playAudioChunk, handleImageArrival, handleTurnChange]);
+    processorRef.current?.disconnect();
+    sourceRef.current?.disconnect();
+    captureCtxRef.current?.close().catch(() => {});
+    playbackCtxRef.current?.close().catch(() => {});
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    processorRef.current = null;
+    sourceRef.current = null;
+    captureCtxRef.current = null;
+    playbackCtxRef.current = null;
+    streamRef.current = null;
+  }, []);
 
   /* ── Start session ──────────────────────────────────────────── */
 
@@ -302,8 +331,10 @@ export function LiveSession() {
     audioChunksReceivedRef.current = 0;
 
     console.log(
-      '[LiveSession] AudioContexts created — capture:', audioContext.state,
-      'playback:', playbackContext.state,
+      '[LiveSession] AudioContexts created — capture:',
+      audioContext.state,
+      'playback:',
+      playbackContext.state,
     );
 
     // Ensure both are running (belt-and-suspenders for autoplay policy)
@@ -366,7 +397,12 @@ export function LiveSession() {
           console.log('[LiveSession] First audio chunk sent');
         }
         if (audioChunksSent % 50 === 0) {
-          console.log('[LiveSession] Audio stats — sent:', audioChunksSent, 'muted:', geminiMutedChunks);
+          console.log(
+            '[LiveSession] Audio stats — sent:',
+            audioChunksSent,
+            'muted:',
+            geminiMutedChunks,
+          );
         }
       };
 
@@ -381,7 +417,9 @@ export function LiveSession() {
         if (msg.type !== 'ping') {
           console.log('[LiveSession] WS recv:', msg.type, msg.type === 'status' ? msg.content : '');
         }
-      } catch { /* logged in handler */ }
+      } catch {
+        /* logged in handler */
+      }
       handleMessage(event);
     };
 
@@ -401,26 +439,9 @@ export function LiveSession() {
         setSummary({ scenes: sceneCountRef.current, minutes: Math.round(elapsed * 10) / 10 });
       }
     };
-  }, [handleMessage, handleTurnChange, sessionStats]);
+  }, [handleMessage, handleTurnChange, sessionStats, cleanupCapture]);
 
   /* ── Stop session ───────────────────────────────────────────── */
-
-  const cleanupCapture = useCallback(() => {
-    if (listeningTimerRef.current) {
-      clearTimeout(listeningTimerRef.current);
-      listeningTimerRef.current = null;
-    }
-    processorRef.current?.disconnect();
-    sourceRef.current?.disconnect();
-    captureCtxRef.current?.close().catch(() => {});
-    playbackCtxRef.current?.close().catch(() => {});
-    streamRef.current?.getTracks().forEach((t) => t.stop());
-    processorRef.current = null;
-    sourceRef.current = null;
-    captureCtxRef.current = null;
-    playbackCtxRef.current = null;
-    streamRef.current = null;
-  }, []);
 
   const stopSession = useCallback(() => {
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
@@ -469,10 +490,10 @@ export function LiveSession() {
 
   // Status indicator dot color
   const dotColor = isListening
-    ? '#4ade80'   // green — your turn
+    ? '#4ade80' // green — your turn
     : isNarrating
-      ? 'var(--primary)'  // amber — Dash speaking
-      : '#f59e0b';        // orange — generating
+      ? 'var(--primary)' // amber — Dash speaking
+      : '#f59e0b'; // orange — generating
 
   // Mic button appearance changes with turn state
   const micBorder = isListening
@@ -482,13 +503,13 @@ export function LiveSession() {
       : '2px solid #f59e0b';
 
   const micBg = isListening
-    ? 'oklch(0.12 0.03 145)'   // faint green tint
+    ? 'oklch(0.12 0.03 145)' // faint green tint
     : 'oklch(0.1 0.01 60)';
 
   const micStroke = isListening
     ? '#4ade80'
     : isNarrating
-      ? 'oklch(0.35 0.02 60)'  // dimmed when not your turn
+      ? 'oklch(0.35 0.02 60)' // dimmed when not your turn
       : '#f59e0b';
 
   const micShadow = isListening
@@ -505,11 +526,7 @@ export function LiveSession() {
         ? 'Dash is speaking'
         : 'Generating\u2026';
 
-  const micLabelColor = isListening
-    ? '#4ade80'
-    : isNarrating
-      ? 'oklch(0.4 0.02 60)'
-      : '#f59e0b';
+  const micLabelColor = isListening ? '#4ade80' : isNarrating ? 'oklch(0.4 0.02 60)' : '#f59e0b';
 
   /* ── Render ─────────────────────────────────────────────────── */
 
@@ -570,7 +587,8 @@ export function LiveSession() {
             className="overflow-hidden rounded-lg"
             style={{
               clipPath: irisClipPath,
-              animation: imageTransition === 'iris-in' ? 'irisOpen 1.2s ease-out forwards' : undefined,
+              animation:
+                imageTransition === 'iris-in' ? 'irisOpen 1.2s ease-out forwards' : undefined,
             }}
           >
             <img
@@ -603,7 +621,10 @@ export function LiveSession() {
             {error}
             {!sessionActive && (
               <button
-                onClick={() => { setError(null); startSession(); }}
+                onClick={() => {
+                  setError(null);
+                  startSession();
+                }}
                 className="ml-3 underline hover:text-red-300 transition-colors"
               >
                 Retry
@@ -622,7 +643,8 @@ export function LiveSession() {
             }}
           >
             <p className="text-sm" style={{ color: 'oklch(0.7 0.03 80)' }}>
-              {summary.scenes} scene{summary.scenes !== 1 ? 's' : ''} created, {summary.minutes} minute{summary.minutes !== 1 ? 's' : ''}
+              {summary.scenes} scene{summary.scenes !== 1 ? 's' : ''} created, {summary.minutes}{' '}
+              minute{summary.minutes !== 1 ? 's' : ''}
             </p>
             <p className="text-xs" style={{ color: 'oklch(0.5 0.02 80)' }}>
               Session complete
