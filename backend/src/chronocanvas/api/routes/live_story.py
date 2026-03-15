@@ -788,12 +788,13 @@ async def _scene_by_scene_flow(
         elapsed_s=time.perf_counter() - casting_t0,
     )
 
-    # ── Create FRESH scene chat with thinking ──────────────────
-    # The casting was one-shot — this chat starts clean, no
-    # thought_signature history to corrupt.
-    thinking_enabled = model.startswith("gemini-3")
+    # ── Create FRESH scene chat — NO thinking ──────────────────
+    # Thinking suppresses image generation in multi-turn chat on
+    # Gemini 3.x models.  Casting (one-shot, no thinking) generates
+    # images fine; scene chat with thinking_level=MINIMAL does not.
+    thinking_enabled = False
     chat = client.aio.chats.create(
-        model=model, config=_gen_config(thinking=thinking_enabled)
+        model=model, config=_gen_config(thinking=False)
     )
 
     # ── Scenes — model decides how many; stops on [END] ────────
