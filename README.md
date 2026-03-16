@@ -180,6 +180,171 @@ Verify with `make smoke-test` — runs end-to-end checks against the live stack.
 
 ---
 
+## Hackathon mode — 5-minute judge walkthrough
+
+Set `DEPLOYMENT_MODE=gcp` in `.env` to enable hackathon mode (or deploy to Cloud Run where it's automatic). This locks routing to Gemini, simplifies the sidebar to three pages, and drops you straight into Story Director.
+
+```bash
+# In .env, set:
+DEPLOYMENT_MODE=gcp
+GOOGLE_API_KEY=your-key-here
+
+make restart
+# Open http://localhost:3000
+```
+
+### Step 1 — Story Director (2 min)
+
+1. Open the app. You land on Story Director automatically.
+2. Pick a template preset (e.g., "Film Noir Mystery") or type your own prompt.
+3. Click **Action**. Watch the pipeline stream:
+   - Character extraction → scene decomposition → parallel image generation → coherence review → narration → audio
+   - Panels appear one by one in the filmstrip as Imagen 4 generates them.
+4. When complete, click the speaker icon on any panel to hear Dash narrate it via Gemini TTS.
+5. Click the pencil icon on a panel, type an edit instruction (e.g., "make it darker, more shadow"), and watch the scene regenerate.
+
+**Expected result:** A 4–6 scene storyboard with illustrated panels, narration text, and playable audio per scene.
+
+### Step 2 — Live Story (1.5 min)
+
+1. Navigate to **Live Story** in the sidebar.
+2. Type a prompt (e.g., *"A woman in a rain-soaked trench coat stands outside a shuttered jazz club. The neon sign flickers."*).
+3. Click generate. Watch interleaved text+image output stream in real time:
+   - Typewriter text appears with camera iris reveal
+   - Images arrive inline between paragraphs
+   - Film dissolve transitions between scenes
+4. After the story completes, narration auto-plays if enabled. Use arrow keys or swipe to navigate scenes.
+5. Try **"What happens next?"** for continuation or **"Tell it from the other side"** for a Rashomon perspective flip.
+
+**Expected result:** Full-screen cinematic viewer with interleaved text and images arriving together in a single Gemini response.
+
+### Step 3 — Live Noir Session (1.5 min)
+
+1. Navigate to **Live Session** in the sidebar.
+2. Click the green mic button and speak a story idea (e.g., *"Tell me about a detective in 1940s Bombay who finds a coded letter in a dead man's coat"*).
+3. Listen as Dash narrates back in noir voice (Charon) via Gemini Live API.
+4. Watch for images materializing on screen mid-narration — Dash triggers image generation via function calls while speaking.
+5. Respond naturally to continue the story. The session is a real-time voice conversation.
+
+**Expected result:** Bidirectional voice storytelling with photorealistic images appearing during narration. Green mic (your turn) → dimmed mic (Dash speaking) → amber mic (generating image).
+
+### Verify
+
+```bash
+make smoke-test
+```
+
+Runs end-to-end pipeline checks: creates a generation request, polls until completion, verifies images and audit trail exist.
+
+---
+
+## Full setup — all features
+
+For the complete application with all providers and features:
+
+### Prerequisites
+
+- Docker and Docker Compose v2
+- 8 GB RAM minimum (16 GB recommended for local models)
+- Ports: 3000 (frontend), 8000 (API), 5432 (Postgres), 6379 (Redis)
+- Optional: 8188 (ComfyUI), 7861 (FaceFusion), 11434 (Ollama)
+
+### Environment configuration
+
+```bash
+cp .env.example .env
+```
+
+**Deployment modes** (`DEPLOYMENT_MODE` in `.env`):
+
+| Mode | What's available | Use case |
+|------|-----------------|----------|
+| `gcp` | Gemini, Imagen, Gemini TTS, Live API, Veo | Hackathon / Cloud Run deployment |
+| `local` | Ollama, ComfyUI, Stable Diffusion | Fully offline, no API keys needed |
+| `hybrid` | All providers | Development (default) |
+
+**API keys** (add whichever providers you want to use):
+
+| Key | Provider | Required for |
+|-----|----------|-------------|
+| `GOOGLE_API_KEY` | Google GenAI | Gemini, Imagen, TTS, Live API, Veo, Search grounding |
+| `ANTHROPIC_API_KEY` | Anthropic | Claude as alternative LLM |
+| `OPENAI_API_KEY` | OpenAI | GPT-4o as alternative LLM |
+| `SERPAPI_KEY` | SerpAPI | Alternative search provider |
+
+**No API keys?** Set `DEPLOYMENT_MODE=local`, install [Ollama](https://ollama.com) with `ollama pull llama3.1:8b`, and run [ComfyUI](https://github.com/comfyanonymous/ComfyUI) on port 8188. The entire pipeline runs locally.
+
+### Local model setup (optional)
+
+**Ollama** (local LLM):
+```bash
+# Install from https://ollama.com
+ollama pull llama3.1:8b
+# Verify: curl http://localhost:11434/api/tags
+```
+
+**ComfyUI** (local image generation):
+```bash
+# Install and run on port 8188
+# Set IMAGE_PROVIDER=comfyui in .env
+```
+
+**FaceFusion** (face compositing for portrait mode):
+```bash
+# Runs as Docker container on port 7861
+# ONNX models auto-download on first use
+```
+
+### Per-agent LLM routing
+
+Route specific pipeline nodes to different providers:
+
+```bash
+# In .env — use Claude for prompt writing, Gemini for everything else:
+LLM_AGENT_ROUTING={"prompt_generation": "claude", "scene_prompt_generation": "claude"}
+```
+
+### ConfigHUD
+
+The in-app mixing board lets you switch providers per-request without restarting. Six channels: LLM, Image, Search, Voice/TTS, Vision/Multimodal, Compositing. Available providers light up based on which API keys are configured and which services are running.
+
+### Feature flags
+
+All features are individually toggleable in `.env`:
+
+| Flag | Default | What it controls |
+|------|---------|-----------------|
+| `IMAGE_TO_STORY_ENABLED` | true | Image upload → story concept extraction |
+| `VISION_NARRATION_ENABLED` | true | Narration written from actual generated images |
+| `VOICE_INPUT_ENABLED` | true | Microphone → Gemini STT transcription |
+| `VIDEO_ASSEMBLY_ENABLED` | true | ffmpeg panel → MP4 stitching |
+| `VEO_VIDEO_ENABLED` | true | Veo scene-to-video generation |
+| `SCENE_EDITING_ENABLED` | true | Per-scene edit via Gemini vision |
+| `CONVERSATION_MODE_ENABLED` | false | Chat refinement panel |
+
+### Running
+
+```bash
+make up          # Start all services
+make restart     # Rebuild and restart
+make down        # Stop all services
+make smoke-test  # End-to-end verification
+make logs        # Tail API logs
+```
+
+### Cloud Run deployment
+
+```bash
+cd deploy/cloudrun
+./deploy-all.sh          # Full deploy (infra + build + deploy)
+./deploy-all.sh --from=4 # Rebuild and redeploy only (skip infra)
+./redeploy.sh            # Quick rebuild of API + worker
+```
+
+Provisions Cloud SQL, Memorystore Redis, GCS bucket, Secret Manager entries, and three Cloud Run services. Deployment is automated via `scripts/setup-gcp.sh` (infrastructure-as-code).
+
+---
+
 ## Tech stack
 
 - **Python 3.12** — FastAPI, LangGraph, SQLAlchemy, google-genai SDK, ARQ
