@@ -1,0 +1,109 @@
+%%{init: {'look': 'handDrawn', 'theme': 'default', 'themeVariables': {'fontSize': '16px', 'fontFamily': 'Comic Sans MS, cursive', 'primaryColor': '#e8e0d4', 'primaryTextColor': '#2d2a26', 'primaryBorderColor': '#8b7e6a', 'lineColor': '#6b5e4d', 'secondaryColor': '#f5f0e8', 'tertiaryColor': '#faf7f2', 'background': '#faf7f2', 'mainBkg': '#f5f0e8', 'nodeBorder': '#8b7e6a', 'clusterBkg': '#f0ebe2', 'clusterBorder': '#a89880', 'titleColor': '#2d2a26', 'edgeLabelBackground': '#f5f0e8'}}}%%
+graph TB
+    subgraph User["User"]
+        TEXT["Text Prompt"]
+        VOICE["Voice / Mic"]
+        IMAGE["Image Upload"]
+    end
+
+    subgraph Frontend["Frontend — React + Vite :3000"]
+        SD["Story Director"]
+        LS["Live Story"]
+        LNS["Live Noir Session"]
+        LV["Live Video"]
+    end
+
+    subgraph Backend["FastAPI Backend — Cloud Run"]
+        API["REST API"]
+        SSE["SSE Streaming"]
+        WSP["WebSocket Proxy"]
+        WORKER["ARQ Worker"]
+    end
+
+    subgraph Pipeline["Story Pipeline — 13-Node LangGraph"]
+        direction LR
+        P1["Orchestrator"]
+        P2["Image-to-Story"]
+        P3["Character\nExtraction"]
+        P4["Scene\nDecomposition"]
+        P5["Scene Prompt\nGeneration ∥"]
+        P6["Prompt\nValidation"]
+        P7["Scene Image\nGeneration ∥"]
+        P8["Coherence\nReview"]
+        P9["Narration\nScript"]
+        P10["Narration\nAudio"]
+        P11["Video\nAssembly"]
+        P12["Export"]
+    end
+
+    subgraph Gemini["Google GenAI SDK — 7 Capabilities"]
+        G_TEXT["Gemini 2.5 Flash\nText Generation"]
+        G_VISION["Gemini 2.5 Flash\nMultimodal Vision"]
+        G_INTERLEAVED["Gemini 3.1 Flash\nInterleaved Text+Image"]
+        G_IMAGEN["Imagen 4\nImage Generation"]
+        G_TTS["Gemini TTS\nKore Voice"]
+        G_LIVE["Gemini Live API\nNative Audio — Charon"]
+        G_SEARCH["Google Search\nGrounding + Citations"]
+    end
+
+    subgraph Video["Veo"]
+        VEO["Veo 3.1\nScene-to-Video"]
+    end
+
+    subgraph Storage["Data — Cloud SQL + Redis + GCS"]
+        PG[("PostgreSQL\nGenerations, Audit,\nCosts, Validation")]
+        REDIS[("Redis\nPub/Sub + ARQ Queue")]
+        GCS[("GCS Bucket\nImages, Audio, Video")]
+    end
+
+    %% User to Frontend
+    TEXT --> SD
+    VOICE --> SD
+    VOICE --> LNS
+    IMAGE --> SD
+
+    %% Frontend to Backend
+    SD -->|"REST + WebSocket"| API
+    LS -->|"SSE Stream"| SSE
+    LNS -->|"WebSocket"| WSP
+    LV -->|"SSE Stream"| SSE
+
+    %% Backend to Pipeline
+    API -->|"enqueue"| REDIS
+    REDIS -->|"dequeue"| WORKER
+    WORKER --> Pipeline
+
+    %% Pipeline flow
+    P1 --> P2 --> P3 --> P4 --> P5 --> P6 --> P7 --> P8 --> P9 --> P10 --> P11 --> P12
+
+    %% Pipeline to Gemini
+    P1 & P3 & P4 & P5 & P6 & P9 -->|"text"| G_TEXT
+    P2 & P8 -->|"vision"| G_VISION
+    P7 -->|"images"| G_IMAGEN
+    P10 -->|"audio"| G_TTS
+    P4 -->|"research"| G_SEARCH
+
+    %% Live features to Gemini
+    SSE -->|"interleaved\ntext+image"| G_INTERLEAVED
+    WSP -->|"bidirectional\nvoice"| G_LIVE
+    G_LIVE -->|"function call\nmid-narration"| G_IMAGEN
+    SSE -->|"scene-to-video"| VEO
+
+    %% Backend to Storage
+    WORKER --> PG
+    WORKER --> GCS
+    API --> PG
+    SSE --> REDIS
+
+    %% Coherence regen loop
+    P8 -->|"regen if\nscore < 0.6"| P5
+
+    %% Style — soft color-coded Gemini capabilities
+    style G_TEXT fill:#dbeafe,stroke:#3b82f6,color:#1e3a5f
+    style G_VISION fill:#dbeafe,stroke:#3b82f6,color:#1e3a5f
+    style G_INTERLEAVED fill:#ede9fe,stroke:#8b5cf6,color:#3b1f7e
+    style G_IMAGEN fill:#d1fae5,stroke:#10b981,color:#064e3b
+    style G_TTS fill:#fef3c7,stroke:#f59e0b,color:#78350f
+    style G_LIVE fill:#fee2e2,stroke:#ef4444,color:#7f1d1d
+    style G_SEARCH fill:#cffafe,stroke:#06b6d4,color:#164e63
+    style VEO fill:#ede9fe,stroke:#8b5cf6,color:#3b1f7e
