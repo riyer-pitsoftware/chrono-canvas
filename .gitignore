@@ -66,6 +66,11 @@ zap-reports/
 # Demo videos (host externally)
 docs/videos/
 
+# Demo fallback binaries (baked locally, copied into Docker at build time)
+demo/fallback/*.png
+demo/fallback/*.wav
+demo/fallback/*.mp4
+
 # Blog drafts
 blog/
 
