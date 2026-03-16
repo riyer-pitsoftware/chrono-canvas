@@ -37,6 +37,7 @@ COPY backend/alembic/ alembic/
 COPY backend/alembic.ini .
 COPY backend/scripts/ scripts/
 COPY seed/ /app/seed/
+COPY demo/fallback/ /app/demo/fallback/
 
 # Cloud Run entrypoint (no wait-for-it needed)
 COPY deploy/cloudrun/entrypoint-cloudrun.sh /app/entrypoint.sh

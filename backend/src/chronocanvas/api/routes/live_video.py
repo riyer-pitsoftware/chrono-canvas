@@ -476,9 +476,15 @@ async def demo_fallback():
     """
     fallback_dir = Path(settings.demo_fallback_dir)
     if not fallback_dir.is_absolute():
-        # Resolve relative to project root (two levels up from this file,
-        # or relative to cwd which is typically the backend root)
-        fallback_dir = Path.cwd() / fallback_dir
+        # Resolve relative to project root — this file lives at
+        # backend/src/chronocanvas/api/routes/, so project root is 5 levels up.
+        # Also try cwd as a fallback.
+        project_root = Path(__file__).resolve().parents[5]
+        candidate = project_root / fallback_dir
+        if candidate.exists():
+            fallback_dir = candidate
+        else:
+            fallback_dir = Path.cwd() / fallback_dir
 
     manifest_path = fallback_dir / "manifest.json"
     if not manifest_path.exists():

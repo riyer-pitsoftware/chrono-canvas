@@ -23,10 +23,10 @@ router = APIRouter(prefix="/live-session", tags=["live-session"])
 LIVE_MODEL_PRIMARY = "gemini-2.5-flash-native-audio-latest"
 LIVE_MODEL_FALLBACK = "gemini-2.5-flash-native-audio-preview-12-2025"
 
-# Image generation models — try best consistency first
+# Image generation models — speed first for live sessions
 _IMAGE_MODEL_CHAIN = [
-    "gemini-3.1-flash-image-preview",  # Nano Banana 2: best character consistency
-    "gemini-2.5-flash-image",  # fallback
+    "imagen-4.0-fast-generate-001",  # Fastest: ~2-3s, purpose-built
+    "gemini-2.5-flash-image",  # Fallback: slower, supports reference images
 ]
 
 SYSTEM_INSTRUCTION = """\
@@ -100,7 +100,9 @@ LIVE_TOOLS = [
             ),
         ]
     ),
-    types.Tool(google_search=types.GoogleSearch()),
+    # NOTE: google_search tool removed — mixing it with function_declarations
+    # in Live API causes Gemini 1011 internal errors mid-stream.
+    # search_historical_context uses the function call path instead.
 ]
 
 
@@ -137,37 +139,51 @@ _IMAGE_STYLE_PREFIX = (
 async def _generate_image(
     client: genai.Client, description: str, last_image_b64: str | None = None
 ) -> str | None:
-    """Generate an image via Gemini and return base64 PNG, or None on failure.
+    """Generate an image and return base64, or None on failure.
 
-    If last_image_b64 is provided, it's included as a reference so the model
-    can maintain character consistency with the previous scene.
+    Tries Imagen Fast first (fastest, ~2-3s, no reference image support).
+    Falls back to Gemini image gen which supports reference images for
+    character consistency across scenes.
     """
     styled_description = f"{_IMAGE_STYLE_PREFIX}{description}"
 
-    try:
-        # Build contents — include last image as visual reference if available
-        contents: list = []
-        if last_image_b64:
-            image_bytes = base64.b64decode(last_image_b64)
-            contents.append(types.Part.from_bytes(data=image_bytes, mime_type="image/png"))
-            contents.append(
-                types.Part.from_text(
-                    text=f"Maintain the same characters with identical faces and features "
-                    f"as shown in the reference image above. {styled_description}"
+    for img_model in _IMAGE_MODEL_CHAIN:
+        try:
+            if img_model.startswith("imagen"):
+                # Imagen API — fastest, but no reference image support
+                response = await client.aio.models.generate_images(
+                    model=img_model,
+                    prompt=styled_description,
+                    config=types.GenerateImagesConfig(
+                        number_of_images=1,
+                        aspect_ratio="16:9",
+                        person_generation="ALLOW_ADULT",
+                    ),
                 )
-            )
-        else:
-            contents.append(types.Part.from_text(text=styled_description))
+                if response.generated_images:
+                    img = response.generated_images[0]
+                    return base64.b64encode(img.image.image_bytes).decode("ascii")
+            else:
+                # Gemini image gen — supports reference image for consistency
+                contents: list = []
+                if last_image_b64:
+                    image_bytes = base64.b64decode(last_image_b64)
+                    contents.append(
+                        types.Part.from_bytes(data=image_bytes, mime_type="image/png")
+                    )
+                    contents.append(
+                        types.Part.from_text(
+                            text=f"Maintain the same characters with identical "
+                            f"faces and features as shown in the reference "
+                            f"image above. {styled_description}"
+                        )
+                    )
+                else:
+                    contents.append(types.Part.from_text(text=styled_description))
 
-        for img_model in _IMAGE_MODEL_CHAIN:
-            try:
                 gen_config = types.GenerateContentConfig(
                     response_modalities=["IMAGE"],
                 )
-                # Only models that support thinking get the config
-                if "3.1" in img_model:
-                    gen_config.thinking_config = types.ThinkingConfig(thinking_level="MINIMAL")
-
                 response = await client.aio.models.generate_content(
                     model=img_model,
                     contents=contents,
@@ -176,12 +192,14 @@ async def _generate_image(
                 if response.candidates and response.candidates[0].content.parts:
                     for part in response.candidates[0].content.parts:
                         if part.inline_data and part.inline_data.data:
-                            return base64.b64encode(part.inline_data.data).decode("ascii")
-            except Exception as e:
-                logger.warning("Image model %s failed: %s", img_model, e)
-                continue
-    except Exception as e:
-        logger.error("Image generation failed: %s", e)
+                            return base64.b64encode(
+                                part.inline_data.data
+                            ).decode("ascii")
+        except Exception as e:
+            logger.warning("Image model %s failed: %s", img_model, e)
+            continue
+
+    logger.error("All image models failed for: %s", description[:80])
     return None
 
 
@@ -244,56 +262,48 @@ async def _handle_function_call(
         asyncio.create_task(_generate_image_background(client, ws, description, session_state))
 
         # Send immediate response — tell Gemini to PAUSE and wait for user
-        await session.send(
-            input=types.LiveClientToolResponse(
-                function_responses=[
-                    types.FunctionResponse(
-                        id=tool_call.id,
-                        name=fn_name,
-                        response={
-                            "success": True,
-                            "message": "Image is being generated and will appear for the audience. "
-                            "STOP talking now. Wait silently for the audience to respond "
-                            "before narrating the next scene.",
-                        },
-                    )
-                ]
-            ),
+        await session.send_tool_response(
+            function_responses=[
+                types.FunctionResponse(
+                    id=tool_call.id,
+                    name=fn_name,
+                    response={
+                        "success": True,
+                        "message": "Image is being generated and will appear for the audience. "
+                        "STOP talking now. Wait silently for the audience to respond "
+                        "before narrating the next scene.",
+                    },
+                )
+            ],
         )
 
     elif fn_name == "search_historical_context":
         query = fn_args.get("query", "")
         logger.info("Historical search requested: %s", query)
 
-        # Google Search tool handles this automatically via grounding.
-        # Send a minimal response back so Gemini continues.
-        await session.send(
-            input=types.LiveClientToolResponse(
-                function_responses=[
-                    types.FunctionResponse(
-                        id=tool_call.id,
-                        name=fn_name,
-                        response={
-                            "success": True,
-                            "message": f"Search completed for: {query}",
-                        },
-                    )
-                ]
-            ),
+        await session.send_tool_response(
+            function_responses=[
+                types.FunctionResponse(
+                    id=tool_call.id,
+                    name=fn_name,
+                    response={
+                        "success": True,
+                        "message": f"Search completed for: {query}",
+                    },
+                )
+            ],
         )
 
     else:
         logger.warning("Unknown function call: %s", fn_name)
-        await session.send(
-            input=types.LiveClientToolResponse(
-                function_responses=[
-                    types.FunctionResponse(
-                        id=tool_call.id,
-                        name=fn_name,
-                        response={"error": f"Unknown function: {fn_name}"},
-                    )
-                ]
-            ),
+        await session.send_tool_response(
+            function_responses=[
+                types.FunctionResponse(
+                    id=tool_call.id,
+                    name=fn_name,
+                    response={"error": f"Unknown function: {fn_name}"},
+                )
+            ],
         )
 
 
@@ -357,20 +367,22 @@ async def _receive_from_browser(ws: WebSocket, session, stop_event: asyncio.Even
                         break
 
             elif msg_type == "end_turn":
-                # User tapped Send — send 1s of silence so Gemini's VAD
-                # detects end-of-speech and triggers a response.
+                # User tapped Send — send a burst of silence so auto-VAD
+                # detects end-of-speech and triggers Gemini's response.
+                # We use silence instead of audio_stream_end (which permanently
+                # kills the audio stream) or send_client_content (which is
+                # invalid when mixed with send_realtime_input).
                 logger.info("User ended turn manually (Send button)")
                 try:
-                    # 1s of silence at 16kHz = 16000 samples × 2 bytes = 32000 bytes
-                    silence = b"\x00" * 32000
+                    silence = b"\x00" * 32000  # 1s at 16kHz mono 16-bit
                     await session.send_realtime_input(
                         audio=types.Blob(
                             data=silence, mime_type="audio/pcm;rate=16000",
                         ),
                     )
-                    logger.info("Sent 1s silence to Gemini to trigger VAD")
+                    logger.info("Sent 1s silence to trigger VAD")
                 except Exception as e:
-                    logger.error("Failed to send silence to Gemini: %s", e)
+                    logger.error("Failed to send silence: %s", e)
 
             elif msg_type == "stop":
                 logger.info("Client requested session stop")
@@ -470,13 +482,18 @@ async def _receive_from_gemini(
                         await _send_json(ws, {"type": "status", "content": "narrating"})
                         await _handle_function_call(client, session, ws, fc, session_state)
 
-            # If receive() generator exits, session may be done
-            break
+            # receive() generator exhausted for this turn — loop back
+            # to call receive() again for the next turn
+            logger.info("Gemini receive() cycle complete, awaiting next turn")
 
     except Exception as e:
         if not stop_event.is_set():
-            logger.error("Error receiving from Gemini: %s", e)
-            await _send_json(ws, {"type": "error", "content": str(e)})
+            logger.error(
+                "Error receiving from Gemini: %s: %s", type(e).__name__, e
+            )
+            # Surface the actual error type so we can diagnose
+            err_msg = f"Gemini error: {type(e).__name__}: {e}"
+            await _send_json(ws, {"type": "error", "content": err_msg})
         stop_event.set()
 
 
@@ -485,86 +502,111 @@ async def live_session_ws(ws: WebSocket):
     """WebSocket endpoint bridging browser audio to Gemini Live API."""
     await ws.accept()
 
-    if not settings.google_api_key:
-        await _send_json(ws, {"type": "error", "content": "GOOGLE_API_KEY not configured"})
-        await ws.close()
-        return
+    session_ctx = None
+    model_used = None
 
-    # Wait for start message
     try:
-        raw = await ws.receive_text()
-        msg = json.loads(raw)
-        if msg.get("type") != "start":
-            await _send_json(ws, {"type": "error", "content": "Expected start message"})
+        if not settings.google_api_key:
+            await _send_json(ws, {"type": "error", "content": "GOOGLE_API_KEY not configured"})
             await ws.close()
             return
-    except (WebSocketDisconnect, Exception) as e:
-        logger.warning("Connection closed before start: %s", e)
-        return
 
-    client = genai.Client(api_key=settings.google_api_key)
-    config = _build_live_config()
-
-    # Try primary model, fall back if needed
-    session = None
-    model_used = None
-    for model in [LIVE_MODEL_PRIMARY, LIVE_MODEL_FALLBACK]:
+        # Wait for start message
         try:
-            logger.info("Connecting to Gemini Live API with model %s", model)
-            session_ctx = client.aio.live.connect(model=model, config=config)
-            session = await session_ctx.__aenter__()
-            model_used = model
-            break
-        except Exception as e:
-            logger.warning("Model %s failed to connect: %s", model, e)
-            continue
+            raw = await ws.receive_text()
+            msg = json.loads(raw)
+            if msg.get("type") != "start":
+                await _send_json(ws, {"type": "error", "content": "Expected start message"})
+                await ws.close()
+                return
+        except (WebSocketDisconnect, Exception) as e:
+            logger.warning("Connection closed before start: %s", e)
+            return
 
-    if session is None:
+        client = genai.Client(api_key=settings.google_api_key)
+        config = _build_live_config()
+
+        # Try primary model, fall back if needed
+        session = None
+        for model in [LIVE_MODEL_PRIMARY, LIVE_MODEL_FALLBACK]:
+            try:
+                logger.info("Connecting to Gemini Live API with model %s", model)
+                session_ctx = client.aio.live.connect(model=model, config=config)
+                session = await session_ctx.__aenter__()
+                model_used = model
+                break
+            except Exception as e:
+                logger.warning("Model %s failed to connect: %s", model, e)
+                # Clean up partially-entered context manager
+                if session_ctx is not None:
+                    try:
+                        await session_ctx.__aexit__(None, None, None)
+                    except Exception:
+                        pass
+                    session_ctx = None
+                continue
+
+        if session is None:
+            await _send_json(
+                ws,
+                {
+                    "type": "error",
+                    "content": "Failed to connect to Gemini Live API",
+                },
+            )
+            await ws.close()
+            return
+
+        logger.info("Gemini Live session established with %s", model_used)
+        await _send_json(ws, {"type": "status", "content": "listening"})
+
+        stop_event = asyncio.Event()
+        # Track state across the session (e.g., last image for consistency)
+        session_state: dict = {}
+
+        # Run browser→Gemini, Gemini→browser, and keepalive loops concurrently
+        browser_task = asyncio.create_task(_receive_from_browser(ws, session, stop_event))
+        gemini_task = asyncio.create_task(
+            _receive_from_gemini(client, session, ws, stop_event, session_state)
+        )
+        ping_task = asyncio.create_task(_keepalive_ping(ws, stop_event))
+
+        try:
+            results = await asyncio.gather(
+                browser_task,
+                gemini_task,
+                ping_task,
+                return_exceptions=True,
+            )
+            # Log any exceptions that were swallowed by return_exceptions
+            for i, result in enumerate(results):
+                if isinstance(result, BaseException):
+                    task_name = ["browser", "gemini", "ping"][i]
+                    logger.error("Task %s exited with error: %s", task_name, result)
+        finally:
+            # Clean up tasks
+            stop_event.set()
+            browser_task.cancel()
+            gemini_task.cancel()
+            ping_task.cancel()
+
+    except Exception as e:
+        # Top-level catch — prevents 1011 from leaking to browser
+        logger.error("Live session crashed: %s: %s", type(e).__name__, e)
         await _send_json(
             ws,
-            {
-                "type": "error",
-                "content": "Failed to connect to Gemini Live API",
-            },
-        )
-        await ws.close()
-        return
-
-    logger.info("Gemini Live session established with %s", model_used)
-    await _send_json(ws, {"type": "status", "content": "listening"})
-
-    stop_event = asyncio.Event()
-    # Track state across the session (e.g., last image for consistency)
-    session_state: dict = {}
-
-    # Run browser→Gemini, Gemini→browser, and keepalive loops concurrently
-    browser_task = asyncio.create_task(_receive_from_browser(ws, session, stop_event))
-    gemini_task = asyncio.create_task(
-        _receive_from_gemini(client, session, ws, stop_event, session_state)
-    )
-    ping_task = asyncio.create_task(_keepalive_ping(ws, stop_event))
-
-    try:
-        await asyncio.gather(
-            browser_task,
-            gemini_task,
-            ping_task,
-            return_exceptions=True,
+            {"type": "error", "content": f"Session error: {e}"},
         )
     finally:
-        # Clean up
-        stop_event.set()
-        browser_task.cancel()
-        gemini_task.cancel()
-        ping_task.cancel()
+        # Clean up Gemini session
+        if session_ctx is not None:
+            try:
+                await session_ctx.__aexit__(None, None, None)
+            except Exception:
+                pass
 
         try:
-            await session_ctx.__aexit__(None, None, None)
-        except Exception:
-            pass
-
-        try:
-            await ws.close()
+            await ws.close(code=1000, reason="session ended")
         except Exception:
             pass
 

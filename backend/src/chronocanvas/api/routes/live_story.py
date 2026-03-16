@@ -34,6 +34,13 @@ _MODEL_CHAIN = [
     "gemini-2.5-flash-image",  # fallback
 ]
 
+# Image-only fallback chain for scene generation — tried in order when
+# the primary chat model's image generation fails (quota, content filter, etc.)
+_IMAGE_FALLBACK_CHAIN = [
+    "gemini-2.5-flash-image",  # Gemini image gen
+    "imagen-4.0-fast-generate-001",  # Imagen: fast, no reference images
+]
+
 # Fast text-only model for parallel fallback (no image capability needed)
 _TEXT_ONLY_MODEL = "gemini-2.5-flash"
 
@@ -645,12 +652,20 @@ async def _scene_by_scene_flow(
 
     casting_prompt = (
         f"{base_prompt}\n\n"
-        f"CASTING CALL ONLY — DO NOT START THE STORY.\n"
-        f"Describe each main character's exact appearance in detail "
-        f"(face shape, skin tone, hair color/style, eye color, build, age, "
-        f"distinguishing marks, wardrobe). Then generate ONE image: a portrait "
-        f"lineup of the main characters standing side by side, well-lit, "
-        f"facing the camera. This is the reference photo for the entire film.\n\n"
+        f"CASTING CALL ONLY — DO NOT START THE STORY.\n\n"
+        f"For each main character, write a structured description:\n"
+        f"  NAME: [character name]\n"
+        f"  FACE: [face shape, jawline, nose, lips, cheekbones]\n"
+        f"  SKIN: [exact skin tone, e.g. 'warm olive', 'deep brown', 'pale ivory']\n"
+        f"  HAIR: [color, length, style, texture]\n"
+        f"  EYES: [color, shape, distinctive features]\n"
+        f"  BUILD: [height, body type, posture]\n"
+        f"  AGE: [apparent age]\n"
+        f"  MARKS: [scars, tattoos, moles, or 'none']\n"
+        f"  WARDROBE: [specific clothing for this story]\n\n"
+        f"Then generate ONE image: a portrait lineup of the main characters "
+        f"standing side by side, well-lit, facing the camera. Show their full "
+        f"faces clearly — this is the reference photo for the entire film.\n\n"
         f"STOP after the casting photo. Do NOT write any story scenes or narration. "
         f"Do NOT include [END]. Just the character descriptions and one portrait image."
     )
@@ -842,6 +857,10 @@ async def _scene_by_scene_flow(
     text_history: list[types.Content] = []
     _image_timeout_s = 90  # image generation can be slow
 
+    # Track last scene image for visual continuity (used by 2.5 fallback)
+    last_scene_image_bytes: bytes | None = None
+    last_scene_image_mime: str = "image/png"
+
     # ── Scenes ────────────────────────────────────────────────────
     max_scenes = 4  # cap for demo pacing
     scene_idx = 0
@@ -939,72 +958,156 @@ async def _scene_by_scene_flow(
             break
 
         # ── Image generation (parallel, ~10-30s) ─────────────────
-        # Fire-and-forget style: yield keepalives while waiting.
-        image_prompt = (
-            f"Generate ONE photorealistic cinematic image for this noir scene:\n\n{scene_text}\n\n"
-        )
+        # Try the primary model first, then fall back through the chain.
+        #
+        # Character consistency strategy:
+        #   - 3.x models: can't accept reference images (suppresses output),
+        #     so we front-load detailed character descriptions in the prompt.
+        #   - 2.5 models: CAN accept reference images, so we pass casting
+        #     portrait + last scene image for visual continuity.
+        #
+        # The prompt puts CHARACTER REFERENCE before the scene description
+        # so the model "sees" the characters first and anchors on them.
+
         if casting_text:
-            image_prompt += f"Character appearances:\n{casting_text}\n\n"
-        image_prompt += (
-            "Dramatic lighting, cinematic composition, film noir aesthetic. "
-            "Photorealistic. No text overlays."
-        )
-
-        image_config = types.GenerateContentConfig(
-            response_modalities=["IMAGE"],
-            temperature=1.0,
-            max_output_tokens=8192,
-        )
-
-        loop = asyncio.get_event_loop()
-
-        async def _gen_image():
-            return await client.aio.models.generate_content(
-                model=model,
-                contents=image_prompt,
-                config=image_config,
+            image_prompt_text = (
+                f"CHARACTER REFERENCE — you MUST match these faces exactly:\n"
+                f"{casting_text}\n\n"
+                f"SCENE TO ILLUSTRATE:\n{scene_text}\n\n"
+                f"CRITICAL: The characters' faces, skin tone, hair, and build must be "
+                f"IDENTICAL to the character reference above. Same person, same features, "
+                f"just in this new scene.\n\n"
+                f"Style: dramatic lighting, cinematic composition, film noir aesthetic. "
+                f"Photorealistic. 16:9 widescreen. No text overlays."
+            )
+        else:
+            image_prompt_text = (
+                f"Generate ONE photorealistic cinematic image for this noir scene:\n\n"
+                f"{scene_text}\n\n"
+                f"Dramatic lighting, cinematic composition, film noir aesthetic. "
+                f"Photorealistic. No text overlays."
             )
 
-        image_task = asyncio.create_task(_gen_image())
-        img_deadline = loop.time() + _image_timeout_s
-        last_keepalive = loop.time()
+        # Build ordered list of models to try: primary first, then fallbacks
+        image_models_to_try = [model] + [
+            m for m in _IMAGE_FALLBACK_CHAIN if m != model
+        ]
 
-        while not image_task.done():
-            now = loop.time()
-            if now >= img_deadline:
-                image_task.cancel()
-                logger.warning("Scene %d image timed out", scene_idx + 1)
+        loop = asyncio.get_event_loop()
+        got_scene_image = False
+
+        for img_model in image_models_to_try:
+            if got_scene_image:
                 break
-            if now - last_keepalive >= _KEEPALIVE_INTERVAL_S:
-                yield _KEEPALIVE_EVENT
-                last_keepalive = now
-            try:
-                await asyncio.wait_for(
-                    asyncio.shield(image_task),
-                    timeout=min(_KEEPALIVE_INTERVAL_S, img_deadline - now),
-                )
-            except asyncio.TimeoutError:
-                pass
 
-        if image_task.done() and not image_task.cancelled():
-            try:
-                img_response = image_task.result()
-                img_parts = _extract_parts(img_response)
-                for p in img_parts:
-                    if p["type"] == "image":
-                        yield p
-                        logger.info(
-                            "Scene %d image generated in %.1fs",
-                            scene_idx + 1,
-                            time.perf_counter() - scene_t0,
-                        )
-                        break
+            is_imagen = img_model.startswith("imagen")
+            is_3x = img_model.startswith("gemini-3")
+
+            async def _gen_image(_model=img_model, _is_imagen=is_imagen, _is_3x=is_3x):
+                if _is_imagen:
+                    resp = await client.aio.models.generate_images(
+                        model=_model,
+                        prompt=image_prompt_text,
+                        config=types.GenerateImagesConfig(
+                            number_of_images=1,
+                            aspect_ratio="16:9",
+                            person_generation="ALLOW_ADULT",
+                        ),
+                    )
+                    if resp.generated_images:
+                        raw = resp.generated_images[0].image.image_bytes
+                        compressed, mime = _compress_image(raw, "image/png")
+                        return [{"type": "image", "content": base64.b64encode(compressed).decode(), "mime_type": mime}]
+                    return []
                 else:
-                    logger.warning("Scene %d: image model returned no image", scene_idx + 1)
-            except Exception as e:
-                logger.warning("Scene %d image failed: %s", scene_idx + 1, e)
-        else:
-            logger.warning("Scene %d: image generation skipped (timeout/cancel)", scene_idx + 1)
+                    image_config = types.GenerateContentConfig(
+                        response_modalities=["IMAGE"],
+                        temperature=1.0,
+                        max_output_tokens=8192,
+                    )
+                    # Gemini 2.5 can accept reference images for consistency;
+                    # 3.x suppresses output images when input contains images.
+                    if _is_3x:
+                        contents = image_prompt_text
+                    else:
+                        # Build multimodal contents: reference images + text
+                        parts = []
+                        ref_img = casting_image_bytes or last_scene_image_bytes
+                        ref_mime = casting_image_mime if casting_image_bytes else last_scene_image_mime
+                        if ref_img:
+                            parts.append(types.Part.from_bytes(
+                                data=ref_img,
+                                mime_type=ref_mime,
+                            ))
+                            parts.append(types.Part.from_text(
+                                text=(
+                                    "Above is the character reference photo. "
+                                    "The characters in the new image MUST have "
+                                    "identical faces, skin tone, hair, and build.\n\n"
+                                    + image_prompt_text
+                                ),
+                            ))
+                        else:
+                            parts.append(types.Part.from_text(text=image_prompt_text))
+                        contents = parts
+
+                    resp = await client.aio.models.generate_content(
+                        model=_model,
+                        contents=contents,
+                        config=image_config,
+                    )
+                    return _extract_parts(resp)
+
+            image_task = asyncio.create_task(_gen_image())
+            img_deadline = loop.time() + _image_timeout_s
+            last_keepalive = loop.time()
+
+            while not image_task.done():
+                now = loop.time()
+                if now >= img_deadline:
+                    image_task.cancel()
+                    logger.warning("Scene %d image timed out on %s", scene_idx + 1, img_model)
+                    break
+                if now - last_keepalive >= _KEEPALIVE_INTERVAL_S:
+                    yield _KEEPALIVE_EVENT
+                    last_keepalive = now
+                try:
+                    await asyncio.wait_for(
+                        asyncio.shield(image_task),
+                        timeout=min(_KEEPALIVE_INTERVAL_S, img_deadline - now),
+                    )
+                except asyncio.TimeoutError:
+                    pass
+
+            if image_task.done() and not image_task.cancelled():
+                try:
+                    img_parts = image_task.result()
+                    for p in img_parts:
+                        if p["type"] == "image":
+                            yield p
+                            got_scene_image = True
+                            # Stash for next scene's reference (2.5 fallback)
+                            try:
+                                last_scene_image_bytes = base64.b64decode(p["content"])
+                                last_scene_image_mime = p.get("mime_type", "image/png")
+                            except Exception:
+                                pass
+                            logger.info(
+                                "Scene %d image via %s in %.1fs",
+                                scene_idx + 1,
+                                img_model,
+                                time.perf_counter() - scene_t0,
+                            )
+                            break
+                    else:
+                        logger.warning("Scene %d: %s returned no image, trying next", scene_idx + 1, img_model)
+                except Exception as e:
+                    logger.warning("Scene %d image failed on %s: %s — trying next", scene_idx + 1, img_model, e)
+            else:
+                logger.warning("Scene %d: %s timed out, trying next", scene_idx + 1, img_model)
+
+        if not got_scene_image:
+            logger.error("Scene %d: all image models exhausted, no image generated", scene_idx + 1)
 
         yield _stage_event(
             "scene",
