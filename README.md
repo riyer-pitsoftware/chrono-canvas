@@ -190,11 +190,6 @@ Verify with `make smoke-test` — runs end-to-end checks against the live stack.
 - **Cloud Run** — production deployment on GCP
 - **ffmpeg** — video assembly with Ken Burns transitions
 
----
-
-## Team
-
-Built for the Google AI Hackathon 2026.
 
 ---
 
